@@ -1,0 +1,17 @@
+List Member Problem
+
+Write a Prolog predicate member/2 that checks if an element is in a list.
+
+member(X, L) should be true when X is an element of list L.
+
+Requirements:
+- An element X is a member of a list if it's the head
+- An element X is a member if it's in the tail
+- Empty list has no members
+
+Expected test cases:
+- member(2, [1,2,3]) should be true
+- member(a, [a,b,c]) should be true
+- member(3, [1,2]) should be false
+- member(x, []) should be false
+- member(1, [1,1,2]) should be true (duplicates ok)

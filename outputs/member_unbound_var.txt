@@ -1,0 +1,15 @@
+PROLOG CODE CHECKER
+Problem: list_member_problem.txt
+Student Code: member_unbound_var.pl
+Step 1: Syntax Check
+Syntax OK
+Preparing test cases...
+Extracted from problem
+Step 2: Logical Analysis
+Proof Tree:
+⚙ member(2,[1,2,3])
+Step 3: Feedback
+LLM Input:
+{'status': 'correct', 'error': None, 'proof_tree': '⚙ member(2,[1,2,3])', 'diagnoses': None}
+LLM translation failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01keyfray1em6b8hkj2qhkk2ge` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99986, Requested 207. Please try again in 2m46.752s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+Predicate: member/2

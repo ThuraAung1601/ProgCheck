@@ -1,0 +1,15 @@
+Factorial Problem
+
+Write a Prolog predicate factorial/2 that computes the factorial of a number.
+
+factorial(N, F) should be true when F is the factorial of N.
+
+Requirements:
+- factorial(0, 1) should be true (base case)
+- factorial(1, 1) should be true
+- factorial(3, 6) should be true
+- factorial(5, 120) should be true
+
+The predicate should handle:
+- Base case: factorial of 0 is 1
+- Recursive case: factorial of N is N * factorial(N-1)

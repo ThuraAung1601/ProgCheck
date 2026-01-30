@@ -1,0 +1,13 @@
+PROLOG CODE CHECKER
+Problem: family_relations_problem.txt
+Student Code: family_reversed_logic.pl
+Step 1: Syntax Check
+Syntax OK
+Preparing test cases...
+Extracted from problem
+Step 2: Logical Analysis
+Step 3: Feedback
+LLM Input:
+{'status': 'logic_error', 'error': '["test_failure(grandparent(tom, ann), [\'grandparent(tom, ann)\'], [])", "test_failure(grandparent(tom, pat), [\'grandparent(tom, pat)\'], [])", "test_failure(grandparent(bob, jim), [\'grandparent(bob, jim)\'], [])"]', 'proof_tree': None, 'diagnoses': Variable(190)}
+LLM translation failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01keyfray1em6b8hkj2qhkk2ge` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99968, Requested 401. Please try again in 5m18.816s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+Predicate: grandparent/2

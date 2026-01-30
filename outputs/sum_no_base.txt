@@ -1,0 +1,13 @@
+PROLOG CODE CHECKER
+Problem: arithmetic_sum_problem.txt
+Student Code: sum_no_base.pl
+Step 1: Syntax Check
+Syntax OK
+Preparing test cases...
+Generating with LLM...
+LLM generation failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01keyfray1em6b8hkj2qhkk2ge` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99958, Requested 445. Please try again in 5m48.191999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+Step 2: Logical Analysis
+Step 3: Feedback
+LLM Input:
+{'status': 'unknown', 'error': 'No predicate', 'proof_tree': None, 'diagnoses': None}
+LLM translation failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01keyfray1em6b8hkj2qhkk2ge` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99958, Requested 261. Please try again in 3m9.216s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
