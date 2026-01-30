@@ -1,6 +1,8 @@
-# Prolog Debugging System with LLM Integration
+# ProgCheck: Neuro-Symbolic Prolog Lab Assistant
+## Phase-1 Bug Identification and Explanation
 
-Pattern-based Prolog debugging system for student programs. It separates logical reasoning (Prolog) from language translation (LLM) and ranks diagnoses by weighted evidence.
+Pattern-based Prolog bug identification and explanation system for student programs.
+It separates logical reasoning (Prolog) from language translation (LLM) and ranks diagnoses by weighted evidence.
 
 ## Quick Start
 
