@@ -1,0 +1,34 @@
+PROLOG CODE CHECKER
+Problem: factorial_problem.txt
+Student Code: factorial_swapped_args.pl
+Step 1: Syntax Check
+Syntax OK
+Preparing test cases...
+Extracted from problem
+Step 2: Logical Analysis
+Test Proof Trees:
+
+Query: factorial(0, 1)
+No proof tree (query failed)
+---
+
+Query: factorial(1, 1)
+Execution Trace:
+→ Depth 1: factorial(1,1)
+✗ Depth 2: 1=:=0 (failed)
+No proof tree (query failed)
+---
+
+Query: factorial(3, 6)
+No proof tree (query failed)
+---
+
+Query: factorial(5, 120)
+No proof tree (query failed)
+---
+Step 3: Feedback
+LLM Input:
+{'status': 'logic_error', 'error': '["test_failure(factorial(0, 1), [\'factorial(0, 1)\'], [])", "test_failure(factorial(3, 6), [\'factorial(3, 6)\'], [])", "test_failure(factorial(5, 120), [\'factorial(5, 120)\'], [])"]', 'proof_tree': None, 'diagnoses': Variable(166)}
+LLM Output:
+The student's code has a logic error because the argument order in the factorial predicate is swapped. The diagnosis _126 indicates that the test failures are due to this incorrect argument order. The tests failed for factorial(0, 1), factorial(3, 6), and factorial(5, 120) because of this mistake. The correct argument order should be factorial(N, F) instead of factorial(F, N).
+Predicate: factorial/2
