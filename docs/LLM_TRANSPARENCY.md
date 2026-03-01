@@ -214,15 +214,6 @@ To verify the transparency logging works:
 3. **Use local LLMs** if privacy is a major concern (future feature)
 4. **Don't commit API keys** to version control
 
-## Future Enhancements
-
-Potential improvements to transparency:
-- [ ] Add timestamps for LLM calls
-- [ ] Show token counts and API costs
-- [ ] Add response time metrics
-- [ ] Support for local LLM providers (no external data transfer)
-- [ ] Option to disable LLM logging (if needed)
-- [ ] Structured JSON format for programmatic analysis
 
 ## Conclusion
 
