@@ -1,0 +1,13 @@
+Problem: List Reversal
+
+Write a Prolog predicate `reverse_list(L, R)` that reverses a list.
+The predicate should be true when R is the reverse of list L.
+
+For example:
+- reverse_list([1,2,3], [3,2,1]) should succeed
+- reverse_list([], []) should succeed  
+- reverse_list([a], [a]) should succeed
+
+This is a classic recursive problem. Think about:
+1. What is the base case? (empty list)
+2. How to reverse the tail and append the head at the end?

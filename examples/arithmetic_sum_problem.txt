@@ -1,0 +1,9 @@
+Sum of Numbers Problem
+
+Write a Prolog predicate sum_list/2 that computes the sum of all numbers in a list.
+
+sum_list(L, S) should be true when S is the sum of all numbers in list L.
+
+Requirements:
+- Sum of empty list is 0
+- Sum of [H|T] is H + sum of T
