@@ -84,7 +84,6 @@ test(factorial(1, 1), [factorial(1, 1)]).
 - **How to use**: [docs/HOW_TO_USE.md](docs/HOW_TO_USE.md)
 - **System overview**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - **Prolog architecture**: [docs/PROLOG_ARCHITECTURE.md](docs/PROLOG_ARCHITECTURE.md)
-- **Line-by-line Prolog explanation**: [docs/PROLOG_LINE_BY_LINE.md](docs/PROLOG_LINE_BY_LINE.md)
 - **Syntax checker details**: [docs/SYNTAX_CHECKER.md](docs/SYNTAX_CHECKER.md)
 - **LLM transparency feature**: [docs/LLM_TRANSPARENCY.md](docs/LLM_TRANSPARENCY.md)
 
