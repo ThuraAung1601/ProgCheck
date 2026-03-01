@@ -1,4 +1,4 @@
-# Prolog Debugging System with LLM Integration
+# ProgCheck: Neuro-symbolic Prolog Debugging System
 
 Pattern-based Prolog debugging system for student programs. It separates logical reasoning (Prolog) from language translation (LLM) and ranks diagnoses by weighted evidence.
 
