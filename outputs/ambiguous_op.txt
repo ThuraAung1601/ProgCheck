@@ -1,0 +1,408 @@
+PROLOG CODE CHECKER
+Problem: ambiguous_op_problem.txt
+Student Code: ambiguous_op.pl
+Step 1: Syntax Check (Grammar-based Parser)
+Syntax OK - No syntax errors found!
+
+Preparing test cases...
+
+============================================================
+GENERATING TEST CASES WITH LLM
+============================================================
+
+LLM INPUT (Test Case Generation):
+
+Problem Text (266 chars):
+----------------------------------------
+% Problem: Ambiguous operator precedence example
+% Define predicate p/0 that succeeds if both a and b hold; otherwise, it should also succeed if both c and d hold. Facts a/0, b/0, c/0, d/0 are provided.
+% Clarify your intended precedence with parentheses if needed.
+
+----------------------------------------
+
+Student Code (31 chars):
+----------------------------------------
+a.
+b.
+c.
+d.
+
+p :- a, b ; c, d.
+
+----------------------------------------
+
+Calling LLM API (Groq Llama 3.3)...
+
+LLM OUTPUT (Generated Test Cases):
+----------------------------------------
+test(p, [p]).
+test(p, []).
+test(p, [p, p]).
+test(p, [a, b, p]).
+test(p, [c, d, p]).
+test(p, [a, c, p]).
+test(p, [b, d, p]).
+test(p, [a, b, c, d, p]).
+test(p, [a, b, c, d]).
+
+test(a, [a]).
+test(a, []).
+test(a, [a, a]).
+test(a, [a, b]).
+test(a, [b, a]).
+test(a, [c, a]).
+test(a, [d, a]).
+test(a, [a, b, c, d]).
+
+test(b, [b]).
+test(b, []).
+test(b, [b, b]).
+test(b, [a, b]).
+test(b, [b, a]).
+test(b, [c, b]).
+test(b, [d, b]).
+test(b, [a, b, c, d]).
+
+test(c, [c]).
+test(c, []).
+test(c, [c, c]).
+test(c, [a, c]).
+test(c, [c, a]).
+test(c, [b, c]).
+test(c, [d, c]).
+test(c, [a, b, c, d]).
+
+test(d, [d]).
+test(d, []).
+test(d, [d, d]).
+test(d, [a, d]).
+test(d, [d, a]).
+test(d, [b, d]).
+test(d, [d, b]).
+test(d, [a, b, c, d]).
+----------------------------------------
+
+Step 2: Logical Analysis
+
+Test Cases Being Used:
+----------------------------------------
+  1. test(p, [p]).
+  2. test(p, [p, p]).
+  3. test(p, [a, b, p]).
+  4. test(p, [c, d, p]).
+  5. test(p, [a, c, p]).
+  6. test(p, [b, d, p]).
+  7. test(p, [a, b, c, d, p]).
+  8. test(p, [a, b, c, d]).
+  10. test(a, [a]).
+  11. test(a, [a, a]).
+  12. test(a, [a, b]).
+  13. test(a, [b, a]).
+  14. test(a, [c, a]).
+  15. test(a, [d, a]).
+  16. test(a, [a, b, c, d]).
+  18. test(b, [b]).
+  19. test(b, [b, b]).
+  20. test(b, [a, b]).
+  21. test(b, [b, a]).
+  22. test(b, [c, b]).
+  23. test(b, [d, b]).
+  24. test(b, [a, b, c, d]).
+  26. test(c, [c]).
+  27. test(c, [c, c]).
+  28. test(c, [a, c]).
+  29. test(c, [c, a]).
+  30. test(c, [b, c]).
+  31. test(c, [d, c]).
+  32. test(c, [a, b, c, d]).
+  34. test(d, [d]).
+  35. test(d, [d, d]).
+  36. test(d, [a, d]).
+  37. test(d, [d, a]).
+  38. test(d, [b, d]).
+  39. test(d, [d, b]).
+  40. test(d, [a, b, c, d]).
+----------------------------------------
+
+Test Proof Trees:
+
+Query: p
+Execution Trace:
+Depth 1: p
+Depth 2: a,b;c,d (failed)
+No proof tree (query failed)
+---
+
+Query: p
+Execution Trace:
+Depth 1: p
+Depth 2: a,b;c,d (failed)
+No proof tree (query failed)
+---
+
+Query: p
+Execution Trace:
+Depth 1: p
+Depth 2: a,b;c,d (failed)
+No proof tree (query failed)
+---
+
+Query: p
+Execution Trace:
+Depth 1: p
+Depth 2: a,b;c,d (failed)
+No proof tree (query failed)
+---
+
+Query: p
+Execution Trace:
+Depth 1: p
+Depth 2: a,b;c,d (failed)
+No proof tree (query failed)
+---
+
+Query: p
+Execution Trace:
+Depth 1: p
+Depth 2: a,b;c,d (failed)
+No proof tree (query failed)
+---
+
+Query: p
+Execution Trace:
+Depth 1: p
+Depth 2: a,b;c,d (failed)
+No proof tree (query failed)
+---
+
+Query: p
+Execution Trace:
+Depth 1: p
+Depth 2: a,b;c,d (failed)
+No proof tree (query failed)
+---
+
+Query: a
+Execution Trace:
+Depth 1: a
+Proof Tree:
+Goal: a (fact)
+---
+
+Query: a
+Execution Trace:
+Depth 1: a
+Proof Tree:
+Goal: a (fact)
+---
+
+Query: a
+Execution Trace:
+Depth 1: a
+Proof Tree:
+Goal: a (fact)
+---
+
+Query: a
+Execution Trace:
+Depth 1: a
+Proof Tree:
+Goal: a (fact)
+---
+
+Query: a
+Execution Trace:
+Depth 1: a
+Proof Tree:
+Goal: a (fact)
+---
+
+Query: a
+Execution Trace:
+Depth 1: a
+Proof Tree:
+Goal: a (fact)
+---
+
+Query: a
+Execution Trace:
+Depth 1: a
+Proof Tree:
+Goal: a (fact)
+---
+
+Query: b
+Execution Trace:
+Depth 1: b
+Proof Tree:
+Goal: b (fact)
+---
+
+Query: b
+Execution Trace:
+Depth 1: b
+Proof Tree:
+Goal: b (fact)
+---
+
+Query: b
+Execution Trace:
+Depth 1: b
+Proof Tree:
+Goal: b (fact)
+---
+
+Query: b
+Execution Trace:
+Depth 1: b
+Proof Tree:
+Goal: b (fact)
+---
+
+Query: b
+Execution Trace:
+Depth 1: b
+Proof Tree:
+Goal: b (fact)
+---
+
+Query: b
+Execution Trace:
+Depth 1: b
+Proof Tree:
+Goal: b (fact)
+---
+
+Query: b
+Execution Trace:
+Depth 1: b
+Proof Tree:
+Goal: b (fact)
+---
+
+Query: c
+Execution Trace:
+Depth 1: c
+Proof Tree:
+Goal: c (fact)
+---
+
+Query: c
+Execution Trace:
+Depth 1: c
+Proof Tree:
+Goal: c (fact)
+---
+
+Query: c
+Execution Trace:
+Depth 1: c
+Proof Tree:
+Goal: c (fact)
+---
+
+Query: c
+Execution Trace:
+Depth 1: c
+Proof Tree:
+Goal: c (fact)
+---
+
+Query: c
+Execution Trace:
+Depth 1: c
+Proof Tree:
+Goal: c (fact)
+---
+
+Query: c
+Execution Trace:
+Depth 1: c
+Proof Tree:
+Goal: c (fact)
+---
+
+Query: c
+Execution Trace:
+Depth 1: c
+Proof Tree:
+Goal: c (fact)
+---
+
+Query: d
+Execution Trace:
+Depth 1: d
+Proof Tree:
+Goal: d (fact)
+---
+
+Query: d
+Execution Trace:
+Depth 1: d
+Proof Tree:
+Goal: d (fact)
+---
+
+Query: d
+Execution Trace:
+Depth 1: d
+Proof Tree:
+Goal: d (fact)
+---
+
+Query: d
+Execution Trace:
+Depth 1: d
+Proof Tree:
+Goal: d (fact)
+---
+
+Query: d
+Execution Trace:
+Depth 1: d
+Proof Tree:
+Goal: d (fact)
+---
+
+Query: d
+Execution Trace:
+Depth 1: d
+Proof Tree:
+Goal: d (fact)
+---
+
+Query: d
+Execution Trace:
+Depth 1: d
+Proof Tree:
+Goal: d (fact)
+---
+Execution Trace:
+Depth 1: p
+Depth 2: a,b;c,d (failed)
+Step 3: Feedback
+
+============================================================
+GENERATING NATURAL LANGUAGE FEEDBACK WITH LLM
+============================================================
+
+LLM INPUT (Feedback Generation):
+----------------------------------------
+Analysis Results:
+  status: logic_error
+  error: ['timeout']
+  diagnoses: []
+
+Problem Text (266 chars)
+Student Code (31 chars)
+----------------------------------------
+
+Calling LLM API (Groq Llama 3.3)...
+
+LLM OUTPUT (Natural Language Feedback):
+============================================================
+The student's code is causing a problem because it's not clear what order the conditions should be checked. The code `p :- a, b ; c, d.` means "p is true if a and b are true, or if c and d are true", but Prolog is getting stuck and running out of time trying to figure it out. The tests failed, but no specific diagnosis was produced. This is likely due to the ambiguous operator precedence in the code.
+============================================================
+
+Auto-correction skipped (auto_fix disabled).
+Predicate: p/0

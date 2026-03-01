@@ -1,0 +1,259 @@
+PROLOG CODE CHECKER
+Problem: cut_max_problem.txt
+Student Code: cut_correct.pl
+Step 1: Syntax Check (Grammar-based Parser)
+Syntax OK - No syntax errors found!
+
+Preparing test cases...
+
+============================================================
+GENERATING TEST CASES WITH LLM
+============================================================
+
+LLM INPUT (Test Case Generation):
+
+Problem Text (593 chars):
+----------------------------------------
+Cut - Maximum of Two Numbers Problem
+
+Write a Prolog predicate max/3 that finds the maximum of two numbers using cut (!).
+
+max(X, Y, Max) should be true when Max is the greater of X and Y.
+
+Requirements:
+- max(3, 5, 5) should be true
+- max(7, 2, 7) should be true
+- max(4, 4, 4) should be true
+- max(0, 1, 1) should be true
+- max(10, 3, 10) should be true
+
+The predicate should handle:
+- When X >= Y: Max is X (commit with cut to avoid redundant backtracking)
+- When X < Y:  Max is Y (fallback clause)
+
+Use cut (!) to make the predicate deterministic:
+max(X, Y, X) :- X >= Y, !.
+max(_, Y, Y).
+
+----------------------------------------
+
+Student Code (83 chars):
+----------------------------------------
+% Max - CORRECT implementation using cut
+
+max(X, Y, X) :- X >= Y, !.
+max(_, Y, Y).
+
+----------------------------------------
+
+Calling LLM API (Groq Llama 3.3)...
+
+LLM OUTPUT (Generated Test Cases):
+----------------------------------------
+test(max(3, 5, 5), [max(3, 5, 5)]).
+test(max(7, 2, 7), [max(7, 2, 7)]).
+test(max(4, 4, 4), [max(4, 4, 4)]).
+test(max(0, 1, 1), [max(0, 1, 1)]).
+test(max(10, 3, 10), [max(10, 3, 10)]).
+test(max(5, 3, 5), [max(5, 3, 5)]).
+test(max(0, 0, 0), [max(0, 0, 0)]).
+test(max(-1, 1, 1), [max(-1, 1, 1)]).
+test(max(1, -1, 1), [max(1, -1, 1)]).
+test(max(1, 1, 1), [max(1, 1, 1)]).
+test(max(-5, -3, -3), [max(-5, -3, -3)]).
+test(max(5, 5, 5), [max(5, 5, 5)]).
+
+test(max(3, 5, 3), []).
+test(max(2, 7, 2), []).
+test(max(1, 4, 4), [max(1, 4, 4)]).
+test(max(1, 0, 1), [max(1, 0, 1)]).
+test(max(3, 10, 10), [max(3, 10, 10)]).
+test(max(3, 5, 6), []).
+test(max(0, 1, 0), []).
+test(max(-1, 1, -1), []).
+test(max(1, -1, -1), []).
+test(max(1, 1, 2), []).
+test(max(-5, -3, -5), []).
+test(max(5, 5, 6), []).
+----------------------------------------
+
+Step 2: Logical Analysis
+
+Test Cases Being Used:
+----------------------------------------
+  1. test(max(3, 5, 5), [max(3, 5, 5)]).
+  2. test(max(7, 2, 7), [max(7, 2, 7)]).
+  3. test(max(4, 4, 4), [max(4, 4, 4)]).
+  4. test(max(0, 1, 1), [max(0, 1, 1)]).
+  5. test(max(10, 3, 10), [max(10, 3, 10)]).
+  6. test(max(5, 3, 5), [max(5, 3, 5)]).
+  7. test(max(0, 0, 0), [max(0, 0, 0)]).
+  8. test(max(-1, 1, 1), [max(-1, 1, 1)]).
+  9. test(max(1, -1, 1), [max(1, -1, 1)]).
+  10. test(max(1, 1, 1), [max(1, 1, 1)]).
+  11. test(max(-5, -3, -3), [max(-5, -3, -3)]).
+  12. test(max(5, 5, 5), [max(5, 5, 5)]).
+  14. test(max(1, 4, 4), [max(1, 4, 4)]).
+  15. test(max(1, 0, 1), [max(1, 0, 1)]).
+  16. test(max(3, 10, 10), [max(3, 10, 10)]).
+----------------------------------------
+
+Test Proof Trees:
+
+Query: max(3, 5, 5)
+Execution Trace:
+Depth 1: max(3,5,5)
+Proof Tree:
+Goal: max(3,5,5) (fact)
+---
+
+Query: max(7, 2, 7)
+Execution Trace:
+Depth 1: max(7,2,7)
+Proof Tree:
+Goal: max(7,2,7) :- 7>=2,!
+    Builtin: 7>=2
+    Builtin: !
+---
+
+Query: max(4, 4, 4)
+Execution Trace:
+Depth 1: max(4,4,4)
+Proof Tree:
+Goal: max(4,4,4) :- 4>=4,!
+    Builtin: 4>=4
+    Builtin: !
+---
+
+Query: max(0, 1, 1)
+Execution Trace:
+Depth 1: max(0,1,1)
+Proof Tree:
+Goal: max(0,1,1) (fact)
+---
+
+Query: max(10, 3, 10)
+Execution Trace:
+Depth 1: max(10,3,10)
+Proof Tree:
+Goal: max(10,3,10) :- 10>=3,!
+    Builtin: 10>=3
+    Builtin: !
+---
+
+Query: max(5, 3, 5)
+Execution Trace:
+Depth 1: max(5,3,5)
+Proof Tree:
+Goal: max(5,3,5) :- 5>=3,!
+    Builtin: 5>=3
+    Builtin: !
+---
+
+Query: max(0, 0, 0)
+Execution Trace:
+Depth 1: max(0,0,0)
+Proof Tree:
+Goal: max(0,0,0) :- 0>=0,!
+    Builtin: 0>=0
+    Builtin: !
+---
+
+Query: max(-1, 1, 1)
+Execution Trace:
+Depth 1: max(-1,1,1)
+Proof Tree:
+Goal: max(-1,1,1) (fact)
+---
+
+Query: max(1, -1, 1)
+Execution Trace:
+Depth 1: max(1,-1,1)
+Proof Tree:
+Goal: max(1,-1,1) :- 1>= -1,!
+    Builtin: 1>= -1
+    Builtin: !
+---
+
+Query: max(1, 1, 1)
+Execution Trace:
+Depth 1: max(1,1,1)
+Proof Tree:
+Goal: max(1,1,1) :- 1>=1,!
+    Builtin: 1>=1
+    Builtin: !
+---
+
+Query: max(-5, -3, -3)
+Execution Trace:
+Depth 1: max(-5,-3,-3)
+Proof Tree:
+Goal: max(-5,-3,-3) (fact)
+---
+
+Query: max(5, 5, 5)
+Execution Trace:
+Depth 1: max(5,5,5)
+Proof Tree:
+Goal: max(5,5,5) :- 5>=5,!
+    Builtin: 5>=5
+    Builtin: !
+---
+
+Query: max(1, 4, 4)
+Execution Trace:
+Depth 1: max(1,4,4)
+Proof Tree:
+Goal: max(1,4,4) (fact)
+---
+
+Query: max(1, 0, 1)
+Execution Trace:
+Depth 1: max(1,0,1)
+Proof Tree:
+Goal: max(1,0,1) :- 1>=0,!
+    Builtin: 1>=0
+    Builtin: !
+---
+
+Query: max(3, 10, 10)
+Execution Trace:
+Depth 1: max(3,10,10)
+Proof Tree:
+Goal: max(3,10,10) (fact)
+---
+Proof Tree:
+Goal: max(3,5,5) (fact)
+Execution Trace:
+Depth 1: max(3,5,5)
+Step 3: Feedback
+
+============================================================
+GENERATING NATURAL LANGUAGE FEEDBACK WITH LLM
+============================================================
+
+LLM INPUT (Feedback Generation):
+----------------------------------------
+Analysis Results:
+  status: correct
+  proof_tree: Goal: max(3,5,5) (fact)
+  diagnoses: []
+
+Problem Text (593 chars)
+Student Code (83 chars)
+----------------------------------------
+
+Calling LLM API (Groq Llama 3.3)...
+
+LLM OUTPUT (Natural Language Feedback):
+============================================================
+The program proves that the maximum of 3 and 5 is 5. 
+It works by following the Prolog predicate max/3, which compares two numbers and returns the greater one. 
+The proof tree shows that max(3, 5, 5) is true because 5 is greater than 3. 
+At each step, the program checks the conditions and uses cut (!) to ensure that once a condition is met, it does not backtrack. 
+Therefore, the program correctly implements the maximum of two numbers problem using cut. 
+The proof tree confirms that max(3, 5, 5) is true, as required.
+============================================================
+
+Auto-correction skipped (auto_fix disabled).
+Predicate: max/3
