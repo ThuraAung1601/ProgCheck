@@ -1,0 +1,114 @@
+# =============================================================================
+# PROLOG GRAMMAR (BNF Notation)
+# Formal grammar for a subset of Prolog suitable for student code validation
+# =============================================================================
+
+# Top-level structure
+<program>           ::= <clause_list>
+<clause_list>       ::= <clause> <clause_list> | ε
+
+<clause>            ::= <fact> | <rule> | <query>
+<fact>              ::= <term> "."
+<rule>              ::= <head> ":-" <body> "."
+<query>             ::= "?-" <body> "."
+
+# Clause components
+<head>              ::= <compound_term>
+<body>              ::= <goal> | <goal> "," <body> | <goal> ";" <body>
+<goal>              ::= <term>
+
+# Terms
+<term>              ::= <variable>
+                      | <atom>
+                      | <number>
+                      | <compound_term>
+                      | <list>
+                      | <string>
+                      | <infix_expr>
+                      | "!"          # cut as a standalone goal/term
+
+<compound_term>     ::= <functor> "(" <arguments> ")"
+<functor>           ::= <atom>
+<arguments>         ::= <term> | <term> "," <arguments>
+
+# Infix expressions (subset)
+<infix_expr>        ::= <term> <operator> <term>
+
+# Lists
+<list>              ::= "[" "]"
+                      | "[" <list_elements> "]"
+                      | "[" <list_elements> "|" <term> "]"
+
+<list_elements>     ::= <term> | <term> "," <list_elements>
+
+# Atomic terms
+<variable>          ::= <uppercase_letter> <alphanum>*
+                      | "_" <alphanum>*
+
+<atom>              ::= <lowercase_letter> <alphanum>*
+                      | "'" <quoted_chars> "'"
+                      | <special_atom>
+
+<number>            ::= <integer> | <float>
+<integer>           ::= <digit>+ | "-" <digit>+
+<float>             ::= <digit>+ "." <digit>+ | "-" <digit>+ "." <digit>+
+
+<string>            ::= '"' <string_chars> '"'
+
+# Character classes
+<uppercase_letter>  ::= "A" | "B" | ... | "Z"
+<lowercase_letter>  ::= "a" | "b" | ... | "z"
+<digit>             ::= "0" | "1" | ... | "9"
+<alphanum>          ::= <letter> | <digit> | "_"
+<letter>            ::= <uppercase_letter> | <lowercase_letter>
+
+# Special atoms (operators and built-ins)
+<special_atom>      ::= "[]" | "!" | "true" | "false" | "fail"
+
+# Operators (subset for student code)
+<operator>          ::= "is" | "=" | "\\=" | "==" | "\\==" 
+                      | "<" | ">" | "=<" | ">="
+                      | "+" | "-" | "*" | "/" | "//" | "mod"
+                      | "=.." | "\\+"
+
+# Comments (stripped before tokenization)
+<comment>           ::= "%" <text_until_newline>
+                      | "/*" <text_until_close> "*/"
+
+# =============================================================================
+# ERROR PATTERNS TO DETECT
+# =============================================================================
+
+# 1. Missing period at end of clause
+#    factorial(0, 1)    ← MISSING "."
+
+# 2. Unmatched parentheses
+#    factorial(N, R) :- N > 0, factorial(N1, R1.    ← MISSING ")"
+
+# 3. Unmatched brackets
+#    append([H|T], L, [H|R) :- append(T, L, R).     ← "]" became ")"
+
+# 4. Variable starting with lowercase
+#    factorial(n, R) :- R is 1.    ← "n" should be "N"
+
+# 5. Invalid operators
+#    X := 5      ← should be "X is 5"
+#    X != Y      ← should be "X \\= Y"
+#    X && Y      ← should be "X , Y"
+
+# 6. Missing clause body
+#    factorial(N, R) :-.    ← body missing after ":-"
+
+# 7. Space in atom/functor
+#    fact orial(5, 120).    ← should be "factorial"
+
+# 8. Dangling comma
+#    factorial(N, R) :- N > 0,.    ← trailing comma
+
+# =============================================================================
+# NOTES
+# =============================================================================
+# - This grammar is simplified for educational purposes
+# - Full Prolog grammar includes many more operators and constructs
+# - DCG implementation handles left-recursion and provides better error messages
+# - Whitespace is implicit and handled by tokenizer
