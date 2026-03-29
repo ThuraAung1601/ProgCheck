@@ -1,0 +1,141 @@
+PROLOG CODE CHECKER
+Problem: factorial_problem.txt
+Student Code: factorial_no_base.pl
+Step 1: Syntax Check (Grammar-based Parser)
+Syntax OK - No syntax errors found!
+
+Preparing test cases...
+Extracted from problem
+Step 2: Logical Analysis
+
+Test Cases Being Used:
+----------------------------------------
+  1. test(factorial(0, 1), [factorial(0, 1)]).
+  2. test(factorial(1, 1), [factorial(1, 1)]).
+  3. test(factorial(3, 6), [factorial(3, 6)]).
+  4. test(factorial(5, 120), [factorial(5, 120)]).
+----------------------------------------
+
+Test Proof Trees:
+
+Query: factorial(0, 1)
+Execution Trace:
+Error generating trace
+No proof tree (query failed)
+---
+
+Query: factorial(1, 1)
+Execution Trace:
+Error generating trace
+No proof tree (query failed)
+---
+
+Query: factorial(3, 6)
+Execution Trace:
+Error generating trace
+No proof tree (query failed)
+---
+
+Query: factorial(5, 120)
+Execution Trace:
+Error generating trace
+No proof tree (query failed)
+---
+Execution Trace:
+Error generating trace
+Shapiro Analysis Mode: nonterminating
+TERMINATION DEBUGGER -- non-progressing clauses:
+  Head   : factorial(_470,_472)
+  Body   : _482 is _470+ -1,factorial(_482,_502),_472 is _470*_502
+  RecCall: factorial(_482,_502)
+
+============================================================
+ALGORITHMIC DEBUGGING (LLM as Oracle — Shapiro's Method)
+============================================================
+  factorial(0, 1)  →  1 node(s) via nontermination (termination debugger)
+  factorial(1, 1)  →  1 node(s) via nontermination (termination debugger)
+  factorial(3, 6)  →  1 node(s) via nontermination (termination debugger)
+  factorial(5, 120)  →  1 node(s) via nontermination (termination debugger)
+  factorial(0,1)  →  1 node(s) via nontermination (termination debugger)
+Total: 5 node(s) queued for oracle.
+[AlgoDebug] Mode: nonterminating | 1 unique node(s) (of 5 total)
+[AlgoDebug] ----------------------------------------------------------
+[TER] [BUG] factorial(A,B) :- C is A+ -1,factorial(C,D),B is A*D  [rec: factorial(C,D)]  [failing: factorial(0, 1)]
+       The recursive call does not guarantee termination because the argument C, which is A+ -1, is not necessarily smaller than A, it's actually equivalent to A-1, but due to the syntax A+ -1, it seems like it could be interpreted as A + (-1) which would be correct, however the correct syntax should be A - 1, or A + (-1) to avoid confusion, but in this case, it seems like a typo and the intention was A - 1, but as written, the expression A+ -1 is equivalent to A, which does not decrease toward the base case.
+
+ALGORITHMIC DEBUGGING (TERMINATION DEBUGGER) — LLM ORACLE SESSION
+==============================================================
+Oracle: LLM judging each node against the problem specification
+Method: Shapiro's Algorithmic Debugging (1982) — TERMINATION mode
+
+WRONG nodes (5):
+[BUG] factorial(A,B) :- C is A+ -1,factorial(C,D),B is A*D  [failing goal: factorial(0, 1)]
+       RecCall: factorial(C,D)
+       Reason: The recursive call does not guarantee termination because the argument C, which is A+ -1, is not necessarily smaller than A, it's actually equivalent to A-1, but due to the syntax A+ -1, it seems like it could be interpreted as A + (-1) which would be correct, however the correct syntax should be A - 1, or A + (-1) to avoid confusion, but in this case, it seems like a typo and the intention was A - 1, but as written, the expression A+ -1 is equivalent to A, which does not decrease toward the base case.
+[BUG] factorial(A,B) :- C is A+ -1,factorial(C,D),B is A*D  [failing goal: factorial(1, 1)]
+       RecCall: factorial(C,D)
+       Reason: The recursive call does not guarantee termination because the argument C, which is A+ -1, is not necessarily smaller than A, it's actually equivalent to A-1, but due to the syntax A+ -1, it seems like it could be interpreted as A + (-1) which would be correct, however the correct syntax should be A - 1, or A + (-1) to avoid confusion, but in this case, it seems like a typo and the intention was A - 1, but as written, the expression A+ -1 is equivalent to A, which does not decrease toward the base case.
+[BUG] factorial(A,B) :- C is A+ -1,factorial(C,D),B is A*D  [failing goal: factorial(3, 6)]
+       RecCall: factorial(C,D)
+       Reason: The recursive call does not guarantee termination because the argument C, which is A+ -1, is not necessarily smaller than A, it's actually equivalent to A-1, but due to the syntax A+ -1, it seems like it could be interpreted as A + (-1) which would be correct, however the correct syntax should be A - 1, or A + (-1) to avoid confusion, but in this case, it seems like a typo and the intention was A - 1, but as written, the expression A+ -1 is equivalent to A, which does not decrease toward the base case.
+[BUG] factorial(A,B) :- C is A+ -1,factorial(C,D),B is A*D  [failing goal: factorial(5, 120)]
+       RecCall: factorial(C,D)
+       Reason: The recursive call does not guarantee termination because the argument C, which is A+ -1, is not necessarily smaller than A, it's actually equivalent to A-1, but due to the syntax A+ -1, it seems like it could be interpreted as A + (-1) which would be correct, however the correct syntax should be A - 1, or A + (-1) to avoid confusion, but in this case, it seems like a typo and the intention was A - 1, but as written, the expression A+ -1 is equivalent to A, which does not decrease toward the base case.
+[BUG] factorial(A,B) :- C is A+ -1,factorial(C,D),B is A*D
+       RecCall: factorial(C,D)
+       Reason: The recursive call does not guarantee termination because the argument C, which is A+ -1, is not necessarily smaller than A, it's actually equivalent to A-1, but due to the syntax A+ -1, it seems like it could be interpreted as A + (-1) which would be correct, however the correct syntax should be A - 1, or A + (-1) to avoid confusion, but in this case, it seems like a typo and the intention was A - 1, but as written, the expression A+ -1 is equivalent to A, which does not decrease toward the base case.
+
+==============================================================
+PRIMARY FAULT LOCALISATION (TERMINATION DEBUGGER — Shapiro):
+  Deepest WRONG node pinpoints the faulty clause.
+
+  Faulty clause #1: factorial(A,B) :- C is A+ -1,factorial(C,D),B is A*D
+  Non-progressing:   factorial(C,D)
+  Oracle reason    : The recursive call does not guarantee termination because the argument C, which is A+ -1, is not necessarily smaller than A, it's actually equivalent to A-1, but due to the syntax A+ -1, it seems like it could be interpreted as A + (-1) which would be correct, however the correct syntax should be A - 1, or A + (-1) to avoid confusion, but in this case, it seems like a typo and the intention was A - 1, but as written, the expression A+ -1 is equivalent to A, which does not decrease toward the base case.
+
+==============================================================
+Step 3: Feedback
+
+============================================================
+GENERATING NATURAL LANGUAGE FEEDBACK WITH LLM
+============================================================
+
+LLM INPUT (Feedback Generation):
+----------------------------------------
+Analysis Results:
+  status: logic_error
+  error: ["test_failure(factorial(0, 1), ['factorial(0, 1)'], [])", "test_failure(factorial(1, 1), ['factorial(1, 1)'], [])", "test_failure(factorial(3, 6), ['factorial(3, 6)'], [])", "test_failure(factorial(5, 120), ['factorial(5, 120)'], [])"]
+  shapiro_mode: nonterminating
+  shapiro_nodes_text: TERMINATION DEBUGGER -- non-progressing clauses:
+  Head   : factorial(_470,_472)
+  Body   : _482 is _470+ -1,factorial(_482,_502),_472 is _470*_502
+  RecCall: factorial(_482,_502)
+
+
+  debug_summary: DEBUGGING SUMMARY
+=================
+- cut events: 0
+- choice points: 0
+- failed steps: 0
+- depth limit hits: 0
+Likely behavior → cause:
+* Multiple wrong answers -> Test failures
+  evidence: 4 failing test cases were reported.
+  student_error_code: factorial(N, F) :-
+    N1 is N - 1,
+    factorial(N1, F1),
+    F is N * F1.
+
+Problem Text (438 chars)
+Student Code (76 chars)
+----------------------------------------
+
+Calling LLM API (Groq Llama 3.3)...
+
+LLM OUTPUT (Natural Language Feedback):
+============================================================
+The Shapiro analysis mode indicates that the code has a "nonterminating" error, which means it will keep running indefinitely without stopping. This happens because the recursive call to the factorial predicate does not have a proper base case to stop the recursion. The analysis shows that the recursive call is not making progress, causing the function to loop indefinitely. The tests failed due to this nonterminating error, which prevents the function from producing the correct results.
+============================================================
+
+Auto-correction skipped (auto_fix disabled).
+Predicate: factorial/2

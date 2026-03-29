@@ -1,0 +1,10 @@
+# Core dependencies
+groq>=0.4.0
+pyswip>=0.2.11
+python-dotenv>=1.0.0
+fastapi>=0.115.0
+uvicorn>=0.30.0
+zodb>=5.8.0
+
+# Optional: for development
+pytest>=7.4.0

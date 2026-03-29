@@ -1,0 +1,41 @@
+PROLOG CODE CHECKER
+Problem: factorial_problem.txt
+Student Code: syntax_invalid_operator.pl
+Step 1: Syntax Check (Grammar-based Parser)
+
+============================================================
+SYNTAX ERROR DETECTED (Grammar-based Parser)
+============================================================
+Error #1:
+Invalid operator: :=
+  Hint: Use "is" for arithmetic assignment (X is 5)
+
+------------------------------------------------------------
+
+Step 3: Feedback
+
+============================================================
+GENERATING NATURAL LANGUAGE FEEDBACK WITH LLM
+============================================================
+
+LLM INPUT (Feedback Generation):
+----------------------------------------
+Analysis Results:
+  status: syntax_error
+  error: parse_error
+  syntax_error: {'line': 0, 'type': 'parse_error', 'line_text': 'Invalid operator: :=\n  Hint: Use "is" for arithmetic assignment (X is 5)', 'friendly_message': 'Invalid operator: :=\n  Hint: Use "is" for arithmetic assignment (X is 5)'}
+  student_error_code: factorial(0, 1).
+factorial(N, F) :- N > 0, N1 := N-1, factorial(N1, F1), F is N*F1.
+
+Problem Text (438 chars)
+Student Code (84 chars)
+----------------------------------------
+
+Calling LLM API (Groq Llama 3.3)...
+
+LLM OUTPUT (Natural Language Feedback):
+============================================================
+The error occurs because the operator ":=" is not a valid operator in Prolog for arithmetic assignment. To fix this, you should use the "is" operator instead, as in "X is 5", to assign the result of an arithmetic expression to a variable. This change will allow Prolog to correctly parse and execute the code.
+============================================================
+
+Auto-correction skipped (auto_fix disabled).

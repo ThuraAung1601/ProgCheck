@@ -1,0 +1,12 @@
+append([], [], []).
+append([], [a,b], [a,b]).
+append([a,b], [], [a,b]).
+append([a,b], [c,d], [a,b,c,d]).
+append([1,2], [3], [1,2,3]).
+append([], [x,y,z], [x,y,z]).
+append([a,b,c], [], [a,b,c]).
+append([a,b], [c], [a,b,c]).
+append([a|T], [c], [a,b,c]).
+append([a], X, [a,b,c]).
+append(X, Y, [a,b]).
+append([a], [b], [a,b]).

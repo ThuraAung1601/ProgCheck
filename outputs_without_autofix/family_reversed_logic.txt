@@ -1,0 +1,105 @@
+PROLOG CODE CHECKER
+Problem: family_relations_problem.txt
+Student Code: family_reversed_logic.pl
+Step 1: Syntax Check (Grammar-based Parser)
+
+============================================================
+SYNTAX ERROR DETECTED (Grammar-based Parser)
+============================================================
+Error #1:
+Variable 'tom' starts with lowercase
+  Hint: Variables must start with uppercase or underscore. Try: TOM
+
+------------------------------------------------------------
+
+Error #2:
+Variable 'bob' starts with lowercase
+  Hint: Variables must start with uppercase or underscore. Try: BOB
+
+------------------------------------------------------------
+
+Error #3:
+Variable 'tom' starts with lowercase
+  Hint: Variables must start with uppercase or underscore. Try: TOM
+
+------------------------------------------------------------
+
+Error #4:
+Variable 'liz' starts with lowercase
+  Hint: Variables must start with uppercase or underscore. Try: LIZ
+
+------------------------------------------------------------
+
+Error #5:
+Variable 'bob' starts with lowercase
+  Hint: Variables must start with uppercase or underscore. Try: BOB
+
+------------------------------------------------------------
+
+Error #6:
+Variable 'ann' starts with lowercase
+  Hint: Variables must start with uppercase or underscore. Try: ANN
+
+------------------------------------------------------------
+
+Error #7:
+Variable 'bob' starts with lowercase
+  Hint: Variables must start with uppercase or underscore. Try: BOB
+
+------------------------------------------------------------
+
+Error #8:
+Variable 'pat' starts with lowercase
+  Hint: Variables must start with uppercase or underscore. Try: PAT
+
+------------------------------------------------------------
+
+Error #9:
+Variable 'pat' starts with lowercase
+  Hint: Variables must start with uppercase or underscore. Try: PAT
+
+------------------------------------------------------------
+
+Error #10:
+Variable 'jim' starts with lowercase
+  Hint: Variables must start with uppercase or underscore. Try: JIM
+
+------------------------------------------------------------
+
+Step 3: Feedback
+
+============================================================
+GENERATING NATURAL LANGUAGE FEEDBACK WITH LLM
+============================================================
+
+LLM INPUT (Feedback Generation):
+----------------------------------------
+Analysis Results:
+  status: syntax_error
+  error: parse_error
+  syntax_error: {'line': 0, 'type': 'parse_error', 'line_text': "Variable 'tom' starts with lowercase\n  Hint: Variables must start with uppercase or underscore. Try: TOM", 'friendly_message': "Variable 'tom' starts with lowercase\n  Hint: Variables must start with uppercase or underscore. Try: TOM"}
+  student_error_code: parent(tom, bob).
+parent(tom, liz).
+parent(bob, ann).
+parent(bob, pat).
+parent(pat, jim).
+grandparent(X, Y) :-
+    parent(Z, X),
+    parent(Y, Z).
+sibling(X, Y) :-
+    parent(P, X),
+    parent(P, Y),
+    X \= Y.
+
+Problem Text (899 chars)
+Student Code (212 chars)
+----------------------------------------
+
+Calling LLM API (Groq Llama 3.3)...
+
+LLM OUTPUT (Natural Language Feedback):
+============================================================
+The error occurs because the variable 'tom' starts with a lowercase letter, which is not allowed in Prolog. In Prolog, variables must start with either an uppercase letter or an underscore. To fix the error, you can rename the variable to start with an uppercase letter, such as 'Tom' or '_tom', or simply change 'tom' to 'TOM' as suggested in the hint.
+============================================================
+
+Auto-correction skipped (auto_fix disabled).

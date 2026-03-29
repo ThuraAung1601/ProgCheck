@@ -1,0 +1,94 @@
+PROLOG CODE CHECKER
+Problem: factorial_problem.txt
+Student Code: factorial_arity_mismatch.pl
+Step 1: Syntax Check (Grammar-based Parser)
+Syntax OK - No syntax errors found!
+
+Preparing test cases...
+Extracted from problem
+Step 2: Logical Analysis
+
+Test Cases Being Used:
+----------------------------------------
+  1. test(factorial(0, 1), [factorial(0, 1)]).
+  2. test(factorial(1, 1), [factorial(1, 1)]).
+  3. test(factorial(3, 6), [factorial(3, 6)]).
+  4. test(factorial(5, 120), [factorial(5, 120)]).
+----------------------------------------
+
+Test Proof Trees:
+
+Query: factorial(0, 1)
+Execution Trace:
+Depth 1: factorial(0,1) (failed)
+No proof tree (query failed)
+---
+
+Query: factorial(1, 1)
+Execution Trace:
+Depth 1: factorial(1,1) (failed)
+No proof tree (query failed)
+---
+
+Query: factorial(3, 6)
+Execution Trace:
+Depth 1: factorial(3,6) (failed)
+No proof tree (query failed)
+---
+
+Query: factorial(5, 120)
+Execution Trace:
+Depth 1: factorial(5,120) (failed)
+No proof tree (query failed)
+---
+Execution Trace:
+Depth 1: factorial(0,1) (failed)
+Shapiro Analysis Mode: incomplete
+Incompleteness suspected but predicate is undefined.
+
+============================================================
+ALGORITHMIC DEBUGGING (LLM as Oracle — Shapiro's Method)
+============================================================
+No nodes available for algorithmic debugging.
+(All goals failed before any clause could fire — check for syntax errors or completely missing predicate.)
+Step 3: Feedback
+
+============================================================
+GENERATING NATURAL LANGUAGE FEEDBACK WITH LLM
+============================================================
+
+LLM INPUT (Feedback Generation):
+----------------------------------------
+Analysis Results:
+  status: logic_error
+  error: ["test_failure(factorial(0, 1), ['factorial(0, 1)'], [])", "test_failure(factorial(1, 1), ['factorial(1, 1)'], [])", "test_failure(factorial(3, 6), ['factorial(3, 6)'], [])", "test_failure(factorial(5, 120), ['factorial(5, 120)'], [])"]
+  shapiro_mode: incomplete
+  shapiro_nodes_text: Incompleteness suspected but predicate is undefined.
+  debug_summary: DEBUGGING SUMMARY
+=================
+- cut events: 0
+- choice points: 0
+- failed steps: 5
+- depth limit hits: 0
+Likely behavior → cause:
+* Multiple wrong answers -> Test failures
+  evidence: 4 failing test cases were reported.
+  student_error_code: factorial(0).
+factorial(N) :-
+    N > 0,
+    N1 is N - 1,
+    factorial(N1).
+
+Problem Text (438 chars)
+Student Code (77 chars)
+----------------------------------------
+
+Calling LLM API (Groq Llama 3.3)...
+
+LLM OUTPUT (Natural Language Feedback):
+============================================================
+The Shapiro analysis mode reports that the predicate is "incomplete", which means that the program is missing some necessary rules or conditions to produce the correct results. This suggests that the code is not fully defined to handle all possible cases. The tests failed, but the analysis did not provide more specific details about the issue. The code is missing a crucial part to correctly calculate the factorial of a number.
+============================================================
+
+Auto-correction skipped (auto_fix disabled).
+Predicate: factorial/2

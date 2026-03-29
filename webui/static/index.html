@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prolog Debugging UI</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Prolog Debugging UI</h1>
+    <div class="toolbar">
+      <select id="problemSelect"></select>
+      <select id="studentSelect"></select>
+      <select id="testSelect"></select>
+      <button id="loadBtn">Load</button>
+      <button id="saveBtn">Save Code</button>
+    </div>
+  </header>
+
+  <main class="layout" id="mainLayout">
+    <section class="editor-pane">
+      <div class="pane-title">Editor</div>
+      <textarea id="editor"></textarea>
+    </section>
+
+    <div class="divider vertical" data-target="rightPane"></div>
+
+    <section class="right-pane" id="rightPane">
+      <div class="panel question-panel" id="questionPanel">
+        <div class="panel-header">
+          <span>Question (scrollable)</span>
+        </div>
+        <pre id="questionText" class="scrollable"></pre>
+      </div>
+
+      <div class="divider horizontal" data-target="queryPanel"></div>
+
+      <div class="panel query-panel" id="queryPanel">
+        <div class="panel-header">
+          <span>Test Query Input</span>
+          <button class="toggle" data-toggle="queryPanel">Close</button>
+        </div>
+        <div class="query-controls">
+          <input id="queryInput" type="text" placeholder="Example: max(3,5,X)" />
+          <div class="button-row">
+            <button id="syntaxBtn">Check Syntax (Step 1)</button>
+            <button id="queryBtn">Run Test Query</button>
+            <button id="llmBtn">LLM Feedback</button>
+            <button id="visualizeBtn">Visualize</button>
+            <button id="diagnoseBtn">Run Full Diagnosis</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider horizontal" data-target="feedbackPanel"></div>
+
+      <div class="panel feedback-panel" id="feedbackPanel">
+        <div class="panel-header">
+          <span>Feedback</span>
+          <button class="toggle" data-toggle="feedbackPanel">Close</button>
+        </div>
+        <pre id="feedbackText" class="scrollable"></pre>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="fixDialog">
+    <h3>Auto-corrected Code Diff</h3>
+    <pre id="diffText" class="diff-box"></pre>
+    <div class="button-row">
+      <button id="acceptFixBtn">Accept</button>
+      <button id="denyFixBtn">Deny</button>
+    </div>
+  </dialog>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

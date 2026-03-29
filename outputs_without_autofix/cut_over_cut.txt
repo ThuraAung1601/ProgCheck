@@ -1,0 +1,121 @@
+PROLOG CODE CHECKER
+Problem: cut_max_problem.txt
+Student Code: cut_over_cut.pl
+Step 1: Syntax Check (Grammar-based Parser)
+Syntax OK - No syntax errors found!
+
+Preparing test cases...
+Extracted from problem
+Step 2: Logical Analysis
+
+Test Cases Being Used:
+----------------------------------------
+  1. test(max(3, 5, 5), [max(3, 5, 5)]).
+  2. test(max(7, 2, 7), [max(7, 2, 7)]).
+  3. test(max(4, 4, 4), [max(4, 4, 4)]).
+  4. test(max(0, 1, 1), [max(0, 1, 1)]).
+  5. test(max(10, 3, 10), [max(10, 3, 10)]).
+----------------------------------------
+
+Test Proof Trees:
+
+Query: max(3, 5, 5)
+Execution Trace:
+Depth 1: max(3,5,5)
+Depth 2: 3>=5 (failed)
+Depth 2: ! (CUT - pruning alternatives)
+No proof tree (query failed)
+---
+
+Query: max(7, 2, 7)
+Execution Trace:
+Depth 1: max(7,2,7)
+Depth 2: ! (CUT - pruning alternatives)
+No proof tree (query failed)
+---
+
+Query: max(4, 4, 4)
+Execution Trace:
+Depth 1: max(4,4,4)
+Depth 1: choice point max(4,4,4) (2 clauses)
+Depth 2: ! (CUT - pruning alternatives)
+No proof tree (query failed)
+---
+
+Query: max(0, 1, 1)
+Execution Trace:
+Depth 1: max(0,1,1)
+Depth 2: 0>=1 (failed)
+Depth 2: ! (CUT - pruning alternatives)
+No proof tree (query failed)
+---
+
+Query: max(10, 3, 10)
+Execution Trace:
+Depth 1: max(10,3,10)
+Depth 2: ! (CUT - pruning alternatives)
+No proof tree (query failed)
+---
+Execution Trace:
+Depth 1: max(3,5,5)
+Depth 2: 3>=5 (failed)
+Depth 2: ! (CUT - pruning alternatives)
+Shapiro Analysis Mode: incomplete
+INCOMPLETENESS DEBUGGER -- existing clauses shown to oracle:
+  max(_586,_588,_586) :-
+    _586>=_588,!
+  max(_554,_556,_556) :-
+    _554>=_556,!
+
+DEBUGGING SUMMARY
+=================
+- cut events: 6
+- choice points: 1
+- failed steps: 3
+- depth limit hits: 0
+Likely behavior → cause:
+* Multiple wrong answers -> Test failures
+  evidence: 2 failing test cases were reported.
+Step 3: Feedback
+
+============================================================
+GENERATING NATURAL LANGUAGE FEEDBACK WITH LLM
+============================================================
+
+LLM INPUT (Feedback Generation):
+----------------------------------------
+Analysis Results:
+  status: logic_error
+  error: ["test_failure(max(3, 5, 5), ['max(3, 5, 5)'], [])", "test_failure(max(0, 1, 1), ['max(0, 1, 1)'], [])"]
+  shapiro_mode: incomplete
+  shapiro_nodes_text: INCOMPLETENESS DEBUGGER -- existing clauses shown to oracle:
+  max(_586,_588,_586) :-
+    _586>=_588,!
+  max(_554,_556,_556) :-
+    _554>=_556,!
+
+  debug_summary: DEBUGGING SUMMARY
+=================
+- cut events: 6
+- choice points: 1
+- failed steps: 3
+- depth limit hits: 0
+Likely behavior → cause:
+* Multiple wrong answers -> Test failures
+  evidence: 2 failing test cases were reported.
+  student_error_code: max(X, Y, X) :- X >= Y, !.
+max(X, Y, Y) :- X >= Y, !.
+
+Problem Text (593 chars)
+Student Code (54 chars)
+----------------------------------------
+
+Calling LLM API (Groq Llama 3.3)...
+
+LLM OUTPUT (Natural Language Feedback):
+============================================================
+The Shapiro analysis mode indicates that the code is incomplete. This means that the program does not cover all possible cases, resulting in some tests failing. The analysis shows that the existing clauses are not sufficient to handle all scenarios. Tests failed, and the code needs to be revised to handle cases where X is less than Y.
+============================================================
+
+Auto-correction skipped (auto_fix disabled).
+Predicate: max/3
