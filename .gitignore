@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Node
+node_modules/
+webui/frontend/node_modules/
+
+# React build output (generated — do not commit)
+static/
+
+# Editor
+.DS_Store
+.vscode/
+*.swp
+
+# Temp files
+*.tmp
+/tmp/

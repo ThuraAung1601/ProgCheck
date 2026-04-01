@@ -1,0 +1,20 @@
+List Append Problem
+
+Write a Prolog predicate append/3 that concatenates two lists.
+
+append(L1, L2, L3) should be true when L3 is the result of appending list L2 to list L1.
+
+Test Cases:
+- append([], [1,2,3], [1,2,3]) should be true
+- append([1,2], [3,4], [1,2,3,4]) should be true
+- append([a], [b,c], [a,b,c]) should be true
+- append([1,2,3], [], [1,2,3]) should be true
+- append([], [], []) should be true
+
+Requirements:
+- Base case: appending anything to empty list gives that list
+- Recursive case: move first element from L1 to result, append rest
+
+Expected behavior:
+append([], L, L).
+append([H|T1], L2, [H|T3]) :- append(T1, L2, T3).

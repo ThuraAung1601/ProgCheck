@@ -1,0 +1,27 @@
+Family Relations Problem
+
+Given facts about parent relationships, implement predicates for family relationships.
+
+Background Facts:
+parent(tom, bob).
+parent(tom, liz).
+parent(bob, ann).
+parent(bob, pat).
+parent(pat, jim).
+
+Task: Write predicates for:
+1. grandparent(X, Y) - X is grandparent of Y
+2. sibling(X, Y) - X and Y are siblings (same parents)
+
+Rules:
+- X is grandparent of Y if X is parent of Z and Z is parent of Y
+- X and Y are siblings if they have the same parent P and X != Y
+
+Test Cases:
+- grandparent(tom, ann) should be true (tom -> bob -> ann)
+- grandparent(tom, pat) should be true
+- grandparent(bob, jim) should be true (bob -> pat -> jim)
+- grandparent(tom, jim) should be false (not direct grandparent)
+- sibling(ann, pat) should be true (both children of bob)
+- sibling(bob, liz) should be true (both children of tom)
+- sibling(ann, ann) should be false (can't be own sibling)

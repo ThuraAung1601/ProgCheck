@@ -1,0 +1,20 @@
+Cut - Maximum of Two Numbers Problem
+
+Write a Prolog predicate max/3 that finds the maximum of two numbers using cut (!).
+
+max(X, Y, Max) should be true when Max is the greater of X and Y.
+
+Requirements:
+- max(3, 5, 5) should be true
+- max(7, 2, 7) should be true
+- max(4, 4, 4) should be true
+- max(0, 1, 1) should be true
+- max(10, 3, 10) should be true
+
+The predicate should handle:
+- When X >= Y: Max is X (commit with cut to avoid redundant backtracking)
+- When X < Y:  Max is Y (fallback clause)
+
+Use cut (!) to make the predicate deterministic:
+max(X, Y, X) :- X >= Y, !.
+max(_, Y, Y).
