@@ -25,3 +25,5 @@ static/
 # Temp files
 *.tmp
 /tmp/
+
+data/*.lock

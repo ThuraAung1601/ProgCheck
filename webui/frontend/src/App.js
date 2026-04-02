@@ -700,7 +700,7 @@ export default function App() {
             setScreen('landing');
           }}
           onUserUpdate={handleUserUpdate}
-          mainContent={<PrologCheckerUI />}
+          mainContent={PrologCheckerUI()}
         />
       )}
     </>

@@ -5,8 +5,10 @@ import Button from '../components/Button.js';
 
 const LoginPage = ({ defaultRole = 'student', onLogin, onBack }) => {
   const [role, setRole] = useState(defaultRole);
-  const [id, setId] = useState('');
-  const [pass, setPass] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [studentId, setStudentId] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
 
@@ -14,25 +16,89 @@ const LoginPage = ({ defaultRole = 'student', onLogin, onBack }) => {
   const accentDark = role === 'teacher' ? '#3681D6' : '#2FA57E';
   const accentLight = role === 'teacher' ? '#EAF2FF' : '#E6F9F2';
 
-  const handleLogin = () => {
-    if (!id || !pass) {
-      setErr('Please enter both ID and password');
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    if (!username || !password) {
+      setErr('Please enter both username and password');
       return;
     }
     
     setErr('');
     setLoading(true);
     
-    setTimeout(() => {
+    try {
+      const endpoint = role === 'student' ? '/api/auth/login/student' : '/api/auth/login/teacher';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username,
+          password,
+        }),
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || 'Login failed');
+      }
+      
+      const data = await res.json();
+      // Store token in localStorage
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('userId', data.user.id);
+      localStorage.setItem('userRole', data.user.role);
+      
+      onLogin(data.user, data.user.role);
+    } catch (e) {
+      setErr(e.message || 'Login failed');
+    } finally {
       setLoading(false);
-      const userData = {
-        id,
-        name: id === '66011148' ? 'Alex Johnson' : 'Dr. Smith',
-        email: `${id}@kmitl.ac.th`
-      };
-      onLogin(userData, role);
-    }, 1200);
+    }
   };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    if (!username || !password || (role === 'student' && !studentId)) {
+      setErr('Please fill all required fields');
+      return;
+    }
+    
+    setErr('');
+    setLoading(true);
+    
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username,
+          password,
+          role,
+          student_id: role === 'student' ? studentId : undefined,
+          teacher_id: role === 'teacher' ? studentId : undefined,
+        }),
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || 'Registration failed');
+      }
+      
+      const data = await res.json();
+      // Store token in localStorage
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('userId', data.user.id);
+      localStorage.setItem('userRole', data.user.role);
+      
+      onLogin(data.user, data.user.role);
+    } catch (e) {
+      setErr(e.message || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = isRegistering ? handleRegister : handleLogin;
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', background: '#F5F7FA', fontFamily: "'Google Sans', sans-serif" }}>
@@ -79,50 +145,89 @@ const LoginPage = ({ defaultRole = 'student', onLogin, onBack }) => {
         </div>
 
         <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-.04em', marginBottom: 8, color: '#111827' }}>
-          {role === 'student' ? 'Student Log In' : 'Instructor Log In'}
+          {isRegistering 
+            ? (role === 'student' ? 'Create Student Account' : 'Create Teacher Account')
+            : (role === 'student' ? 'Student Log In' : 'Instructor Log In')
+          }
         </h1>
         <p style={{ color: '#6B7280', fontSize: 14, marginBottom: 32 }}>
-          Welcome back! Enter your KMITL credentials to continue.
+          {isRegistering ? 'Set up your account to get started' : 'Welcome back! Enter your credentials to continue.'}
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
-          <InputField 
-            label="Student ID / Username" 
-            value={id} 
-            onChange={setId}
-            placeholder={role === 'student' ? 'e.g. 66011148' : 'e.g. T-001'} 
-            icon="user" 
-          />
-          <InputField 
-            label="Password" 
-            value={pass} 
-            onChange={setPass}
-            placeholder="Enter your password" 
-            type="password" 
-            icon="lock" 
-          />
-        </div>
-
-        {err && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 9, background: '#FEF2F2', marginBottom: 16 }}>
-            <Icon name="alert" size={15} color="#EF4444" />
-            <span style={{ fontSize: 13, color: '#EF4444' }}>{err}</span>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+            {isRegistering && (role === 'student' ? (
+              <InputField 
+                label="Student ID" 
+                value={studentId} 
+                onChange={setStudentId}
+                placeholder="e.g. 66011148" 
+                icon="id" 
+              />
+            ) : (
+              <InputField 
+                label="Teacher ID" 
+                value={studentId} 
+                onChange={setStudentId}
+                placeholder="e.g. T-001" 
+                icon="id" 
+              />
+            ))}
+            <InputField 
+              label="Username" 
+              value={username} 
+              onChange={setUsername}
+              placeholder="Choose a username" 
+              icon="user" 
+            />
+            <InputField 
+              label="Password" 
+              value={password} 
+              onChange={setPassword}
+              placeholder="Enter your password" 
+              type="password" 
+              icon="lock" 
+            />
           </div>
-        )}
 
-        <Button 
-          onClick={handleLogin}
-          size="lg"
-          style={{
-            width: '100%',
-            background: `linear-gradient(135deg, ${accent}, ${accentDark})`,
-            color: '#fff',
-            boxShadow: `0 4px 20px ${role === 'teacher' ? 'rgba(91,163,245,.35)' : 'rgba(78,203,160,.35)'}`
-          }}
-          disabled={loading}
-        >
-          {loading ? 'Signing In...' : 'Sign In'}
-        </Button>
+          {err && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 9, background: '#FEF2F2', marginBottom: 16 }}>
+              <Icon name="alert" size={15} color="#EF4444" />
+              <span style={{ fontSize: 13, color: '#EF4444' }}>{err}</span>
+            </div>
+          )}
+
+          <Button 
+            type="submit"
+            size="lg"
+            style={{
+              width: '100%',
+              background: `linear-gradient(135deg, ${accent}, ${accentDark})`,
+              color: '#fff',
+              boxShadow: `0 4px 20px ${role === 'teacher' ? 'rgba(91,163,245,.35)' : 'rgba(78,203,160,.35)'}`
+            }}
+            disabled={loading}
+          >
+            {loading ? (isRegistering ? 'Creating Account...' : 'Signing In...') : (isRegistering ? 'Create Account' : 'Sign In')}
+          </Button>
+
+          <button 
+            type="button"
+            onClick={() => { setIsRegistering(!isRegistering); setErr(''); }}
+            style={{
+              marginTop: 12,
+              background: 'none',
+              border: 'none',
+              color: '#6B7280',
+              fontSize: 13,
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              padding: 0
+            }}
+          >
+            {isRegistering ? 'Already have an account? Sign in' : "Don't have an account? Create one"}
+          </button>
+        </form>
       </div>
 
       {/* <div style={{ flex: 1, background: `linear-gradient(135deg, ${accent}, ${accentDark})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
