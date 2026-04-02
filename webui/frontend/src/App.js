@@ -102,6 +102,7 @@ export default function App() {
   const [canVisualize, setCanVisualize] = useState(false);
   const [isNewFile, setIsNewFile] = useState(false);
   const [saveFilename, setSaveFilename] = useState('');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Editor / graph state
   const [code, setCode] = useState('');
@@ -433,10 +434,10 @@ export default function App() {
 
   // Prolog Checker UI Component
   const PrologCheckerUI = () => (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-bg-primary text-txt-primary font-sans">
+    <div className="flex flex-col h-full w-full overflow-hidden bg-bg-primary text-txt-primary font-sans">
 
       {/* ── Top bar ── */}
-      <header className="flex items-center gap-2 px-3 h-[46px] bg-bg-secondary border-b border-border-subtle flex-shrink-0 z-10 overflow-x-auto">
+      <header className="flex items-center gap-2 px-3 h-[46px] bg-bg-secondary border-b border-border-subtle flex-shrink-0 z-10 overflow-hidden">
 
         {/* Brand */}
         <div className="flex items-center gap-1.5 mr-1 flex-shrink-0">
@@ -471,8 +472,8 @@ export default function App() {
         <Btn onClick={runLlm} disabled={loading} variant="warning" title="LLM natural-language feedback">LLM</Btn>
         <Btn onClick={runDiagnosis} disabled={loading} variant="danger" title="Full diagnosis with optional auto-fix">Diagnose</Btn>
 
-        {/* Shapiro mode badge */}
-        {lastResult && (
+        {/* Shapiro mode badge — hidden when sidebar is expanded to prevent header overflow */}
+        {lastResult && sidebarCollapsed && (
           <span className={`ml-auto text-[10px] px-2 py-0.5 rounded border flex-shrink-0
             ${lastResult.has_logic_error
               ? 'text-red-300 border-red-700/40 bg-red-900/15'
@@ -700,7 +701,9 @@ export default function App() {
             setScreen('landing');
           }}
           onUserUpdate={handleUserUpdate}
-          mainContent={<PrologCheckerUI />}
+          sidebarCollapsed={sidebarCollapsed}
+          onSidebarChange={setSidebarCollapsed}
+          mainContent={PrologCheckerUI()}
         />
       )}
     </>
