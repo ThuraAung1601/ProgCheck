@@ -85,31 +85,6 @@ const LoginPage = ({ defaultRole = 'student', onLogin, onBack }) => {
           Welcome back! Enter your KMITL credentials to continue.
         </p>
 
-        <div style={{ display: 'flex', background: '#E5E7EB', borderRadius: 10, padding: 4, marginBottom: 28 }}>
-          {['student', 'teacher'].map(r => (
-            <button
-              key={r}
-              onClick={() => setRole(r)}
-              style={{
-                flex: 1, 
-                padding: '9px 0', 
-                borderRadius: 8, 
-                fontSize: 13, 
-                fontWeight: 600,
-                background: role === r ? '#fff' : 'transparent',
-                color: role === r ? '#111827' : '#6B7280',
-                boxShadow: role === r ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
-                transition: 'all .15s', 
-                textTransform: 'capitalize',
-                border: 'none',
-                cursor: 'pointer'
-              }}
-            >
-              {r === 'teacher' ? 'Instructor' : 'Student'}
-            </button>
-          ))}
-        </div>
-
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
           <InputField 
             label="Student ID / Username" 
@@ -150,11 +125,68 @@ const LoginPage = ({ defaultRole = 'student', onLogin, onBack }) => {
         </Button>
       </div>
 
-      <div style={{ flex: 1, background: `linear-gradient(135deg, ${accent}, ${accentDark})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {/* <div style={{ flex: 1, background: `linear-gradient(135deg, ${accent}, ${accentDark})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', color: '#fff' }}>
           <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 16 }}>Welcome to ProgCheck</h2>
           <p style={{ fontSize: 16, opacity: 0.9, maxWidth: 300 }}>
             Your intelligent Prolog code evaluation platform
+          </p>
+        </div>
+      </div> */}
+      {/* --- RIGHT SIDE BANNER --- */}
+      <div style={{ 
+        flex: 1, 
+        background: `linear-gradient(135deg, ${accent}, ${accentDark})`, 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        padding: '60px',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        {/* Main Content Wrapper */}
+        <div style={{ 
+          maxWidth: 440, 
+          color: '#fff',
+          zIndex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-start' /* Left-aligns everything for a cleaner look */
+        }}>
+          
+          {/* Frosted Glass Icon Box */}
+          <div style={{
+            width: 64, 
+            height: 64, 
+            borderRadius: 16,
+            background: 'rgba(255,255,255,0.15)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            marginBottom: 32
+          }}>
+            <Icon name="code" size={32} color="#fff" />
+          </div>
+
+          <h2 style={{ 
+            fontSize: 46, 
+            fontWeight: 800, 
+            lineHeight: 1.15, 
+            letterSpacing: '-.03em',
+            marginBottom: 60 
+          }}>
+            Welcome to<br/>ProgCheck
+          </h2>
+          
+          <p style={{ 
+            fontSize: 18, 
+            lineHeight: 1.6, 
+            opacity: 0.85, 
+            fontWeight: 400 
+          }}>
+            Your intelligent Prolog code evaluation platform. Combine symbolic reasoning with LLMs for transparent, explainable feedback.
           </p>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Icon from './Icon.js';
 
 const InputField = ({ 
@@ -13,11 +13,16 @@ const InputField = ({
   icon 
 }) => {
   const [isFocused, setIsFocused] = useState(false);
+  
+  // Generate a unique ID from the label
+  const fieldId = useMemo(() => {
+    return `field-${label.toLowerCase().replace(/\s+/g, '-')}`;
+  }, [label]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}>
+        <label htmlFor={fieldId} style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}>
           {label}
         </label>
         {badge && (
@@ -37,6 +42,8 @@ const InputField = ({
       
       <div style={{ position: 'relative' }}>
         <input 
+          id={fieldId}
+          name={fieldId}
           value={value} 
           onChange={e => onChange && onChange(e.target.value)}
           placeholder={placeholder} 

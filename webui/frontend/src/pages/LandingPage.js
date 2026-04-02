@@ -12,7 +12,13 @@ const LandingPage = ({ onStudentLogin, onTeacherLogin }) => {
   }, []);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F5F7FA', fontFamily: "'Google Sans', sans-serif" }}>
+    <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        minHeight: '100vh', 
+        background: '#F5F7FA', 
+        fontFamily: "'Google Sans', sans-serif" 
+        }}>
       <nav style={{
         position: 'sticky', 
         top: 0, 
@@ -51,12 +57,16 @@ const LandingPage = ({ onStudentLogin, onTeacherLogin }) => {
       </nav>
 
       <section style={{
+        flex: 1,                  
+        justifyContent: 'center', 
+        padding: '80px 56px',
         padding: '80px 56px 100px', 
         display: 'flex', 
         alignItems: 'center',
-        gap: 60, 
+        gap: 100, 
         maxWidth: 1200, 
-        margin: '0 auto'
+        margin: '0 auto',
+        width: '100%'
       }}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
           <div style={{
@@ -155,6 +165,7 @@ const LandingPage = ({ onStudentLogin, onTeacherLogin }) => {
       </section>
 
       <footer style={{ 
+        marginTop: 'auto',
         padding: '24px 56px', 
         borderTop: '1px solid #E5E7EB', 
         display: 'flex', 

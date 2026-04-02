@@ -113,6 +113,8 @@ export default function CodeEditor({ value, onChange, highlightLines = [] }) {
 
         {/* Editable textarea — identical geometry to highlight layer */}
         <textarea
+          id="code-editor"
+          name="code-editor"
           ref={textareaRef}
           value={value}
           onChange={e => onChange(e.target.value)}

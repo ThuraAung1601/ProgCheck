@@ -8,7 +8,7 @@ import GraphCanvas from './components/GraphCanvas';
 import NodeInfo from './components/NodeInfo';
 import BacktrackTree from './components/BacktrackTree';
 import Modal from './components/Modal';
-import { parseProlog, clausesToGraph, reorderClausesByY } from './utils/prologParser';
+import { parseProlog, clausesToGraph } from './utils/prologParser';
 import { rewireEdge } from './utils/rewire';
 import { simulateProlog } from './utils/prologEngineSimulator';
 import { extractSourceClauses } from './utils/engineOutputParser';
@@ -47,9 +47,9 @@ function Btn({ onClick, children, disabled, variant = 'default', title }) {
   );
 }
 
-function FileSelect({ value, onChange, options, placeholder }) {
+function FileSelect({ value, onChange, options, placeholder, id, name }) {
   return (
-    <select value={value} onChange={e => onChange(e.target.value)}
+    <select id={id} name={name} value={value} onChange={e => onChange(e.target.value)}
       className="bg-bg-elevated border border-border-accent text-txt-secondary text-[11px] rounded px-2 py-1 font-mono focus:outline-none focus:border-accent-blue max-w-[160px]">
       <option value="">{placeholder}</option>
       {options.map(o => <option key={o} value={o}>{o.split('/').pop()}</option>)}
@@ -60,6 +60,8 @@ function FileSelect({ value, onChange, options, placeholder }) {
 function SaveInput({ value, onChange, onSubmit }) {
   return (
     <input
+      id="save-filename"
+      name="save-filename"
       autoFocus
       value={value}
       onChange={(e) => onChange(e.target.value)}
@@ -111,15 +113,46 @@ export default function App() {
   const parseTimer = useRef(null);
   // Use a callback ref so the ResizeObserver reattaches whenever
   // the graph tab mounts (the div only exists when rightTab === 'graph')
+  // Use a ref to track the ResizeObserver instance so we can clean it up properly
+  const obsRef = useRef(null);
+  const resizeTimerRef = useRef(null);
+
   const canvasRef = useCallback((el) => {
+    // Clean up old observer
+    if (obsRef.current) {
+      obsRef.current.disconnect();
+      obsRef.current = null;
+    }
+    if (resizeTimerRef.current) {
+      clearTimeout(resizeTimerRef.current);
+      resizeTimerRef.current = null;
+    }
+
+    // Set up new observer if element exists
     if (!el) return;
+    
     const obs = new ResizeObserver(entries => {
       const { width, height } = entries[0].contentRect;
-      if (width > 10 && height > 10) setCanvasSize({ width, height });
+      // Debounce resize updates to avoid excessive state changes
+      if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current);
+      resizeTimerRef.current = setTimeout(() => {
+        if (width > 10 && height > 10) setCanvasSize({ width, height });
+      }, 50);
     });
     obs.observe(el);
-    // Store cleanup on the element itself
-    el._obs = obs;
+    obsRef.current = obs;
+  }, []);
+
+  // Clean up ResizeObserver on unmount
+  useEffect(() => {
+    return () => {
+      if (obsRef.current) {
+        obsRef.current.disconnect();
+      }
+      if (resizeTimerRef.current) {
+        clearTimeout(resizeTimerRef.current);
+      }
+    };
   }, []);
 
   // Right panel tab: 'problem' | 'feedback' | 'graph' | 'trace'
@@ -128,6 +161,10 @@ export default function App() {
   const [traceData, setTraceData] = useState(null);   // null = trace not yet generated
 
   const setMsg = useCallback((msg, kind = 'idle') => setStatus({ msg, kind }), []);
+
+  const handleUserUpdate = useCallback((updatedUser) => {
+    setUser(updatedUser);
+  }, []);
 
   const fetchOptions = useCallback(async () => {
     try {
@@ -151,7 +188,14 @@ export default function App() {
     parseTimer.current = setTimeout(() => {
       try {
         const clauses = parseProlog(code);
-        setGraph(clausesToGraph(clauses, posRef.current));
+        const newGraph = clausesToGraph(clauses, posRef.current);
+        setGraph(newGraph);
+        // Clear selected node if it no longer exists in the new graph
+        setSelNode(prev => {
+          if (!prev) return null;
+          const nodeExists = newGraph.nodes.some(n => n.id === prev.id);
+          return nodeExists ? prev : null;
+        });
       } catch { /* ignore while typing */ }
     }, 350);
     return () => clearTimeout(parseTimer.current);
@@ -161,11 +205,13 @@ export default function App() {
   const onNodeDragEnd = useCallback((positions) => {
     const posMap = Object.fromEntries(positions.map(p => [p.id, { x: p.x, y: p.y }]));
     posRef.current = { ...posRef.current, ...posMap };
-    setGraph(prev => ({ ...prev, nodes: prev.nodes.map(n => posMap[n.id] ? { ...n, ...posMap[n.id] } : n) }));
-    const allNodes = graph.nodes.map(n => posMap[n.id] ? { ...n, ...posMap[n.id] } : n);
-    const reordered = reorderClausesByY(code, allNodes);
-    if (reordered !== code) setCode(reordered);
-  }, [code, graph.nodes]);
+    
+    // Update graph positions only (don't reorder code here - avoid circular updates)
+    setGraph(prev => ({
+      ...prev,
+      nodes: prev.nodes.map(n => posMap[n.id] ? { ...n, ...posMap[n.id] } : n)
+    }));
+  }, []);
 
   const onNodeClick = useCallback((node) => setSelNode(prev => prev?.id === node.id ? null : node), []);
 
@@ -256,7 +302,7 @@ export default function App() {
     setIsNewFile(false);
 
     setMsg('Saved', 'ok');
-  }), [selStudent, code, isNewFile, withLoading]);
+  }), [selStudent, code, isNewFile, withLoading, fetchOptions, setMsg]);
 
   const createNewFile = useCallback(() => {
     setSelProblem('');
@@ -401,9 +447,9 @@ export default function App() {
         </div>
 
         {/* File selectors */}
-        <FileSelect value={selProblem} onChange={setSelProblem} options={problems} placeholder="Problem…" />
-        <FileSelect value={selStudent} onChange={setSelStudent} options={students} placeholder="Student code…" />
-        <FileSelect value={selTest} onChange={setSelTest} options={tests} placeholder="Test file…" />
+        <FileSelect value={selProblem} onChange={setSelProblem} options={problems} placeholder="Problem…" id="problem-select" name="problem-select" />
+        <FileSelect value={selStudent} onChange={setSelStudent} options={students} placeholder="Student code…" id="student-select" name="student-select" />
+        <FileSelect value={selTest} onChange={setSelTest} options={tests} placeholder="Test file…" id="test-select" name="test-select" />
         <Btn onClick={loadFiles} variant="primary" disabled={loading}>Load</Btn>
         <Btn onClick={saveCode} disabled={loading || !selProblem || !code}>Save</Btn>
         <Btn onClick={createNewFile} variant="success">New</Btn>
@@ -412,6 +458,8 @@ export default function App() {
 
         {/* Query + actions */}
         <input
+          id="query-input"
+          name="query-input"
           value={query} onChange={e => setQuery(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && runQuery()}
           placeholder="e.g. max(3,5,X)"
@@ -634,7 +682,7 @@ export default function App() {
       )}
       {screen === 'login' && (
         <LoginPage
-          userRole={userRole}
+          defaultRole={userRole}
           onLogin={(userData, role) => {
             setUser({ ...userData, role });
             setScreen('dashboard');
@@ -645,11 +693,13 @@ export default function App() {
       {screen === 'dashboard' && user && (
         <Dashboard
           user={user}
+          role={user.role}
           onLogout={() => {
             setUser(null);
             setUserRole(null);
             setScreen('landing');
           }}
+          onUserUpdate={handleUserUpdate}
           mainContent={<PrologCheckerUI />}
         />
       )}

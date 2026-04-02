@@ -7,18 +7,25 @@
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1"
   },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "cross-env BUILD_PATH=../../static react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app"
+    ]
+  },
+  "browserslist": {
+    "production": [">0.2%", "not dead", "not op_mini all"],
+    "development": ["last 1 chrome version"]
+  },
   "devDependencies": {
     "tailwindcss": "^3.4.1",
     "autoprefixer": "^10.4.17",
     "postcss": "^8.4.35",
     "cross-env": "^7.0.3"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "cross-env BUILD_PATH=../../static react-scripts build"
-  },
-  "browserslist": {
-    "production": [">0.2%", "not dead", "not op_mini all"],
-    "development": ["last 1 chrome version"]
   }
 }

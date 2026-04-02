@@ -6,6 +6,8 @@ import SettingsPage from './SettingsPage.js';
 
 const Dashboard = ({ user, role, onLogout, onUserUpdate, mainContent }) => {
   const [activePage, setActivePage] = useState('dashboard');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const sidebarWidth = sidebarCollapsed ? '80px' : 'var(--sidebar-w)';
 
   const pages = {
     classroom: <ClassroomPage role={role} />,
@@ -21,9 +23,11 @@ const Dashboard = ({ user, role, onLogout, onUserUpdate, mainContent }) => {
         activePage={activePage} 
         onNavigate={setActivePage} 
         user={user} 
-        onLogout={onLogout} 
+        onLogout={onLogout}
+        collapsed={sidebarCollapsed}
+        onCollapseChange={setSidebarCollapsed}
       />
-      <main style={{ marginLeft: 'var(--sidebar-w)', flex: 1, overflow: 'auto'}}>
+      <main style={{ marginLeft: sidebarWidth, flex: 1, overflow: 'auto', transition: 'margin-left 0.3s ease' }}>
         {pages[activePage]}
       </main>
     </div>
