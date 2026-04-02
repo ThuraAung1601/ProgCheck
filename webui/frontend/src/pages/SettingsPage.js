@@ -1,0 +1,145 @@
+import React, { useState } from 'react';
+import Icon from '../components/Icon.js';
+import Avatar from '../components/Avatar.js';
+import InputField from '../components/InputField.js';
+import Toggle from '../components/Toggle.js';
+import Button from '../components/Button.js';
+import Card from '../components/Card.js';
+
+const SettingsPage = ({ role, user, onUserUpdate }) => {
+  const [theme, setTheme] = useState('dark');
+  const [tabSize, setTabSize] = useState('2');
+  const [autoSave, setAutoSave] = useState(true);
+  const [emailAlerts, setEmailAlerts] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [name, setName] = useState(user.name);
+  const accent = role === 'teacher' ? '#5BA3F5' : '#4ECBA0';
+  const accentLight = role === 'teacher' ? '#EAF2FF' : '#E6F9F2';
+
+  const handleSave = () => {
+    onUserUpdate({ ...user, name });
+    setShowModal(false);
+  };
+
+  return (
+    <div className="fade-in" style={{ padding: '32px 24px', background: 'var(--surface)', fontFamily: "'Google Sans', sans-serif" }}>
+      <div style={{ marginBottom: 28, textAlign: 'left' }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-.03em', color: '#111827' }}>Settings</h1>
+        <p style={{ color: '#6B7280', fontSize: 14, marginTop: 4 }}>
+          Manage your profile, preferences, and notifications.
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 900 }}>
+        <Card style={{ padding: 24, background: '#F9FAFB', border: '1px solid #E5E7EB' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+            <Icon name="lock" size={18} color={accent} />
+            <span style={{ fontWeight: 700, fontSize: 15, color: '#111827' }}>Profile Details</span>
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr', gap: 24, alignItems: 'flex-start' }}>
+            <div style={{ position: 'relative' }}>
+              <Avatar name={user.name} size={72} role={role} />
+              <button 
+                onClick={() => setShowModal(true)}
+                style={{
+                  position: 'absolute', 
+                  bottom: 0, 
+                  right: 0,
+                  width: 26, 
+                  height: 26, 
+                  borderRadius: '50%', 
+                  background: '#111827',
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <Icon name="camera" size={12} color="#fff" />
+              </button>
+            </div>
+            
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', marginBottom: 8, textAlign: 'left' }}>
+                Display Name
+              </div>
+              <input 
+                type="text"
+                value={name}
+                readOnly
+                onChange={(e) => setName(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  fontSize: 14,
+                  color: '#111827',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: 8,
+                  background: '#fff',
+                  fontFamily: 'inherit'
+                }}
+                placeholder="Your name"
+              />
+            </div>
+
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', marginBottom: 8, textAlign: 'left' }}>
+                Email Address
+              </div>
+              <input 
+                type="email"
+                value={user.email}
+                readOnly
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  fontSize: 14,
+                  color: '#374151',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: 8,
+                  background: '#F9FAFB',
+                  fontFamily: 'inherit',
+                  cursor: 'not-allowed'
+                }}
+              />
+            </div>
+          </div>
+        </Card>
+
+        <Card style={{ padding: 24, background: '#F9FAFB', border: '1px solid #E5E7EB' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+            <Icon name="sliders" size={18} color={accent} />
+            <span style={{ fontWeight: 700, fontSize: 15, color: '#111827' }}>User Preferences</span>
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2 }}>Auto-Save</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)' }}>Automatically save your code</div>
+              </div>
+              <Toggle value={autoSave} onChange={setAutoSave} />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2 }}>Email Alerts</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)' }}>Get notified of new assignments</div>
+              </div>
+              <Toggle value={emailAlerts} onChange={setEmailAlerts} />
+            </div>
+          </div>
+        </Card>
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <Button style={{ background: accent, color: '#fff' }}>Save Changes</Button>
+          <Button variant="secondary">Cancel</Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SettingsPage;

@@ -1,4 +1,8 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import GlobalStyle from './styles/GlobalStyle';
+import LandingPage from './pages/LandingPage';
+import LoginPage from './pages/LoginPage';
+import Dashboard from './pages/Dashboard';
 import CodeEditor from './components/CodeEditor';
 import GraphCanvas from './components/GraphCanvas';
 import NodeInfo from './components/NodeInfo';
@@ -10,7 +14,8 @@ import { simulateProlog } from './utils/prologEngineSimulator';
 import { extractSourceClauses } from './utils/engineOutputParser';
 
 // ── API ───────────────────────────────────────────────────────────────────
-const API_BASE = process.env.REACT_APP_API_BASE || '';
+// const API_BASE = process.env.REACT_APP_API_BASE || '';
+const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
 
 async function apiFetch(path, body) {
   const res = await fetch(API_BASE + path, {
@@ -71,6 +76,11 @@ function SaveInput({ value, onChange, onSubmit }) {
 
 // ── Main App ──────────────────────────────────────────────────────────────
 export default function App() {
+  // Authentication & screen routing
+  const [screen, setScreen] = useState('landing');
+  const [user, setUser] = useState(null);
+  const [userRole, setUserRole] = useState(null);
+
   // Render state
   const [modal, setModal] = useState(null);
 
@@ -375,7 +385,8 @@ export default function App() {
     ['!', '#f59e0b', 'cut'], ['✂', '#6366f1', 'cut-prevented'],
   ];
 
-  return (
+  // Prolog Checker UI Component
+  const PrologCheckerUI = () => (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-bg-primary text-txt-primary font-sans">
 
       {/* ── Top bar ── */}
@@ -609,5 +620,39 @@ export default function App() {
         )}
       </Modal>
     </div>
+  );
+
+  // Main render with screen-based routing
+  return (
+    <>
+      <GlobalStyle />
+      {screen === 'landing' && (
+        <LandingPage
+          onStudentLogin={() => { setUserRole('student'); setScreen('login'); }}
+          onTeacherLogin={() => { setUserRole('teacher'); setScreen('login'); }}
+        />
+      )}
+      {screen === 'login' && (
+        <LoginPage
+          userRole={userRole}
+          onLogin={(userData, role) => {
+            setUser({ ...userData, role });
+            setScreen('dashboard');
+          }}
+          onBack={() => setScreen('landing')}
+        />
+      )}
+      {screen === 'dashboard' && user && (
+        <Dashboard
+          user={user}
+          onLogout={() => {
+            setUser(null);
+            setUserRole(null);
+            setScreen('landing');
+          }}
+          mainContent={<PrologCheckerUI />}
+        />
+      )}
+    </>
   );
 }
