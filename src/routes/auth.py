@@ -72,6 +72,7 @@ def register(req: RegisterRequest):
             student = Student(student_id, req.username, req.password)
             db.students[student_id] = student
             user_id = student_id
+            user_obj = student
         else:  # teacher
             if student_id in db.teachers:
                 raise HTTPException(
@@ -82,6 +83,7 @@ def register(req: RegisterRequest):
             teacher = Teacher(student_id, req.username, req.password)
             db.teachers[student_id] = teacher
             user_id = student_id
+            user_obj = teacher
         
         commit_changes()
     
@@ -93,8 +95,8 @@ def register(req: RegisterRequest):
             id=user_id,
             username=req.username,
             role=req.role,
-            email=None,
-            display_name=""
+            email=user_obj.settings.email or None,
+            display_name=user_obj.settings.display_name or req.username
         ),
         token=token
     )

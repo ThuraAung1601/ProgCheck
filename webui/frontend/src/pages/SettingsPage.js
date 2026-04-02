@@ -35,7 +35,8 @@ const SettingsPage = ({ role, user, onUserUpdate }) => {
   const fetchSettings = async () => {
     if (!user?.id) return;
     try {
-      const res = await fetch(`/api/settings/profile/${user.id}?role=${role}`, {
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${apiUrl}/api/settings/profile/${user.id}?role=${role}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
@@ -54,7 +55,8 @@ const SettingsPage = ({ role, user, onUserUpdate }) => {
     try {
       setSaveLoading(true);
       setErr('');
-      const res = await fetch(`/api/settings/profile/${user.id}?role=${role}`, {
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${apiUrl}/api/settings/profile/${user.id}?role=${role}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -102,7 +104,8 @@ const SettingsPage = ({ role, user, onUserUpdate }) => {
 
     try {
       setLoading(true);
-      const res = await fetch(`/api/settings/password-change/${user.id}?role=${role}`, {
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${apiUrl}/api/settings/password-change/${user.id}?role=${role}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

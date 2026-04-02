@@ -3,6 +3,10 @@ import Icon from '../components/Icon.js';
 import Card from '../components/Card.js';
 
 const DashboardPageContent = ({ role, user }) => {
+  if (!user) {
+    return <div style={{ padding: '32px 24px' }}>Loading user data...</div>;
+  }
+
   const accent = role === 'teacher' ? 'var(--sky)' : 'var(--mint)';
   
   const stats = role === 'student'
@@ -29,7 +33,7 @@ const DashboardPageContent = ({ role, user }) => {
     <div className="fade-in" style={{ padding: '32px 24px', fontFamily: "'Google Sans', sans-serif" }}>
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-.03em', color: '#111827' }}>
-          Welcome back, {user.name.split(' ')[0]}
+          Welcome back, {(user?.display_name || user?.name || 'User').split(' ')[0]}
         </h1>
         <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>
           Here's what's happening with your {role === 'teacher' ? 'classes' : 'studies'} today.

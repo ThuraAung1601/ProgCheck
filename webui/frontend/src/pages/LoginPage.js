@@ -27,7 +27,8 @@ const LoginPage = ({ defaultRole = 'student', onLogin, onBack }) => {
     setLoading(true);
     
     try {
-      const endpoint = role === 'student' ? '/api/auth/login/student' : '/api/auth/login/teacher';
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+      const endpoint = role === 'student' ? `${apiUrl}/api/auth/login/student` : `${apiUrl}/api/auth/login/teacher`;
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -67,7 +68,8 @@ const LoginPage = ({ defaultRole = 'student', onLogin, onBack }) => {
     setLoading(true);
     
     try {
-      const res = await fetch('/api/auth/register', {
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${apiUrl}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
