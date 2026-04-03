@@ -141,6 +141,10 @@ class AlgorithmicDebugger:
         Function accepting a single string; defaults to no-op.
     oracle_timeout : int
         Per-node LLM call timeout in seconds.
+    clause_db : optional
+        ClauseDatabase instance for resolving original clauses.
+        If provided, queries will use original clause patterns instead of
+        instantiated proof tree nodes.
     """
 
     def __init__(
@@ -149,11 +153,55 @@ class AlgorithmicDebugger:
         api_key: str,
         log_fn: Optional[Callable[[str], None]] = None,
         oracle_timeout: int = 20,
+        clause_db=None,
     ):
         self.problem_text   = problem_text
         self.api_key        = api_key
         self._log           = log_fn or (lambda _: None)
         self.oracle_timeout = oracle_timeout
+        self.clause_db      = clause_db  # Optional ClauseDatabase for original clauses
+
+    # ------------------------------------------------------------------
+    # Clause resolution: map instantiated nodes to original clauses
+    # ------------------------------------------------------------------
+
+    def _get_original_clause(self, node: AnyNode) -> Optional[tuple]:
+        """Try to resolve an instantiated proof node to its original clause.
+
+        Returns
+        -------
+        Optional[tuple]
+            (original_head, original_body, is_fact) if found, else None
+
+        If clause_db is available, queries it for the original clause pattern.
+        Otherwise returns None, causing fallback to instantiated node queries.
+        """
+        if self.clause_db is None:
+            return None
+
+        try:
+            from clause_extractor import extract_predicate_name_and_arity
+        except ImportError:
+            return None
+
+        # Extract predicate name and arity from the goal
+        goal_str = node.goal if hasattr(node, 'goal') else ''
+        if not goal_str:
+            return None
+
+        pred_name, arity = extract_predicate_name_and_arity(goal_str)
+        if not pred_name or arity == 0:
+            return None
+
+        # Ask clause_db to find the matching original clause
+        original_clause = self.clause_db.find_original_clause(
+            pred_name, arity, goal_str
+        )
+
+        if original_clause is None:
+            return None
+
+        return (original_clause.head, original_clause.body, original_clause.is_fact)
 
     # ------------------------------------------------------------------
     # Public interface
@@ -320,7 +368,11 @@ class AlgorithmicDebugger:
     # ------------------------------------------------------------------
 
     def _query_oracle_incorrect(self, node: ProofNode) -> None:
-        """Incorrectness Debugger: is this proof-tree step semantically correct?"""
+        """Incorrectness Debugger: is this proof-tree step semantically correct?
+
+        Tries to use the original clause pattern if clause_db is available,
+        falling back to the instantiated proof tree node if not.
+        """
         try:
             from llm_bridge import ask_oracle_node
         except ImportError as e:
@@ -328,14 +380,29 @@ class AlgorithmicDebugger:
             node.oracle_correct = None
             node.oracle_reason  = f"llm_bridge import failed: {e}"
             return
-        self._call_oracle(node, ask_oracle_node, [
-            self.problem_text, node.goal, node.body, self.api_key,
-            node.failing_goal or None,
-        ])
+
+        # Try to resolve to original clause
+        original = self._get_original_clause(node)
+        if original:
+            clause_head, clause_body, is_fact = original
+            self._call_oracle(node, ask_oracle_node, [
+                self.problem_text, clause_head, clause_body, self.api_key,
+                node.failing_goal or None,
+            ])
+        else:
+            # Fallback to instantiated node
+            self._call_oracle(node, ask_oracle_node, [
+                self.problem_text, node.goal, node.body, self.api_key,
+                node.failing_goal or None,
+            ])
         self._log_node(node, "INCORRECTNESS")
 
     def _query_oracle_incomplete(self, node: IncompleteNode) -> None:
-        """Incompleteness Debugger: is this clause correct and complete?"""
+        """Incompleteness Debugger: is this clause correct and complete?
+
+        Tries to use the original clause pattern if clause_db is available,
+        falling back to the instantiated node if not.
+        """
         try:
             from llm_bridge import ask_oracle_incomplete
         except ImportError as e:
@@ -343,14 +410,29 @@ class AlgorithmicDebugger:
             node.oracle_correct = None
             node.oracle_reason  = f"llm_bridge import failed: {e}"
             return
-        self._call_oracle(node, ask_oracle_incomplete, [
-            self.problem_text, node.goal, node.body, self.api_key,
-            node.failing_goal or None,
-        ])
+
+        # Try to resolve to original clause
+        original = self._get_original_clause(node)  # Type ignore: IncompleteNode has same key structure
+        if original:
+            clause_head, clause_body, is_fact = original
+            self._call_oracle(node, ask_oracle_incomplete, [
+                self.problem_text, clause_head, clause_body, self.api_key,
+                node.failing_goal or None,
+            ])
+        else:
+            # Fallback to instantiated node
+            self._call_oracle(node, ask_oracle_incomplete, [
+                self.problem_text, node.goal, node.body, self.api_key,
+                node.failing_goal or None,
+            ])
         self._log_node(node, "INCOMPLETENESS")
 
     def _query_oracle_termination(self, node: TerminationNode) -> None:
-        """Termination Debugger: does this non-progressing clause cause infinite recursion?"""
+        """Termination Debugger: does this non-progressing clause cause infinite recursion?
+
+        Tries to use the original clause pattern if clause_db is available,
+        falling back to the instantiated node if not.
+        """
         try:
             from llm_bridge import ask_oracle_termination
         except ImportError as e:
@@ -358,9 +440,19 @@ class AlgorithmicDebugger:
             node.oracle_correct = None
             node.oracle_reason  = f"llm_bridge import failed: {e}"
             return
-        self._call_oracle(node, ask_oracle_termination, [
-            self.problem_text, node.goal, node.body, node.rec_call, self.api_key,
-        ])
+
+        # Try to resolve to original clause
+        original = self._get_original_clause(node)
+        if original:
+            clause_head, clause_body, is_fact = original
+            self._call_oracle(node, ask_oracle_termination, [
+                self.problem_text, clause_head, clause_body, node.rec_call, self.api_key,
+            ])
+        else:
+            # Fallback to instantiated node
+            self._call_oracle(node, ask_oracle_termination, [
+                self.problem_text, node.goal, node.body, node.rec_call, self.api_key,
+            ])
         self._log_node(node, "TERMINATION")
 
     def _call_oracle(
