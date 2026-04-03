@@ -139,8 +139,9 @@ class MockTestCase:
 
 class MockLabQuestion:
     """Mirrors models.LabQuestion"""
-    def __init__(self, question_id: int, problem: str, question_number: int = 0):
+    def __init__(self, question_id: int, title: str, problem: str, question_number: int = 0):
         self.question_id = question_id
+        self.title = title
         self.problem = problem
         self.question_number = question_number
         self.question_size = 0

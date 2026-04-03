@@ -48,15 +48,6 @@ function Btn({ onClick, children, disabled, variant = 'default', title }) {
   );
 }
 
-function FileSelect({ value, onChange, options, placeholder, id, name }) {
-  return (
-    <select id={id} name={name} value={value} onChange={e => onChange(e.target.value)}
-      className="bg-bg-elevated border border-border-accent text-txt-secondary text-[11px] rounded px-2 py-1 font-mono focus:outline-none focus:border-accent-blue max-w-[160px]">
-      <option value="">{placeholder}</option>
-      {options.map(o => <option key={o} value={o}>{o.split('/').pop()}</option>)}
-    </select>
-  );
-}
 
 function SaveInput({ value, onChange, onSubmit }) {
   return (
@@ -87,22 +78,20 @@ export default function App() {
   // Render state
   const [modal, setModal] = useState(null);
 
-  // ProgCheck state
+  // Playground state
+  const [myFiles, setMyFiles] = useState([]);
   const [problems, setProblems] = useState([]);
-  const [students, setStudents] = useState([]);
-  const [tests, setTests] = useState([]);
-  const [selProblem, setSelProblem] = useState('');
-  const [selStudent, setSelStudent] = useState('');
-  const [selTest, setSelTest] = useState('');
-  const [problemText, setProblemText] = useState('');
+  const [currentFilename, setCurrentFilename] = useState('');
+  const [isNewFile, setIsNewFile] = useState(true);
+  const [saveFilename, setSaveFilename] = useState('');
+  const [problemDraft, setProblemDraft] = useState('');
+  const [selProblemPreset, setSelProblemPreset] = useState('');
   const [query, setQuery] = useState('');
   const [feedback, setFeedback] = useState('');
   const [status, setStatus] = useState({ msg: 'Ready', kind: 'idle' });
   const [loading, setLoading] = useState(false);
   const [lastResult, setLastResult] = useState(null);
   const [canVisualize, setCanVisualize] = useState(false);
-  const [isNewFile, setIsNewFile] = useState(false);
-  const [saveFilename, setSaveFilename] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Editor / graph state
@@ -132,7 +121,7 @@ export default function App() {
 
     // Set up new observer if element exists
     if (!el) return;
-    
+
     const obs = new ResizeObserver(entries => {
       const { width, height } = entries[0].contentRect;
       // Debounce resize updates to avoid excessive state changes
@@ -170,12 +159,19 @@ export default function App() {
 
   const fetchOptions = useCallback(async () => {
     try {
+      // Load user's saved .pl files
       const d = await apiFetch('/api/options');
-      setProblems(d.problems || []);
-      setStudents(d.students || []);
-      setTests(d.tests || []);
+      setMyFiles(d.students || []);
     } catch (e) {
       setMsg(`Options load failed: ${e.message}`, 'error');
+    }
+    try {
+      // Load playground problem presets from lab 9999
+      const questions = await apiFetch('/api/labs/9999/questions');
+      setProblems(Array.isArray(questions) ? questions : []);
+    } catch (e) {
+      // Lab 9999 may not exist yet — silently ignore
+      setProblems([]);
     }
   }, [setMsg]);
 
@@ -207,7 +203,7 @@ export default function App() {
   const onNodeDragEnd = useCallback((positions) => {
     const posMap = Object.fromEntries(positions.map(p => [p.id, { x: p.x, y: p.y }]));
     posRef.current = { ...posRef.current, ...posMap };
-    
+
     // Update graph positions only (don't reorder code here - avoid circular updates)
     setGraph(prev => ({
       ...prev,
@@ -239,93 +235,67 @@ export default function App() {
   }, [setMsg]);
 
   const buildPayload = useCallback(() => ({
-    problem_file: selProblem,
-    student_file: selStudent,
+    problem_id: Number(selProblemPreset),
+    student_file: currentFilename,
     student_code: code,
-  }), [selProblem, selStudent, code]);
+  }), [currentFilename, code, selProblemPreset]);
 
-  const loadFiles = () => withLoading(async () => {
-    if (!selProblem || !selStudent) { setMsg('Select a problem and student file first', 'error'); return; }
-    const d = await apiFetch('/api/load', { problem_file: selProblem, student_file: selStudent, student_code: '' });
-    setProblemText(d.problem_text || '');
+  const loadFile = useCallback((filename) => withLoading(async () => {
+    if (!filename) return;
+    const d = await apiFetch('/api/load', { problem_id: 0, student_file: filename, student_code: '' });
     setCode(d.student_code || '');
+    setCurrentFilename(filename);
+    setIsNewFile(false);
     posRef.current = {};
     setTraceData(null);
-    setRightTab('problem');
     setFeedback('');
     setLastResult(null);
     setSelNode(null);
     setHlLines([]);
-    setMsg('Loaded', 'ok');
-  });
+    setMsg(`Loaded ${filename.split('/').pop()}`, 'ok');
+  }), [withLoading, setMsg]);
 
   const saveCode = useCallback(() => withLoading(async () => {
-    let filename = selStudent;
-
     const doSave = async (filename) => {
       await apiFetch('/api/apply-fix', {
         student_file: filename,
         corrected_code: code,
         accept: true,
       });
-
       await fetchOptions();
-
-      setSelStudent(filename);
+      setCurrentFilename(filename);
       setIsNewFile(false);
-
       setMsg('Saved', 'ok');
     };
 
-    if (isNewFile || !filename) {
+    if (isNewFile || !currentFilename) {
       setModal({
         type: 'save',
         resolve: (name) => {
-          if (!name) {
-            setMsg('Save cancelled', 'error');
-            return;
-          }
-
+          if (!name) { setMsg('Save cancelled', 'error'); return; }
           if (!name.endsWith('.pl')) name += '.pl';
-
           doSave(name);
         }
       });
       return;
     }
 
-    await apiFetch('/api/apply-fix', {
-      student_file: filename,
-      corrected_code: code,
-      accept: true,
-    });
-
-    setSelStudent(filename);
-    setIsNewFile(false);
-
-    setMsg('Saved', 'ok');
-  }), [selStudent, code, isNewFile, withLoading, fetchOptions, setMsg]);
+    await doSave(currentFilename);
+  }), [currentFilename, code, isNewFile, withLoading, fetchOptions, setMsg]);
 
   const createNewFile = useCallback(() => {
-    setSelProblem('');
-    setSelStudent('');
-    setSelTest('');
-
-    setCode('% New Prolog File');
-    setProblemText('');
+    setCurrentFilename('');
+    setCode('% New Prolog file\n');
+    setProblemDraft('');
+    setSelProblemPreset('');
     setQuery('');
     setFeedback('');
     setLastResult(null);
-
     setGraph({ nodes: [], edges: [] });
     setTraceData(null);
-
     posRef.current = {};
-
     setRightTab('graph');
-
     setIsNewFile(true);
-
     setMsg('New file created', 'ok');
   }, [setMsg]);
 
@@ -377,7 +347,7 @@ export default function App() {
   });
 
   const runDiagnosis = () => withLoading(async () => {
-    const r = await apiFetch('/api/full-diagnosis', { ...buildPayload(), test_cases_file: selTest || null });
+    const r = await apiFetch('/api/full-diagnosis', { ...buildPayload(), test_cases_file: null });
     setFeedback(r.log || 'Diagnosis complete.');
     setRightTab('feedback');
     if (r.changed && r.corrected_code) {
@@ -448,12 +418,16 @@ export default function App() {
           </span>
         </div>
 
-        {/* File selectors */}
-        <FileSelect value={selProblem} onChange={setSelProblem} options={problems} placeholder="Problem…" id="problem-select" name="problem-select" />
-        <FileSelect value={selStudent} onChange={setSelStudent} options={students} placeholder="Student code…" id="student-select" name="student-select" />
-        <FileSelect value={selTest} onChange={setSelTest} options={tests} placeholder="Test file…" id="test-select" name="test-select" />
-        <Btn onClick={loadFiles} variant="primary" disabled={loading}>Load</Btn>
-        <Btn onClick={saveCode} disabled={loading || !selProblem || !code}>Save</Btn>
+        {/* File management */}
+        <select
+          value={currentFilename}
+          onChange={e => e.target.value && loadFile(e.target.value)}
+          className="bg-bg-elevated border border-border-accent text-txt-secondary text-[11px] rounded px-2 py-1 font-mono focus:outline-none focus:border-accent-blue max-w-[160px] flex-shrink-0"
+        >
+          <option value="">{isNewFile ? '— new file —' : currentFilename.split('/').pop() || 'Load file…'}</option>
+          {myFiles.map(f => <option key={f} value={f}>{f.split('/').pop()}</option>)}
+        </select>
+        <Btn onClick={saveCode} disabled={loading || !code} variant="primary">Save</Btn>
         <Btn onClick={createNewFile} variant="success">New</Btn>
 
         <div className="w-px h-5 bg-border-accent mx-0.5 flex-shrink-0" />
@@ -473,7 +447,6 @@ export default function App() {
         <Btn onClick={runLlm} disabled={loading} variant="warning" title="LLM natural-language feedback">LLM</Btn>
         <Btn onClick={runDiagnosis} disabled={loading} variant="danger" title="Full diagnosis with optional auto-fix">Diagnose</Btn>
 
-        {/* Shapiro mode badge — hidden when sidebar is expanded to prevent header overflow */}
         {lastResult && sidebarCollapsed && (
           <span className={`ml-auto text-[10px] px-2 py-0.5 rounded border flex-shrink-0
             ${lastResult.has_logic_error
@@ -490,7 +463,9 @@ export default function App() {
         {/* ── LEFT: full-height code editor ── */}
         <div className="flex flex-col border-r border-border-subtle flex-shrink-0" style={{ width: 420 }}>
           <div className="flex items-center justify-between px-3 h-7 bg-bg-secondary border-b border-border-subtle flex-shrink-0">
-            <span className="text-[10px] font-semibold tracking-widest uppercase text-txt-tertiary">Prolog Source</span>
+            <span className="text-[10px] font-semibold tracking-widest uppercase text-txt-tertiary font-mono">
+              {currentFilename ? currentFilename.split('/').pop() : 'untitled.pl'}
+            </span>
             <span className="text-[10px] text-txt-tertiary italic">
               {rightTab === 'trace'
                 ? 'active clause highlighted'
@@ -550,10 +525,56 @@ export default function App() {
 
           {/* Problem */}
           {rightTab === 'problem' && (
-            <div className="flex-1 overflow-auto min-h-0 p-4">
-              <pre className="font-mono text-[12px] leading-relaxed text-txt-secondary whitespace-pre-wrap">
-                {problemText || 'Load a problem file to see the question here.'}
-              </pre>
+            <div className="flex-1 overflow-auto min-h-0 flex flex-col">
+
+              {/* Preset selector */}
+              <div className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border-b border-border-subtle flex-shrink-0">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary flex-shrink-0">
+                  Load preset
+                </span>
+
+                <select
+                  value={selProblemPreset}
+                  onChange={e => {
+                    const qid = e.target.value;
+                    setSelProblemPreset(qid);
+
+                    if (qid) {
+                      const q = problems.find(p => String(p.question_id) === qid);
+                      if (q) setProblemDraft(q.problem || q.description || '');
+                    } else {
+                      setProblemDraft('');
+                    }
+                  }}
+                  className="bg-bg-elevated border border-border-accent text-txt-secondary text-[11px] rounded px-2 py-1 font-mono focus:outline-none focus:border-accent-blue flex-1 min-w-0"
+                >
+                  <option value="">— choose a problem —</option>
+                  {problems.map(p => (
+                    <option key={p.question_id} value={String(p.question_id)}>
+                      {p.title || `Question ${p.question_id}`}
+                    </option>
+                  ))}
+                </select>
+
+                {problemDraft && (
+                  <button
+                    onClick={() => {
+                      setProblemDraft('');
+                      setSelProblemPreset('');
+                    }}
+                    className="text-[10px] text-txt-tertiary hover:text-txt-secondary flex-shrink-0"
+                    title="Clear"
+                  >
+                    ✕ clear
+                  </button>
+                )}
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-auto bg-bg-primary p-4">
+                <pre className="font-mono text-[12px] leading-relaxed text-txt-secondary whitespace-pre-wrap">
+                  {problemDraft || 'Select a problem to view description.'}
+                </pre>
+              </div>
             </div>
           )}
 

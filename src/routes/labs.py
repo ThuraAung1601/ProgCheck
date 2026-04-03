@@ -33,6 +33,7 @@ class LabListResponse(BaseModel):
 
 
 class LabQuestionCreateRequest(BaseModel):
+    title: str
     problem: str
 
 
@@ -49,6 +50,7 @@ class TestCaseResponse(BaseModel):
 
 class LabQuestionResponse(BaseModel):
     question_id: int
+    title: str
     problem: str
     question_size: int
     test_cases: List[TestCaseResponse]
@@ -263,6 +265,7 @@ def add_question_to_lab(lab_id: int, req: LabQuestionCreateRequest, teacher_id: 
         
         return LabQuestionResponse(
             question_id=question.question_id,
+            title=question.title,
             problem=question.problem,
             question_size=question.question_size,
             test_cases=[]
@@ -290,6 +293,7 @@ def get_lab_questions(lab_id: int):
             ]
             questions.append(LabQuestionResponse(
                 question_id=question.question_id,
+                title=question.title,
                 problem=question.problem,
                 question_size=question.question_size,
                 test_cases=test_cases
@@ -322,6 +326,7 @@ def get_question(lab_id: int, question_id: int):
         
         return LabQuestionResponse(
             question_id=question.question_id,
+            title=question.title,
             problem=question.problem,
             question_size=question.question_size,
             test_cases=test_cases

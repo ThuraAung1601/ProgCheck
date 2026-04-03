@@ -126,6 +126,7 @@ class TestCase(Persistent):
 class LabQuestion(Persistent):
     """
     Class diagram:
+      - title          : string
       - problem        : string
       - questionID     : int
       - questionNumber : int
@@ -137,8 +138,9 @@ class LabQuestion(Persistent):
       + editLabQuestion(string, int, int): void
       + getTestCase(int): list<TestCase>
     """
-    def __init__(self, question_id: int, problem: str, question_number: int = 0):
+    def __init__(self, question_id: int, title: str, problem: str, question_number: int = 0):
         self.question_id = question_id          # questionID: int
+        self.title = title                      # title : string
         self.problem = problem                  # problem: string
         self.question_number = question_number  # questionNumber: int (order within lab)
         self.question_size = 0                  # extra: count of test cases (convenience)
@@ -146,8 +148,9 @@ class LabQuestion(Persistent):
         self.created_at = datetime.now()
         self.updated_at = datetime.now()
 
-    def create_lab_question(self, problem: str, question_number: int):
+    def create_lab_question(self, title: str, problem: str, question_number: int):
         """createLabQuestion(string, int): void"""
+        self.title = title
         self.problem = problem
         self.question_number = question_number
         self.updated_at = datetime.now()

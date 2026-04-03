@@ -151,10 +151,10 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
   }, [setMsg]);
 
   const buildPayload = useCallback(() => ({
-    problem_file: '',
-    student_file: '',
+    problem_id: Number(question.question_id),
+    student_file: 'assignment.pl',
     student_code: code,
-  }), [code]);
+  }), [code, question]);
 
   // Prolog checker actions
   const checkSyntax = () => withLoading(async () => {
@@ -166,12 +166,29 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
 
   const runQuery = () => withLoading(async () => {
     const q = normalizeQuery(query);
-    if (!q) { setMsg('Enter a query first', 'error'); return; }
-    const r = await apiFetch('/api/query-run', { ...buildPayload(), query: q });
+    if (!q) {
+      setMsg('Enter a query first', 'error');
+      return;
+    }
+
+    const r = await apiFetch('/api/query-run', {
+      ...buildPayload(),
+      query: q
+    });
+
     setLastResult(r);
     setCanVisualize(!!r.ok && !r.has_logic_error);
-    if (!r.ok) { setFeedback(r.feedback || 'Query failed.'); setRightTab('feedback'); return; }
-    const verdict = r.has_logic_error ? (r.shapiro_mode || 'unknown') : 'correct';
+
+    if (!r.ok) {
+      setFeedback(r.feedback || 'Query failed.');
+      setRightTab('feedback');
+      return;
+    }
+
+    const verdict = r.has_logic_error
+      ? (r.shapiro_mode || 'unknown')
+      : 'correct';
+
     setFeedback([
       `Query: ${r.query}`,
       `Status: ${verdict}`,
@@ -182,8 +199,9 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
       '',
       'Debug Summary:', r.debug_summary || '',
     ].join('\n'));
+
     setRightTab('feedback');
-    setMsg(`Query done - ${verdict}`, r.has_logic_error ? 'error' : 'ok');
+    setMsg(`Query done — ${verdict}`, r.has_logic_error ? 'error' : 'ok');
   });
 
   const visualize = useCallback(() => {
@@ -203,24 +221,41 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
 
   const runLlm = () => withLoading(async () => {
     const q = normalizeQuery(query);
-    if (!q) { setMsg('Enter a query first', 'error'); return; }
-    const r = await apiFetch('/api/llm-feedback', { ...buildPayload(), query: q });
+    if (!q) {
+      setMsg('Enter a query first', 'error');
+      return;
+    }
+
+    const r = await apiFetch('/api/llm-feedback', {
+      ...buildPayload(),
+      query: q
+    });
+
     setLastResult(r);
+
     setFeedback([
       'LLM Feedback:', r.feedback || '',
       '',
       'Execution Trace:', r.trace || '',
       '',
       'Proof Tree:', r.proof_tree || '',
+      '',
+      'Debug Summary:', r.debug_summary || '',
     ].join('\n'));
+
     setRightTab('feedback');
     setMsg('LLM feedback ready', 'ok');
   });
 
   const runDiagnosis = () => withLoading(async () => {
-    const r = await apiFetch('/api/full-diagnosis', { ...buildPayload(), test_cases_file: question.test_cases || null });
+    const r = await apiFetch('/api/full-diagnosis', {
+      ...buildPayload(),
+      test_cases: question.test_cases || [] 
+    });
+
     setFeedback(r.log || 'Diagnosis complete.');
     setRightTab('feedback');
+
     if (r.changed && r.corrected_code) {
       setModal({
         type: 'confirm',
@@ -232,6 +267,7 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
         }
       });
     }
+
     setMsg('Diagnosis complete', 'ok');
   });
 
@@ -248,8 +284,10 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
         results.push({
           input: tc.input,
           expected: tc.expected_output,
-          passed: r.ok && !r.has_logic_error,
-          actual: r.ok ? (r.has_logic_error ? r.shapiro_mode : 'true') : 'failed',
+          passed: r.ok && !r.has_logic_error && tc.expected_output === 'true',
+          actual: r.ok
+            ? (r.has_logic_error ? r.shapiro_mode : 'true')
+            : 'failed',
         });
       } catch (e) {
         results.push({ input: tc.input, expected: tc.expected_output, passed: false, actual: 'error: ' + e.message });

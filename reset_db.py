@@ -64,10 +64,10 @@ def create_fresh_db(db_path: Path) -> DB:
     return db
 
 
-def _make_question(qid: int, qnum: int, problem: str,
+def _make_question(qid: int, qnum: int, title: str, problem: str,
                    test_cases: list[tuple[str, str]]) -> LabQuestion:
     """Build a LabQuestion with attached TestCases."""
-    q = LabQuestion(qid, problem, question_number=qnum)
+    q = LabQuestion(qid, title, problem, question_number=qnum)
     for i, (inp, expected) in enumerate(test_cases, start=1):
         tc = TestCase(qid * 100 + i)
         tc.create_testcase(inp, expected)
@@ -149,7 +149,7 @@ def seed_demo_data(db: DB):
         active=True,
         questions=[
             _make_question(
-                qid=10011, qnum=1,
+                qid=10011, qnum=1, title="Parent Fact",
                 problem=(
                     "Write a Prolog fact that states 'alice is a parent of bob'.\n"
                     "Then write a query to check if alice is a parent of bob."
@@ -160,7 +160,7 @@ def seed_demo_data(db: DB):
                 ],
             ),
             _make_question(
-                qid=10012, qnum=2,
+                qid=10012, qnum=2, title="Parent Fact",
                 problem=(
                     "Define facts for the following: john likes pizza, "
                     "mary likes pasta, john likes pasta.\n"
@@ -183,7 +183,7 @@ def seed_demo_data(db: DB):
         active=False,
         questions=[
             _make_question(
-                qid=10021, qnum=1,
+                qid=10021, qnum=1, title="Unification Example",
                 problem=(
                     "Explain what happens when Prolog evaluates the query:\n"
                     "  ?- X = foo(Y), Y = bar.\n"
@@ -219,7 +219,7 @@ def seed_demo_data(db: DB):
         active=True,
         questions=[
             _make_question(
-                qid=20011, qnum=1,
+                qid=20011, qnum=1, title="Factorial",
                 problem=(
                     "Write a recursive predicate 'factorial(N, F)' where F is "
                     "the factorial of N.\n"
@@ -232,7 +232,7 @@ def seed_demo_data(db: DB):
                 ],
             ),
             _make_question(
-                qid=20012, qnum=2,
+                qid=20012, qnum=2, title="List Length",
                 problem=(
                     "Write a predicate 'list_length(List, Len)' that computes "
                     "the length of a list using recursion.\n"
@@ -254,7 +254,7 @@ def seed_demo_data(db: DB):
         active=True,
         questions=[
             _make_question(
-                qid=20021, qnum=1,
+                qid=20021, qnum=1, title="List Append",
                 problem=(
                     "Write a predicate 'my_append(L1, L2, L3)' that appends "
                     "list L2 to L1, giving L3.\n"
@@ -266,7 +266,7 @@ def seed_demo_data(db: DB):
                 ],
             ),
             _make_question(
-                qid=20022, qnum=2,
+                qid=20022, qnum=2,  title="List Reverse",
                 problem=(
                     "Write a predicate 'my_reverse(List, Reversed)' that reverses "
                     "a list.\n"
@@ -278,7 +278,7 @@ def seed_demo_data(db: DB):
                 ],
             ),
             _make_question(
-                qid=20023, qnum=3,
+                qid=20023, qnum=3, title="List Member",
                 problem=(
                     "Write a predicate 'my_member(X, List)' that succeeds when "
                     "X is a member of List."
@@ -311,7 +311,7 @@ def seed_demo_data(db: DB):
         active=False,
         questions=[
             _make_question(
-                qid=30011, qnum=1,
+                qid=30011, qnum=1, title="Depth-First Search",
                 problem=(
                     "Implement a depth-first search predicate 'dfs(Start, Goal, Path)' "
                     "over an edge/2 graph.\n"
@@ -327,12 +327,12 @@ def seed_demo_data(db: DB):
 
     lab6 = _make_lab(
         lab_id=3002,
-        title="Cut & Negation",
+        title="Cut & Negation", 
         classroom_id=303,
         active=False,
         questions=[
             _make_question(
-                qid=30021, qnum=1,
+                qid=30021, qnum=1, title="Cut - Maximum of Two Numbers",
                 problem=(
                     "Write a predicate 'max(X, Y, Max)' that returns the maximum "
                     "of two numbers using cut."
@@ -350,6 +350,170 @@ def seed_demo_data(db: DB):
     c303.lab_ids.append(lab5.lab_id)
     c303.lab_ids.append(lab6.lab_id)
     data.classrooms[303] = c303
+
+    # ── Playground Lab (global practice) ─────────────────────────
+
+    playground_lab = _make_lab(
+        lab_id=9999,
+        title="Playground",
+        classroom_id=None,  # not tied to one class
+        active=True,
+        questions=[
+            _make_question(
+                qid=99991,
+                qnum=1,
+                title="Ambiguous Operator Precedence",
+                problem=(
+                    "Problem: Ambiguous operator precedence example\n"
+                    "Define predicate p/0 that succeeds if both a and b hold; otherwise, it should also succeed if both c and d hold. Facts a/0, b/0, c/0, d/0 are provided.\n"
+                    "Clarify your intended precedence with parentheses if needed."
+                ),
+                test_cases=[]
+            ),
+            _make_question(
+                qid=99992,
+                qnum=2,
+                title="Sum of Numbers in a List",
+                problem=(
+                    "Sum of Numbers Problem\n"
+                    "Write a Prolog predicate sum_list/2 that computes the sum of all numbers in a list.\n"
+                    "sum_list(L, S) should be true when S is the sum of all numbers in list L.\n"
+                    "Requirements:\n"
+                    "- Sum of empty list is 0\n"
+                    "- Sum of [H|T] is H + sum of T"
+                ),
+                test_cases=[]
+            ),
+            _make_question(
+                qid=99993,
+                qnum=3,
+                title="Cut - Maximum of Two Numbers",
+                problem=(
+                    "Cut - Maximum of Two Numbers Problem\n"
+                    "Write a Prolog predicate max/3 that finds the maximum of two numbers using cut (!).\n"
+                    "max(X, Y, Max) should be true when Max is the greater of X and Y.\n"
+                    "Requirements:\n"
+                    "- max(3, 5, 5) should be true\n"
+                    "- max(7, 2, 7) should be true\n"
+                    "- max(4, 4, 4) should be true\n"
+                    "- max(0, 1, 1) should be true\n"
+                    "- max(10, 3, 10) should be true\n"
+                    "The predicate should handle:\n"
+                    "- When X >= Y: Max is X (commit with cut to avoid redundant backtracking)\n"
+                    "- When X < Y:  Max is Y (fallback clause)\n"
+                    "Use cut (!) to make the predicate deterministic:\n"
+                    "max(X, Y, X) :- X >= Y, !.\n"
+                    "max(_, Y, Y)."
+                ),
+                test_cases=[]
+            ),
+            _make_question(
+                qid=99994,
+                qnum=4,
+                title="Factorial Problem",
+                problem=(
+                    "Factorial Problem\n"
+                    "Write a Prolog predicate factorial/2 that computes the factorial of a number.\n"
+                    "factorial(N, F) should be true when F is the factorial of N.\n"
+                    "Requirements:\n"
+                    "- factorial(0, 1) should be true (base case)\n"
+                    "- factorial(1, 1) should be true\n"
+                    "- factorial(3, 6) should be true\n"
+                    "- factorial(5, 120) should be true\n"
+                    "The predicate should handle:\n"
+                    "- Base case: factorial of 0 is 1\n"
+                    "- Recursive case: factorial of N is N * factorial(N-1)"
+                ),
+                test_cases=[]
+            ),
+            _make_question(
+                qid=99995,
+                qnum=5,
+                title="Family Relations Problem",
+                problem=(
+                    "Family Relations Problem\n"
+                    "Given facts about parent relationships, implement predicates for family relationships.\n"
+                    "Background Facts:\n"
+                    "parent(tom, bob).\n"
+                    "parent(tom, liz).\n"
+                    "parent(bob, ann).\n"
+                    "parent(bob, pat).\n"
+                    "parent(pat, jim)."
+                    "Task: Write predicates for:\n"
+                    "1. grandparent(X, Y) - X is grandparent of Y\n"
+                    "2. sibling(X, Y) - X and Y are siblings (same parents)\n"
+                    "Rules:\n"
+                    "- X is grandparent of Y if X is parent of Z and Z is parent of Y\n"
+                    "- X and Y are siblings if they have the same parent P and X != Y"
+                ),
+                test_cases=[]
+            ),
+            _make_question(
+                qid=99996,
+                qnum=6,
+                title="List Append Problem",
+                problem=(
+                    "List Append Problem\n"
+                    "Write a Prolog predicate append/3 that concatenates two lists.\n"
+                    "append(L1, L2, L3) should be true when L3 is the result of appending list L2 to list L1.\n"
+                    "Test Cases:\n"
+                    "- append([], [1,2,3], [1,2,3]) should be true\n"
+                    "- append([1,2], [3,4], [1,2,3,4]) should be true\n"
+                    "- append([a], [b,c], [a,b,c]) should be true\n"
+                    "- append([1,2,3], [], [1,2,3]) should be true\n"
+                    "- append([], [], []) should be true\n"
+                    "Requirements:\n"
+                    "- Base case: appending anything to empty list gives that list\n"
+                    "- Recursive case: move first element from L1 to result, append rest\n"
+                    "Expected behavior:\n"
+                    "append([], L, L).\n"
+                    "append([H|T1], L2, [H|T3]) :- append(T1, L2, T3)."
+                ),
+                test_cases=[]
+            ),
+            _make_question(
+                qid=99997,
+                qnum=7,
+                title="List Member Problem",
+                problem=(
+                    "List Member Problem\n"
+                    "Write a Prolog predicate member/2 that checks if an element is in a list.\n"
+                    "member(X, L) should be true when X is an element of list L.\n"
+                    "Requirements:\n"
+                    "- An element X is a member of a list if it's the head\n"
+                    "- An element X is a member if it's in the tail\n"
+                    "- Empty list has no members\n"
+                    "Expected test cases:\n"
+                    "- member(2, [1,2,3]) should be true\n"
+                    "- member(a, [a,b,c]) should be true\n"
+                    "- member(3, [1,2]) should be false\n"
+                    "- member(x, []) should be false\n"
+                    "- member(1, [1,1,2]) should be true (duplicates ok)"
+                ),
+                test_cases=[]
+            ),
+            _make_question(
+                qid=99998,
+                qnum=8,
+                title="List Reverse Problem",
+                problem=(
+                    "Problem: List Reversal\n"
+                    "Write a Prolog predicate `reverse_list(L, R)` that reverses a list.\n"
+                    "The predicate should be true when R is the reverse of list L.\n"
+                    "For example:\n"
+                    "- reverse_list([1,2,3], [3,2,1]) should succeed\n"
+                    "- reverse_list([], []) should succeed\n"
+                    "- reverse_list([a], [a]) should succeed\n"
+                    "This is a classic recursive problem. Think about:\n"
+                    "1. What is the base case? (empty list)\n"
+                    "2. How to reverse the tail and append the head at the end?"
+                ),
+                test_cases=[]
+            ),
+        ],
+    )
+
+    data.labs[playground_lab.lab_id] = playground_lab
 
     transaction.commit()
     conn.close()
@@ -384,6 +548,7 @@ def seed_demo_data(db: DB):
     print("    Lab 2002  List Operations             (active)   3 questions")
     print("    Lab 3001  Search Algorithms in Prolog (inactive) 1 question")
     print("    Lab 3002  Cut & Negation              (inactive) 1 question")
+    print("    PlayGround Problem                    (inactive) 1 question")
 
 
 # ── main ─────────────────────────────────────────────────────────────────────
