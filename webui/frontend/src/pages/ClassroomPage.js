@@ -1,120 +1,323 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from '../components/Icon.js';
 import Card from '../components/Card.js';
-import Button from '../components/Button.js';
 
-const ClassroomPage = ({ role }) => {
+const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
+
+const ClassroomPage = ({ role, user, onOpenAssignment }) => {
   const accent = role === 'teacher' ? 'var(--sky)' : 'var(--mint)';
-  
-  const rooms = [
-    { id: 'CS101', name: 'Introduction to Prolog', students: 24, labs: 8, active: true, code: 'INF-2026' },
-    { id: 'CS202', name: 'Logic Programming', students: 18, labs: 5, active: true, code: 'LP-2026' },
-    { id: 'CS303', name: 'AI Fundamentals', students: 31, labs: 12, active: false, code: 'AIF-2026' },
-  ];
-  
-  const labs = [
-    { id: 1, title: 'Basic Facts & Queries', due: 'Apr 5', status: 'submitted', score: 92 },
-    { id: 2, title: 'List Operations', due: 'Apr 12', status: 'pending', score: null },
-    { id: 3, title: 'Recursive Predicates', due: 'Apr 19', status: 'pending', score: null },
-    { id: 4, title: 'Cut & Negation', due: 'Apr 26', status: 'late', score: 45 },
-  ];
+
+  // ── state ──────────────────────────────────────────────────
+  const [classrooms, setClassrooms] = useState([]);
+  const [selectedRoom, setSelectedRoom] = useState(null);
+  const [labs, setLabs] = useState([]);
+  const [selectedLab, setSelectedLab] = useState(null);
+  const [questions, setQuestions] = useState([]);
+  const [loadingRooms, setLoadingRooms] = useState(true);
+  const [loadingLabs, setLoadingLabs] = useState(false);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [error, setError] = useState(null);
+
+  // ── fetch classrooms ───────────────────────────────────────
+  useEffect(() => {
+    if (!user) return;
+    setLoadingRooms(true);
+    setError(null);
+    const endpoint = role === 'teacher'
+      ? `/api/classrooms/teacher/${user.id}`
+      : `/api/classrooms/student/${user.id}`;
+
+    fetch(API_BASE + endpoint)
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then(d => { setClassrooms(d.classrooms || []); setLoadingRooms(false); })
+      .catch(e => { setError(e.message); setLoadingRooms(false); });
+  }, [user, role]);
+
+  // ── handlers ───────────────────────────────────────────────
+  const handleRoomClick = (room) => {
+    if (selectedRoom?.class_id === room.class_id) {
+      setSelectedRoom(null); setLabs([]); setSelectedLab(null); setQuestions([]);
+      return;
+    }
+    setSelectedRoom(room);
+    setSelectedLab(null); setQuestions([]);
+    setLoadingLabs(true); setLabs([]);
+
+    fetch(API_BASE + `/api/labs/classroom/${room.class_id}`)
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then(d => { setLabs(d.labs || []); setLoadingLabs(false); })
+      .catch(e => { setError(e.message); setLoadingLabs(false); });
+  };
+
+  const handleLabClick = (lab) => {
+    if (selectedLab?.lab_id === lab.lab_id) {
+      setSelectedLab(null); setQuestions([]);
+      return;
+    }
+    setSelectedLab(lab);
+    setLoadingQuestions(true); setQuestions([]);
+
+    fetch(API_BASE + `/api/labs/${lab.lab_id}/questions`)
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then(d => { setQuestions(d || []); setLoadingQuestions(false); })
+      .catch(e => { setError(e.message); setLoadingQuestions(false); });
+  };
+
+  const handleStartCoding = (question) => {
+    if (onOpenAssignment) {
+      onOpenAssignment({
+        question,
+        lab: selectedLab,
+        classroom: selectedRoom,
+      });
+    }
+  };
+
+  // ── breadcrumb ─────────────────────────────────────────────
+  const breadcrumb = () => {
+    const parts = ['Classroom'];
+    if (selectedRoom) parts.push(selectedRoom.class_name);
+    if (selectedLab) parts.push(selectedLab.title);
+    return parts;
+  };
+
+  // ── styles ─────────────────────────────────────────────────
+  const thStyle = { padding: '10px 24px', fontSize: 11, fontWeight: 700, color: 'var(--muted)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '.05em' };
 
   return (
-    <div className="fade-in" style={{ padding: '32px 24px', fontFamily: "'Google Sans', sans-serif" }}>
+    <div className="fade-in" style={{ padding: '32px 24px', fontFamily: "'Google Sans', sans-serif", overflowY: 'auto', height: '100%' }}>
+      {/* Breadcrumb */}
       <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-.03em' , color: '#111827' }}>Classroom</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+          {breadcrumb().map((b, i) => (
+            <React.Fragment key={i}>
+              {i > 0 && <span style={{ color: 'var(--muted)', fontSize: 13 }}>/</span>}
+              <span
+                style={{
+                  fontSize: 13, color: i === breadcrumb().length - 1 ? '#111827' : 'var(--muted)',
+                  fontWeight: i === breadcrumb().length - 1 ? 600 : 400,
+                  cursor: i < breadcrumb().length - 1 ? 'pointer' : 'default',
+                }}
+                onClick={() => {
+                  if (i === 0) { setSelectedRoom(null); setLabs([]); setSelectedLab(null); setQuestions([]); }
+                  else if (i === 1) { setSelectedLab(null); setQuestions([]); }
+                }}
+              >{b}</span>
+            </React.Fragment>
+          ))}
+        </div>
+        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-.03em', color: '#111827' }}>
+          {selectedLab ? selectedLab.title : selectedRoom ? selectedRoom.class_name : 'Classroom'}
+        </h1>
         <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>
-          {role === 'teacher' 
-            ? 'Manage your classrooms and track student progress' 
-            : 'View your enrolled classrooms and labs'}
+          {selectedLab
+            ? `${questions.length} question${questions.length !== 1 ? 's' : ''} in this lab`
+            : selectedRoom
+              ? `${labs.length} lab${labs.length !== 1 ? 's' : ''} in this classroom`
+              : role === 'teacher'
+                ? 'Manage your classrooms and track student progress'
+                : 'View your enrolled classrooms and labs'}
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 16, marginBottom: 32 }}>
-        {rooms.map(room => (
-          <div 
-            key={room.id}
-            style={{
-              background: '#fff', 
-              borderRadius: 16, 
-              border: '1px solid var(--border)',
-              padding: 22, 
-              cursor: 'pointer', 
-              transition: 'all .2s',
-              borderTop: `4px solid ${room.active ? accent : 'var(--border)'}`
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.boxShadow = 'var(--shadow)';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.boxShadow = 'none';
-              e.currentTarget.style.transform = 'none';
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-              <div style={{
-                width: 42, 
-                height: 42, 
-                borderRadius: 10, 
-                background: room.active ? accent + '20' : 'var(--surface)',
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center'
-              }}>
-                <Icon name="book" size={20} color={room.active ? accent : 'var(--muted)'} />
-              </div>
-              {room.active && (
-                <span style={{ fontSize: 11, fontWeight: 600, color: accent, background: accent + '15', padding: '3px 10px', borderRadius: 99 }}>
-                  Active
-                </span>
-              )}
-            </div>
-            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{room.name}</div>
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16 }}>{room.id}</div>
-            <div style={{ display: 'flex', gap: 16 }}>
-              <div style={{ fontSize: 13 }}>
-                <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{room.students}</span> 
-                <span style={{ color: 'var(--muted)' }}> students</span>
-              </div>
-              <div style={{ fontSize: 13 }}>
-                <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{room.labs}</span> 
-                <span style={{ color: 'var(--muted)' }}> labs</span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      {error && (
+        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 16px', marginBottom: 20, color: '#991B1B', fontSize: 13 }}>
+          Failed to load: {error}
+          <button onClick={() => setError(null)} style={{ marginLeft: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#991B1B', fontWeight: 700 }}>x</button>
+        </div>
+      )}
 
-      <Card style={{ overflow: 'hidden' }}>
-        <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--surface)', fontWeight: 700, fontSize: 16 }}>Lab Assignments</div>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <tbody>
-            {labs.map((lab, i) => (
-              <tr key={lab.id} style={{ borderBottom: i < labs.length - 1 ? '1px solid var(--surface)' : 'none' }}>
-                <td style={{ padding: '12px 24px', fontSize: 14 }}>{lab.id}</td>
-                <td style={{ padding: '12px 24px', fontWeight: 600 }}>{lab.title}</td>
-                <td style={{ padding: '12px 24px', color: 'var(--muted)' }}>{lab.due}</td>
-                <td style={{ padding: '12px 24px' }}>
-                  <span style={{
-                    fontSize: 11, 
-                    fontWeight: 600,
-                    background: lab.status === 'submitted' ? '#D1FAE5' : lab.status === 'late' ? '#FEF3C7' : 'var(--sky-light)',
-                    color: lab.status === 'submitted' ? '#065F46' : lab.status === 'late' ? '#92400E' : 'var(--sky-dark)',
-                    padding: '3px 10px', 
-                    borderRadius: 99
-                  }}>
-                    {lab.status === 'submitted' ? 'Submitted' : lab.status === 'late' ? 'Late' : 'Pending'}
-                  </span>
-                </td>
-                <td style={{ padding: '12px 24px', fontWeight: 700, textAlign: 'right', color: lab.score >= 70 ? 'var(--mint-dark)' : lab.score ? 'var(--danger)' : 'var(--muted)' }}>
-                  {lab.score ? `${lab.score}%` : '—'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
+      {/* ── VIEW: Questions for selected lab ─────────────────── */}
+      {selectedLab && (
+        <>
+          <button
+            onClick={() => { setSelectedLab(null); setQuestions([]); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: accent, fontSize: 13, fontWeight: 600, marginBottom: 20, padding: 0 }}
+          >
+            <Icon name="arrow_left" size={14} color={accent} /> Back to labs
+          </button>
+
+          {loadingQuestions ? (
+            <div style={{ color: 'var(--muted)', fontSize: 14 }}>Loading questions...</div>
+          ) : questions.length === 0 ? (
+            <div style={{ color: 'var(--muted)', fontSize: 14 }}>No questions in this lab yet.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {questions.map((q, i) => (
+                <Card key={q.question_id} style={{ overflow: 'hidden' }}>
+                  <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--surface)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{
+                        width: 32, height: 32, borderRadius: 8,
+                        background: accent + '20', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 13, fontWeight: 700, color: accent,
+                      }}>
+                        {i + 1}
+                      </div>
+                      <span style={{ fontWeight: 700, fontSize: 15 }}>Question {i + 1}</span>
+                    </div>
+                    <button
+                      onClick={() => handleStartCoding(q)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        padding: '8px 18px', borderRadius: 8, border: 'none',
+                        background: accent, color: '#fff', fontSize: 13, fontWeight: 600,
+                        cursor: 'pointer', transition: 'opacity .2s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                      onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                    >
+                      <Icon name="code" size={14} color="#fff" /> Start Coding
+                    </button>
+                  </div>
+
+                  <div style={{ padding: '18px 24px' }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', marginBottom: 8 }}>Problem</div>
+                    <pre style={{ fontSize: 13, lineHeight: 1.6, color: '#111827', whiteSpace: 'pre-wrap', margin: 0, fontFamily: "'Google Sans', sans-serif" }}>
+                      {q.problem}
+                    </pre>
+                  </div>
+
+                  {q.test_cases && q.test_cases.length > 0 && (
+                    <div style={{ padding: '0 24px 18px' }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', marginBottom: 8 }}>
+                        Test Cases ({q.test_cases.length})
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {q.test_cases.map((tc, ti) => (
+                          <div key={tc.testcase_id} style={{
+                            display: 'flex', gap: 16, padding: '8px 12px',
+                            background: '#F9FAFB', borderRadius: 6, fontSize: 12, fontFamily: 'monospace',
+                          }}>
+                            <span style={{ color: 'var(--muted)', minWidth: 20 }}>#{ti + 1}</span>
+                            <span style={{ color: '#111827' }}>
+                              <strong>Input:</strong> {tc.input}
+                            </span>
+                            <span style={{ color: '#065F46' }}>
+                              <strong>Expected:</strong> {tc.expected_output}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── VIEW: Labs table for selected classroom ──────────── */}
+      {selectedRoom && !selectedLab && (
+        <>
+          <button
+            onClick={() => { setSelectedRoom(null); setLabs([]); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: accent, fontSize: 13, fontWeight: 600, marginBottom: 20, padding: 0 }}
+          >
+            <Icon name="arrow_left" size={14} color={accent} /> Back to classrooms
+          </button>
+
+          {loadingLabs ? (
+            <div style={{ color: 'var(--muted)', fontSize: 14 }}>Loading labs...</div>
+          ) : labs.length === 0 ? (
+            <div style={{ color: 'var(--muted)', fontSize: 14 }}>No labs in this classroom yet.</div>
+          ) : (
+            <Card style={{ overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: 'var(--surface)' }}>
+                    <th style={thStyle}>#</th>
+                    <th style={thStyle}>Title</th>
+                    <th style={thStyle}>Questions</th>
+                    <th style={thStyle}>Status</th>
+                    <th style={thStyle}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {labs.map((lab, i) => (
+                    <tr
+                      key={lab.lab_id}
+                      onClick={() => handleLabClick(lab)}
+                      style={{ borderTop: '1px solid var(--surface)', cursor: 'pointer', transition: 'background .15s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#F9FAFB'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <td style={{ padding: '14px 24px', fontSize: 14, color: 'var(--muted)' }}>{i + 1}</td>
+                      <td style={{ padding: '14px 24px', fontWeight: 600, fontSize: 14 }}>{lab.title}</td>
+                      <td style={{ padding: '14px 24px', fontSize: 14, color: 'var(--muted)' }}>{lab.question_count}</td>
+                      <td style={{ padding: '14px 24px' }}>
+                        <span style={{
+                          fontSize: 11, fontWeight: 600,
+                          background: lab.is_active ? '#D1FAE5' : 'var(--surface)',
+                          color: lab.is_active ? '#065F46' : 'var(--muted)',
+                          padding: '3px 10px', borderRadius: 99,
+                        }}>
+                          {lab.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '14px 24px', textAlign: 'right' }}>
+                        <Icon name="arrow_left" size={14} color="var(--muted)" style={{ transform: 'rotate(180deg)' }} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          )}
+        </>
+      )}
+
+      {/* ── VIEW: Classroom cards ────────────────────────────── */}
+      {!selectedRoom && (
+        <>
+          {loadingRooms ? (
+            <div style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 32 }}>Loading classrooms...</div>
+          ) : classrooms.length === 0 ? (
+            <div style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 32 }}>
+              {role === 'teacher' ? 'No classrooms yet. Create one to get started.' : 'You are not enrolled in any classrooms.'}
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 16, marginBottom: 32 }}>
+              {classrooms.map(room => (
+                <div
+                  key={room.class_id}
+                  onClick={() => handleRoomClick(room)}
+                  style={{
+                    background: '#fff', borderRadius: 16,
+                    border: '1px solid var(--border)', padding: 22,
+                    cursor: 'pointer', transition: 'all .2s',
+                    borderTop: `4px solid ${room.lab_ids?.length > 0 ? accent : 'var(--border)'}`,
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.boxShadow = 'var(--shadow)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                    <div style={{ width: 42, height: 42, borderRadius: 10, background: accent + '20', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Icon name="book" size={20} color={accent} />
+                    </div>
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{room.class_name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16 }}>ID: {room.class_id}</div>
+                  {room.prerequisites && room.prerequisites !== 'None' && (
+                    <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>Prerequisites: {room.prerequisites}</div>
+                  )}
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    <div style={{ fontSize: 13 }}>
+                      <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{room.class_size}</span>
+                      <span style={{ color: 'var(--muted)' }}> students</span>
+                    </div>
+                    <div style={{ fontSize: 13 }}>
+                      <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{room.lab_ids?.length ?? 0}</span>
+                      <span style={{ color: 'var(--muted)' }}> labs</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };

@@ -20,7 +20,10 @@ from pydantic import BaseModel
 ROOT = Path(__file__).resolve().parent.parent   # project root
 SRC  = ROOT / "src"
 STUDENT_DIR = ROOT / "data" / "student_codes"
+
+# Store database in project data/ directory (same path as reset_db.py)
 DATA_DIR = ROOT / "data"
+DATA_DIR.mkdir(exist_ok=True, parents=True)
 
 for p in [str(ROOT), str(SRC)]:
     if p not in sys.path:
@@ -72,18 +75,17 @@ async def startup():
     try:
         db_path = str(DATA_DIR / "progcheck.fs")
         init_database(db_path)
-        print("✓ ZODB database initialized successfully")
+        print("[OK] ZODB database initialized successfully")
     except Exception as e:
-        print(f"✗ Failed to initialize database: {e}")
-        import traceback
-        traceback.print_exc()
-        raise
+        print(f"[WARNING] Database initialization failed: {e}")
+        print("  Server will run without database (some features may be unavailable)")
+        # Don't raise - let server continue without database
 
 @app.on_event("shutdown")
 async def shutdown():
     """Close database connection on shutdown"""
     close_database()
-    print("✓ ZODB database closed")
+    print("[OK] ZODB database closed")
 
 # ── Include Routes ────────────────────────────────────────────────────────
 app.include_router(auth.router)

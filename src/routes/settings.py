@@ -28,18 +28,6 @@ class SettingsResponse(BaseModel):
     phone: Optional[str]
 
 
-def get_user_from_token(user_id: str, role: str):
-    """Get user object from database by ID and role"""
-    with DatabaseContext() as db:
-        if role == "student":
-            if user_id not in db.students:
-                return None
-            return db.students[user_id], "student"
-        else:  # teacher
-            if user_id not in db.teachers:
-                return None
-            return db.teachers[user_id], "teacher"
-
 
 @router.get("/profile/{user_id}", response_model=SettingsResponse)
 def get_settings(user_id: str, role: str = "student"):

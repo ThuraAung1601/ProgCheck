@@ -46,14 +46,14 @@ def register(req: RegisterRequest):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="student_id required for student registration"
             )
-        student_id = req.student_id
+        user_id = req.student_id
     elif req.role == "teacher":
         if not req.teacher_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="teacher_id required for teacher registration"
             )
-        student_id = req.teacher_id
+        user_id = req.teacher_id
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -61,51 +61,45 @@ def register(req: RegisterRequest):
         )
 
     with DatabaseContext() as db:
-        # Check if user already exists
         if req.role == "student":
-            if student_id in db.students:
+            if user_id in db.students:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail="Student already registered"
                 )
-            # Create new student
-            student = Student(student_id, req.username, req.password)
-            db.students[student_id] = student
-            user_id = student_id
-            user_obj = student
-        else:  # teacher
-            if student_id in db.teachers:
+            user_obj = Student(user_id, req.username, req.password)
+            db.students[user_id] = user_obj
+        else:
+            if user_id in db.teachers:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail="Teacher already registered"
                 )
-            # Create new teacher
-            teacher = Teacher(student_id, req.username, req.password)
-            db.teachers[student_id] = teacher
-            user_id = student_id
-            user_obj = teacher
-        
+            user_obj = Teacher(user_id, req.username, req.password)
+            db.teachers[user_id] = user_obj
+
+        # Extract values while connection is still open
+        email = user_obj.settings.email or None
+        display_name = user_obj.settings.display_name or req.username
         commit_changes()
-    
-    # Generate simple token (in production, use JWT)
+
     token = str(uuid.uuid4())
-    
     return AuthResponse(
         user=UserResponse(
             id=user_id,
             username=req.username,
             role=req.role,
-            email=user_obj.settings.email or None,
-            display_name=user_obj.settings.display_name or req.username
+            email=email,
+            display_name=display_name,
         ),
-        token=token
+        token=token,
     )
 
 
 @router.post("/login", response_model=AuthResponse)
 def login(req: LoginRequest, role: str = "student"):
     """Login as student or teacher"""
-    
+
     with DatabaseContext() as db:
         if role == "student":
             users = db.students
@@ -118,41 +112,43 @@ def login(req: LoginRequest, role: str = "student"):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="role must be 'student' or 'teacher'"
             )
-        
-        # Find user by username
+
+        # Find user by name
         user = None
         user_id = None
         for uid, u in users.items():
-            if u.username == req.username:
+            if u.name == req.username:
                 user = u
                 user_id = uid
                 break
-        
+
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid username or password"
             )
-        
-        # Verify password
+
         if not user.verify_password(req.password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid username or password"
             )
-    
-    # Generate simple token (in production, use JWT)
+
+        # Extract all values while connection is still open
+        username = user.name
+        email = user.settings.email or None
+        display_name = user.settings.display_name or user.name
+
     token = str(uuid.uuid4())
-    
     return AuthResponse(
         user=UserResponse(
             id=user_id,
-            username=user.username,
+            username=username,
             role=user_type,
-            email=user.settings.email or None,
-            display_name=user.settings.display_name or user.username
+            email=email,
+            display_name=display_name,
         ),
-        token=token
+        token=token,
     )
 
 

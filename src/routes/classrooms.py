@@ -1,28 +1,29 @@
 """
-Classroom Management Routes
+Classroom Management Routes - Updated to match class diagram
 """
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from typing import Optional, List
 from src.database import DatabaseContext, Classroom, commit_changes
 from datetime import datetime
-import uuid
+import random
 
 router = APIRouter(prefix="/api/classrooms", tags=["classrooms"])
 
 
 class ClassroomCreateRequest(BaseModel):
-    name: str
-    description: Optional[str] = ""
+    class_name: str
+    prerequisites: Optional[str] = ""
 
 
 class ClassroomResponse(BaseModel):
-    classroom_id: str
-    name: str
-    description: str
+    class_id: int
+    class_name: str
+    class_size: int
+    prerequisites: str
     teacher_id: str
-    students: List[str]
-    labs: List[str]
+    student_ids: List[str]
+    lab_ids: List[int]
     created_at: str
 
 
@@ -33,7 +34,8 @@ class ClassroomListResponse(BaseModel):
 @router.post("/create", response_model=ClassroomResponse)
 def create_classroom(req: ClassroomCreateRequest, teacher_id: str):
     """Create a new classroom (teacher only)"""
-    classroom_id = f"class_{uuid.uuid4().hex[:8]}"
+    # Generate random class_id (int)
+    class_id = random.randint(100000, 999999)
     
     with DatabaseContext() as db:
         # Verify teacher exists
@@ -43,24 +45,30 @@ def create_classroom(req: ClassroomCreateRequest, teacher_id: str):
                 detail="Teacher not found"
             )
         
-        # Create classroom
-        classroom = Classroom(classroom_id, req.name, teacher_id, req.description)
-        db.classrooms[classroom_id] = classroom
+        # Ensure unique class_id
+        while class_id in db.classrooms:
+            class_id = random.randint(100000, 999999)
         
-        # Add to teacher's classrooms
+        # Create classroom - matches class diagram: Classroom(class_id, class_name, teacher_id)
+        classroom = Classroom(class_id, req.class_name, teacher_id)
+        classroom.prerequisites = req.prerequisites
+        db.classrooms[class_id] = classroom
+        
+        # Add to teacher's courses_teach (changed from owned_classrooms)
         teacher = db.teachers[teacher_id]
-        teacher.owned_classrooms.append(classroom_id)
+        teacher.courses_teach.append(class_id)
         teacher._p_changed = True
         
         commit_changes()
     
     return ClassroomResponse(
-        classroom_id=classroom_id,
-        name=req.name,
-        description=req.description,
+        class_id=class_id,
+        class_name=req.class_name,
+        class_size=0,
+        prerequisites=req.prerequisites,
         teacher_id=teacher_id,
-        students=[],
-        labs=[],
+        student_ids=[],
+        lab_ids=[],
         created_at=datetime.now().isoformat()
     )
 
@@ -78,16 +86,18 @@ def get_teacher_classrooms(teacher_id: str):
         teacher = db.teachers[teacher_id]
         classrooms = []
         
-        for classroom_id in teacher.owned_classrooms:
-            if classroom_id in db.classrooms:
-                c = db.classrooms[classroom_id]
+        # Changed from owned_classrooms to courses_teach
+        for class_id in teacher.courses_teach:
+            if class_id in db.classrooms:
+                c = db.classrooms[class_id]
                 classrooms.append(ClassroomResponse(
-                    classroom_id=c.classroom_id,
-                    name=c.name,
-                    description=c.description,
+                    class_id=c.class_id,
+                    class_name=c.class_name,
+                    class_size=c.class_size,
+                    prerequisites=c.prerequisites,
                     teacher_id=c.teacher_id,
-                    students=list(c.students),
-                    labs=list(c.labs),
+                    student_ids=list(c.student_ids),
+                    lab_ids=list(c.lab_ids),
                     created_at=c.created_at.isoformat()
                 ))
         
@@ -96,7 +106,7 @@ def get_teacher_classrooms(teacher_id: str):
 
 @router.get("/student/{student_id}", response_model=ClassroomListResponse)
 def get_student_classrooms(student_id: str):
-    """Get all classrooms student is enrolled in"""
+    """Get all classrooms student is enrolled in - search through all classrooms"""
     with DatabaseContext() as db:
         if student_id not in db.students:
             raise HTTPException(
@@ -104,52 +114,53 @@ def get_student_classrooms(student_id: str):
                 detail="Student not found"
             )
         
-        student = db.students[student_id]
         classrooms = []
         
-        for classroom_id in student.enrolled_classrooms:
-            if classroom_id in db.classrooms:
-                c = db.classrooms[classroom_id]
+        # Search all classrooms to find where student is enrolled
+        for class_id, classroom in db.classrooms.items():
+            if student_id in classroom.student_ids:
                 classrooms.append(ClassroomResponse(
-                    classroom_id=c.classroom_id,
-                    name=c.name,
-                    description=c.description,
-                    teacher_id=c.teacher_id,
-                    students=list(c.students),
-                    labs=list(c.labs),
-                    created_at=c.created_at.isoformat()
+                    class_id=classroom.class_id,
+                    class_name=classroom.class_name,
+                    class_size=classroom.class_size,
+                    prerequisites=classroom.prerequisites,
+                    teacher_id=classroom.teacher_id,
+                    student_ids=list(classroom.student_ids),
+                    lab_ids=list(classroom.lab_ids),
+                    created_at=classroom.created_at.isoformat()
                 ))
         
         return ClassroomListResponse(classrooms=classrooms)
 
 
-@router.get("/{classroom_id}", response_model=ClassroomResponse)
-def get_classroom(classroom_id: str):
+@router.get("/{class_id}", response_model=ClassroomResponse)
+def get_classroom(class_id: int):
     """Get classroom details"""
     with DatabaseContext() as db:
-        if classroom_id not in db.classrooms:
+        if class_id not in db.classrooms:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Classroom not found"
             )
         
-        c = db.classrooms[classroom_id]
+        c = db.classrooms[class_id]
         return ClassroomResponse(
-            classroom_id=c.classroom_id,
-            name=c.name,
-            description=c.description,
+            class_id=c.class_id,
+            class_name=c.class_name,
+            class_size=c.class_size,
+            prerequisites=c.prerequisites,
             teacher_id=c.teacher_id,
-            students=list(c.students),
-            labs=list(c.labs),
+            student_ids=list(c.student_ids),
+            lab_ids=list(c.lab_ids),
             created_at=c.created_at.isoformat()
         )
 
 
-@router.post("/{classroom_id}/enroll-student/{student_id}")
-def enroll_student(classroom_id: str, student_id: str, teacher_id: str = ""):
+@router.post("/{class_id}/enroll-student/{student_id}")
+def enroll_student(class_id: int, student_id: str, teacher_id: str = ""):
     """Enroll student in classroom (teacher or direct enrollment)"""
     with DatabaseContext() as db:
-        if classroom_id not in db.classrooms:
+        if class_id not in db.classrooms:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Classroom not found"
@@ -160,7 +171,7 @@ def enroll_student(classroom_id: str, student_id: str, teacher_id: str = ""):
                 detail="Student not found"
             )
         
-        classroom = db.classrooms[classroom_id]
+        classroom = db.classrooms[class_id]
         
         # Verify teacher if provided
         if teacher_id and classroom.teacher_id != teacher_id:
@@ -171,30 +182,23 @@ def enroll_student(classroom_id: str, student_id: str, teacher_id: str = ""):
         
         # Enroll student
         classroom.add_student(student_id)
-        
-        # Add classroom to student's list
-        student = db.students[student_id]
-        if classroom_id not in student.enrolled_classrooms:
-            student.enrolled_classrooms.append(classroom_id)
-            student._p_changed = True
-        
         classroom._p_changed = True
         commit_changes()
     
     return {"message": "Student enrolled successfully"}
 
 
-@router.post("/{classroom_id}/remove-student/{student_id}")
-def remove_student(classroom_id: str, student_id: str, teacher_id: str = ""):
+@router.post("/{class_id}/remove-student/{student_id}")
+def remove_student(class_id: int, student_id: str, teacher_id: str = ""):
     """Remove student from classroom"""
     with DatabaseContext() as db:
-        if classroom_id not in db.classrooms:
+        if class_id not in db.classrooms:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Classroom not found"
             )
         
-        classroom = db.classrooms[classroom_id]
+        classroom = db.classrooms[class_id]
         
         # Verify teacher
         if teacher_id and classroom.teacher_id != teacher_id:
@@ -204,32 +208,28 @@ def remove_student(classroom_id: str, student_id: str, teacher_id: str = ""):
             )
         
         # Remove student
-        classroom.remove_student(student_id)
+        if student_id in classroom.student_ids:
+            classroom.student_ids.remove(student_id)
+            classroom.class_size = len(classroom.student_ids)
+            classroom.updated_at = datetime.now()
+            classroom._p_changed = True
         
-        # Remove classroom from student's list
-        if student_id in db.students:
-            student = db.students[student_id]
-            if classroom_id in student.enrolled_classrooms:
-                student.enrolled_classrooms.remove(classroom_id)
-                student._p_changed = True
-        
-        classroom._p_changed = True
         commit_changes()
     
     return {"message": "Student removed successfully"}
 
 
-@router.put("/{classroom_id}", response_model=ClassroomResponse)
-def update_classroom(classroom_id: str, req: ClassroomCreateRequest, teacher_id: str = ""):
+@router.put("/{class_id}", response_model=ClassroomResponse)
+def update_classroom(class_id: int, req: ClassroomCreateRequest, teacher_id: str = ""):
     """Update classroom details"""
     with DatabaseContext() as db:
-        if classroom_id not in db.classrooms:
+        if class_id not in db.classrooms:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Classroom not found"
             )
         
-        classroom = db.classrooms[classroom_id]
+        classroom = db.classrooms[class_id]
         
         # Verify teacher
         if teacher_id and classroom.teacher_id != teacher_id:
@@ -238,20 +238,19 @@ def update_classroom(classroom_id: str, req: ClassroomCreateRequest, teacher_id:
                 detail="Only classroom teacher can update"
             )
         
-        # Update fields
-        classroom.name = req.name
-        classroom.description = req.description
-        classroom.updated_at = datetime.now()
+        # Update fields using edit_classroom method
+        classroom.edit_classroom(class_name=req.class_name, prerequisites=req.prerequisites)
         classroom._p_changed = True
         
         commit_changes()
         
         return ClassroomResponse(
-            classroom_id=classroom.classroom_id,
-            name=classroom.name,
-            description=classroom.description,
+            class_id=classroom.class_id,
+            class_name=classroom.class_name,
+            class_size=classroom.class_size,
+            prerequisites=classroom.prerequisites,
             teacher_id=classroom.teacher_id,
-            students=list(classroom.students),
-            labs=list(classroom.labs),
+            student_ids=list(classroom.student_ids),
+            lab_ids=list(classroom.lab_ids),
             created_at=classroom.created_at.isoformat()
         )
