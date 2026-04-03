@@ -1,125 +1,313 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import Icon from '../components/Icon.js';
 import Card from '../components/Card.js';
 import CodeEditor from '../components/CodeEditor.js';
+import GraphCanvas from '../components/GraphCanvas.js';
+import NodeInfo from '../components/NodeInfo.js';
+import BacktrackTree from '../components/BacktrackTree.js';
+import Modal from '../components/Modal.js';
+import DiffViewer from '../components/DiffViewer.js';
+import { parseProlog, clausesToGraph } from '../utils/prologParser.js';
+import { rewireEdge } from '../utils/rewire.js';
+import { simulateProlog } from '../utils/prologEngineSimulator.js';
+import { extractSourceClauses } from '../utils/engineOutputParser.js';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
+
+const normalizeQuery = q => (q || '').trim().replace(/\.$/, '');
+
+function Btn({ onClick, children, disabled, variant = 'default', title }) {
+  const base = 'font-sans text-[11px] px-3 py-1 rounded border cursor-pointer transition-all whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed';
+  const styles = {
+    default: 'bg-bg-elevated border-border-accent text-txt-secondary hover:text-txt-primary hover:border-white/20',
+    primary: 'bg-accent-blue/15 border-accent-blue/50 text-[#85B7EB] hover:bg-accent-blue/25',
+    success: 'bg-green-900/20 border-green-700/40 text-green-300 hover:bg-green-900/30',
+    warning: 'bg-amber-900/20 border-amber-700/40 text-amber-300 hover:bg-amber-900/30',
+    danger: 'bg-red-900/20  border-red-700/40  text-red-300  hover:bg-red-900/30',
+  };
+  return (
+    <button onClick={onClick} disabled={disabled} title={title}
+      className={`${base} ${styles[variant] || styles.default}`}>
+      {children}
+    </button>
+  );
+}
 
 const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
   const { question, lab, classroom } = assignmentData;
   const accent = role === 'teacher' ? 'var(--sky)' : 'var(--mint)';
 
-  const [code, setCode] = useState('% Write your Prolog solution here\n');
+  // Results state
   const [output, setOutput] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('problem'); // problem | results
+  const [submitLoading, setSubmitLoading] = useState(false);
 
+  // Code / editor state
+  const [code, setCode] = useState('% Write your Prolog solution here\n');
+  const [loading, setLoading] = useState(false);
+
+  // Graph state
+  const [graph, setGraph] = useState({ nodes: [], edges: [] });
+  const [selNode, setSelNode] = useState(null);
+  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 500 });
+  const [hlLines, setHlLines] = useState([]);
+  const posRef = useRef({});
+  const parseTimer = useRef(null);
+  const obsRef = useRef(null);
+  const resizeTimerRef = useRef(null);
+
+  // Prolog checker state
+  const [query, setQuery] = useState('');
+  const [feedback, setFeedback] = useState('');
+  const [status, setStatus] = useState({ msg: 'Ready', kind: 'idle' });
+  const [lastResult, setLastResult] = useState(null);
+  const [canVisualize, setCanVisualize] = useState(false);
+  const [rightTab, setRightTab] = useState('problem');
+  const [traceData, setTraceData] = useState(null);
+  const [modal, setModal] = useState(null);
+
+  const setMsg = useCallback((msg, kind = 'idle') => setStatus({ msg, kind }), []);
+
+  // Canvas resize observer
+  const canvasRef = useCallback((el) => {
+    if (obsRef.current) { obsRef.current.disconnect(); obsRef.current = null; }
+    if (resizeTimerRef.current) { clearTimeout(resizeTimerRef.current); resizeTimerRef.current = null; }
+    if (!el) return;
+    const obs = new ResizeObserver(entries => {
+      const { width, height } = entries[0].contentRect;
+      if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current);
+      resizeTimerRef.current = setTimeout(() => {
+        if (width > 10 && height > 10) setCanvasSize({ width, height });
+      }, 50);
+    });
+    obs.observe(el);
+    obsRef.current = obs;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (obsRef.current) obsRef.current.disconnect();
+      if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current);
+    };
+  }, []);
+
+  // Parse code -> graph (debounced)
+  useEffect(() => {
+    clearTimeout(parseTimer.current);
+    parseTimer.current = setTimeout(() => {
+      try {
+        const clauses = parseProlog(code);
+        const newGraph = clausesToGraph(clauses, posRef.current);
+        setGraph(newGraph);
+        setSelNode(prev => {
+          if (!prev) return null;
+          return newGraph.nodes.some(n => n.id === prev.id) ? prev : null;
+        });
+      } catch { /* ignore while typing */ }
+    }, 350);
+    return () => clearTimeout(parseTimer.current);
+  }, [code]);
+
+  // Graph interaction
+  const onNodeDragEnd = useCallback((positions) => {
+    const posMap = Object.fromEntries(positions.map(p => [p.id, { x: p.x, y: p.y }]));
+    posRef.current = { ...posRef.current, ...posMap };
+    setGraph(prev => ({
+      ...prev,
+      nodes: prev.nodes.map(n => posMap[n.id] ? { ...n, ...posMap[n.id] } : n)
+    }));
+  }, []);
+
+  const onNodeClick = useCallback((node) => setSelNode(prev => prev?.id === node.id ? null : node), []);
+
+  const onEdgeRewire = useCallback(({ edge, newNodeId, newNodeLabel }) => {
+    try {
+      const updated = rewireEdge(code, edge, newNodeId, newNodeLabel);
+      if (updated !== code) { setCode(updated); setMsg(`Rewired: ${edge.label} -> ${newNodeLabel}`, 'ok'); }
+    } catch (e) { setMsg(`Rewire error: ${e.message}`, 'error'); }
+  }, [code, setMsg]);
+
+  const onHighlightLine = useCallback((lineStart, lineEnd) => {
+    setHlLines(lineStart >= 0
+      ? Array.from({ length: (lineEnd ?? lineStart) - lineStart + 1 }, (_, i) => lineStart + i)
+      : []);
+  }, []);
+
+  // API helper
   const apiFetch = async (path, body) => {
     const res = await fetch(API_BASE + path, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      method: body ? 'POST' : 'GET',
+      headers: body ? { 'Content-Type': 'application/json' } : {},
+      body: body ? JSON.stringify(body) : undefined,
     });
     if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
     return res.json();
   };
 
-  const handleSyntaxCheck = async () => {
+  const withLoading = useCallback(async (fn) => {
     setLoading(true);
-    setOutput(null);
-    try {
-      const r = await apiFetch('/api/syntax-check', {
-        problem_file: '',
-        student_file: '',
-        student_code: code,
-      });
-      setOutput({
-        type: 'syntax',
-        ok: r.ok,
-        feedback: r.feedback || (r.ok ? 'Syntax OK' : 'Syntax error'),
-      });
-      setActiveTab('results');
-    } catch (e) {
-      setOutput({ type: 'error', feedback: e.message });
-      setActiveTab('results');
-    } finally {
-      setLoading(false);
-    }
-  };
+    try { await fn(); }
+    catch (e) { setFeedback(`Error: ${e.message}`); setMsg(e.message, 'error'); }
+    finally { setLoading(false); }
+  }, [setMsg]);
 
+  const buildPayload = useCallback(() => ({
+    problem_file: '',
+    student_file: '',
+    student_code: code,
+  }), [code]);
+
+  // Prolog checker actions
+  const checkSyntax = () => withLoading(async () => {
+    const r = await apiFetch('/api/syntax-check', buildPayload());
+    setFeedback(r.feedback || 'Syntax OK.');
+    setRightTab('feedback');
+    setMsg(r.ok ? 'Syntax OK' : 'Syntax error found', r.ok ? 'ok' : 'error');
+  });
+
+  const runQuery = () => withLoading(async () => {
+    const q = normalizeQuery(query);
+    if (!q) { setMsg('Enter a query first', 'error'); return; }
+    const r = await apiFetch('/api/query-run', { ...buildPayload(), query: q });
+    setLastResult(r);
+    setCanVisualize(!!r.ok && !r.has_logic_error);
+    if (!r.ok) { setFeedback(r.feedback || 'Query failed.'); setRightTab('feedback'); return; }
+    const verdict = r.has_logic_error ? (r.shapiro_mode || 'unknown') : 'correct';
+    setFeedback([
+      `Query: ${r.query}`,
+      `Status: ${verdict}`,
+      '',
+      'Execution Trace:', r.trace || '',
+      '',
+      'Proof Tree:', r.proof_tree || '',
+      '',
+      'Debug Summary:', r.debug_summary || '',
+    ].join('\n'));
+    setRightTab('feedback');
+    setMsg(`Query done - ${verdict}`, r.has_logic_error ? 'error' : 'ok');
+  });
+
+  const visualize = useCallback(() => {
+    if (!code.trim()) { setMsg('Write some code first', 'error'); return; }
+    const q = normalizeQuery(query);
+    if (!q) { setMsg('Enter a query to visualize', 'error'); return; }
+    try {
+      const sourceClauses = extractSourceClauses(code);
+      const trace = simulateProlog(q, sourceClauses);
+      setTraceData(trace);
+      setRightTab('trace');
+      setMsg(`Visualizing ${trace.length} nodes`, 'ok');
+    } catch (e) {
+      setMsg(`Visualize error: ${e.message}`, 'error');
+    }
+  }, [code, query, setMsg]);
+
+  const runLlm = () => withLoading(async () => {
+    const q = normalizeQuery(query);
+    if (!q) { setMsg('Enter a query first', 'error'); return; }
+    const r = await apiFetch('/api/llm-feedback', { ...buildPayload(), query: q });
+    setLastResult(r);
+    setFeedback([
+      'LLM Feedback:', r.feedback || '',
+      '',
+      'Execution Trace:', r.trace || '',
+      '',
+      'Proof Tree:', r.proof_tree || '',
+    ].join('\n'));
+    setRightTab('feedback');
+    setMsg('LLM feedback ready', 'ok');
+  });
+
+  const runDiagnosis = () => withLoading(async () => {
+    const r = await apiFetch('/api/full-diagnosis', { ...buildPayload(), test_cases_file: question.test_cases || null });
+    setFeedback(r.log || 'Diagnosis complete.');
+    setRightTab('feedback');
+    if (r.changed && r.corrected_code) {
+      setModal({
+        type: 'confirm',
+        diff: r.diff || '',
+        onConfirm: () => {
+          setCode(r.corrected_code);
+          posRef.current = {};
+          setMsg('Fix applied', 'ok');
+        }
+      });
+    }
+    setMsg('Diagnosis complete', 'ok');
+  });
+
+  // Test runner & submit
   const handleRunTests = async () => {
     if (!question.test_cases || question.test_cases.length === 0) return;
-    setLoading(true);
+    setSubmitLoading(true);
     setOutput(null);
-
     const results = [];
     for (const tc of question.test_cases) {
       try {
-        const query = tc.input.replace(/\.$/, '');
-        const r = await apiFetch('/api/query-run', {
-          problem_file: '',
-          student_file: '',
-          student_code: code,
-          query,
-        });
+        const q = tc.input.replace(/\.$/, '');
+        const r = await apiFetch('/api/query-run', { ...buildPayload(), query: q });
         results.push({
           input: tc.input,
           expected: tc.expected_output,
           passed: r.ok && !r.has_logic_error,
           actual: r.ok ? (r.has_logic_error ? r.shapiro_mode : 'true') : 'failed',
-          trace: r.trace || '',
         });
       } catch (e) {
-        results.push({
-          input: tc.input,
-          expected: tc.expected_output,
-          passed: false,
-          actual: 'error: ' + e.message,
-          trace: '',
-        });
+        results.push({ input: tc.input, expected: tc.expected_output, passed: false, actual: 'error: ' + e.message });
       }
     }
-
     const passedCount = results.filter(r => r.passed).length;
-    setOutput({
-      type: 'tests',
-      results,
-      passedCount,
-      totalCount: results.length,
-      allPassed: passedCount === results.length,
-    });
-    setActiveTab('results');
-    setLoading(false);
+    setOutput({ type: 'tests', results, passedCount, totalCount: results.length, allPassed: passedCount === results.length });
+    setRightTab('results');
+    setSubmitLoading(false);
   };
 
   const handleSubmit = async () => {
     if (!user) return;
-    setLoading(true);
+    setSubmitLoading(true);
     try {
       const r = await apiFetch('/api/labs/submit', {
         student_id: user.id,
         question_id: question.question_id,
         code_file: code,
       });
-      setOutput({
-        type: 'submitted',
-        message: `Submitted! Result ID: ${r.result_id}`,
-        result: r,
-      });
-      setActiveTab('results');
+      setOutput({ type: 'submitted', message: `Submitted! Result ID: ${r.result_id}`, result: r });
+      setRightTab('results');
     } catch (e) {
       setOutput({ type: 'error', feedback: 'Submit failed: ' + e.message });
-      setActiveTab('results');
+      setRightTab('results');
     } finally {
-      setLoading(false);
+      setSubmitLoading(false);
     }
   };
 
+  const statusColor = status.kind === 'error' ? 'text-red-400'
+    : status.kind === 'ok' ? 'text-green-400'
+      : 'text-txt-tertiary';
+
+  // All tabs: problem + results + checker tabs
+  const rightTabs = [
+    ['problem', '📋 Problem', false],
+    ['results', '✅ Results', false],
+    ['feedback', '💬 Feedback', false],
+    ['graph', '⬡ Graph', false],
+    ['trace', '↯ Trace', !traceData],
+  ];
+
+  const graphLegend = [
+    ['F', '#85B7EB', 'fact'], ['R', '#97C459', 'rule'],
+    ['A', '#EF9F27', 'atom'], ['V', '#ED93B1', 'var'],
+  ];
+  const traceLegend = [
+    ['✓', '#22c55e', 'success'], ['✗', '#ef4444', 'fail'],
+    ['!', '#f59e0b', 'cut'], ['✂', '#6366f1', 'cut-prevented'],
+  ];
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontFamily: "'Google Sans', sans-serif" }}>
-      {/* ── Header ── */}
+
+      {/* Header */}
       <div style={{
-        padding: '12px 24px', borderBottom: '1px solid var(--border)',
+        padding: '10px 16px', borderBottom: '1px solid var(--border)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         background: '#fff', flexShrink: 0,
       }}>
@@ -141,34 +329,23 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
 
         <div style={{ display: 'flex', gap: 8 }}>
           <button
-            onClick={handleSyntaxCheck}
-            disabled={loading}
-            style={{
-              padding: '6px 14px', borderRadius: 6, border: '1px solid var(--border)',
-              background: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              color: '#374151', opacity: loading ? 0.5 : 1,
-            }}
-          >
-            Check Syntax
-          </button>
-          <button
             onClick={handleRunTests}
-            disabled={loading || !question.test_cases?.length}
+            disabled={submitLoading || !question.test_cases?.length}
             style={{
               padding: '6px 14px', borderRadius: 6, border: '1px solid ' + accent,
               background: accent + '15', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              color: accent, opacity: loading ? 0.5 : 1,
+              color: accent, opacity: submitLoading ? 0.5 : 1,
             }}
           >
-            {loading ? 'Running...' : 'Run Tests'}
+            {submitLoading ? 'Running...' : 'Run Tests'}
           </button>
           <button
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={submitLoading}
             style={{
               padding: '6px 14px', borderRadius: 6, border: 'none',
               background: accent, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              color: '#fff', opacity: loading ? 0.5 : 1,
+              color: '#fff', opacity: submitLoading ? 0.5 : 1,
             }}
           >
             Submit
@@ -176,150 +353,221 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
         </div>
       </div>
 
-      {/* ── Main layout ── */}
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      {/* Main layout: editor left, all tabs right */}
+      <div className="flex flex-col flex-1 overflow-hidden min-h-0 bg-bg-primary text-txt-primary font-sans">
 
-        {/* Left: Problem + Test Cases / Results tabs */}
-        <div style={{ width: 380, borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-          {/* Tab bar */}
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-            {[['problem', 'Problem'], ['results', 'Results']].map(([id, label]) => (
-              <button
-                key={id}
-                onClick={() => setActiveTab(id)}
-                style={{
-                  flex: 1, padding: '10px', border: 'none', cursor: 'pointer',
-                  fontSize: 12, fontWeight: 600, transition: 'all .15s',
-                  background: activeTab === id ? '#fff' : 'var(--surface)',
-                  color: activeTab === id ? '#111827' : 'var(--muted)',
-                  borderBottom: activeTab === id ? `2px solid ${accent}` : '2px solid transparent',
-                }}
-              >{label}</button>
-            ))}
+        {/* Toolbar */}
+        <header className="flex items-center gap-2 px-3 h-[46px] bg-bg-secondary border-b border-border-subtle flex-shrink-0 z-10 overflow-hidden">
+          <span className="font-mono text-[12px] font-semibold text-txt-tertiary flex-shrink-0">solution.pl</span>
+          <div className="w-px h-5 bg-border-accent mx-1 flex-shrink-0" />
+          <input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && runQuery()}
+            placeholder="e.g. max(3,5,X)"
+            className="bg-bg-elevated border border-border-accent text-txt-primary text-[11px] font-mono rounded px-2 py-1 w-40 focus:outline-none focus:border-accent-blue flex-shrink-0"
+          />
+          <Btn onClick={checkSyntax} disabled={loading} title="Grammar-based syntax check">Syntax</Btn>
+          <Btn onClick={runQuery} disabled={loading} variant="primary" title="Run query, get proof tree">{loading ? '...' : 'Run'}</Btn>
+          <Btn onClick={visualize} disabled={!canVisualize} variant="success" title={!canVisualize ? 'Run a successful query first' : 'Visualize backtracking trace'}>Visualize</Btn>
+          <Btn onClick={runLlm} disabled={loading} variant="warning" title="LLM natural-language feedback">LLM</Btn>
+          <Btn onClick={runDiagnosis} disabled={loading} variant="danger" title="Full diagnosis with optional auto-fix">Diagnose</Btn>
+          {lastResult && (
+            <span className={`ml-auto text-[10px] px-2 py-0.5 rounded border flex-shrink-0
+              ${lastResult.has_logic_error ? 'text-red-300 border-red-700/40 bg-red-900/15' : 'text-green-300 border-green-700/40 bg-green-900/15'}`}>
+              {lastResult.has_logic_error ? (lastResult.shapiro_mode || 'unknown') : 'correct'}
+            </span>
+          )}
+        </header>
+
+        {/* Editor + tabs */}
+        <div className="flex flex-1 overflow-hidden min-h-0">
+
+          {/* Code editor */}
+          <div className="flex flex-col border-r border-border-subtle flex-shrink-0" style={{ width: 420 }}>
+            <div className="flex items-center justify-between px-3 h-7 bg-bg-secondary border-b border-border-subtle flex-shrink-0">
+              <span className="text-[10px] font-semibold tracking-widest uppercase text-txt-tertiary">Prolog Source</span>
+              <span className="text-[10px] text-txt-tertiary italic">
+                {rightTab === 'trace' ? 'active clause highlighted' : 'drag nodes · drag edge to rewire'}
+              </span>
+            </div>
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              <CodeEditor
+                value={code}
+                onChange={setCode}
+                highlightLines={
+                  rightTab === 'trace'
+                    ? hlLines
+                    : selNode?.lineStart != null ? [selNode.lineStart] : []
+                }
+              />
+            </div>
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
-            {activeTab === 'problem' && (
-              <>
-                <div style={{ marginBottom: 20 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>Problem Description</div>
-                  <pre style={{ fontSize: 13, lineHeight: 1.7, color: '#111827', whiteSpace: 'pre-wrap', margin: 0, fontFamily: "'Google Sans', sans-serif" }}>
+          {/* Right tabbed panel */}
+          <div className="flex-1 flex flex-col min-h-0 min-w-0">
+
+            {/* Tab bar */}
+            <div className="flex items-center h-8 bg-bg-secondary border-b border-border-subtle flex-shrink-0 overflow-x-auto">
+              {rightTabs.map(([id, label, disabled]) => (
+                <button
+                  key={id}
+                  onClick={() => !disabled && setRightTab(id)}
+                  disabled={disabled}
+                  title={disabled ? 'Run a query then click Visualize to enable' : undefined}
+                  className={`h-full px-4 text-[11px] border-none border-r border-border-subtle transition-all whitespace-nowrap flex-shrink-0
+                    ${disabled
+                      ? 'text-txt-tertiary opacity-35 cursor-not-allowed'
+                      : rightTab === id
+                        ? 'bg-bg-primary text-txt-primary font-medium cursor-pointer'
+                        : 'bg-transparent text-txt-tertiary hover:bg-bg-elevated hover:text-txt-secondary cursor-pointer'
+                    }`}>
+                  {label}
+                  {id === 'trace' && traceData && <span className="ml-1 text-[9px] text-indigo-400">●</span>}
+                </button>
+              ))}
+              {(rightTab === 'graph' || rightTab === 'trace') && (
+                <div className="flex gap-2 ml-auto px-3 flex-shrink-0">
+                  {(rightTab === 'graph' ? graphLegend : traceLegend).map(([sym, color, tip]) => (
+                    <span key={sym} style={{ color }} className="text-[10px] font-mono cursor-default" title={tip}>{sym}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Problem tab */}
+            {rightTab === 'problem' && (
+              <div className="flex-1 overflow-auto min-h-0 p-5">
+                <div className="mb-5">
+                  <div className="text-[11px] font-semibold tracking-widest uppercase text-txt-tertiary mb-3">Problem Description</div>
+                  <pre className="font-sans text-[13px] leading-relaxed text-txt-secondary whitespace-pre-wrap">
                     {question.problem}
                   </pre>
                 </div>
-
                 {question.test_cases && question.test_cases.length > 0 && (
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>
+                    <div className="text-[11px] font-semibold tracking-widest uppercase text-txt-tertiary mb-3">
                       Test Cases ({question.test_cases.length})
                     </div>
                     {question.test_cases.map((tc, i) => (
-                      <div key={tc.testcase_id} style={{
-                        padding: '10px 12px', marginBottom: 6,
-                        background: '#F9FAFB', borderRadius: 6, fontSize: 12,
-                      }}>
-                        <div style={{ fontFamily: 'monospace', color: '#111827', marginBottom: 4 }}>
-                          <strong style={{ color: 'var(--muted)' }}>#{i + 1} Input:</strong> {tc.input}
+                      <div key={tc.testcase_id} className="p-3 mb-2 rounded-md border border-border-subtle bg-bg-elevated text-[12px]">
+                        <div className="font-mono text-txt-secondary mb-1">
+                          <span className="text-txt-tertiary font-semibold">#{i + 1} Input:</span> {tc.input}
                         </div>
-                        <div style={{ fontFamily: 'monospace', color: '#065F46' }}>
-                          <strong style={{ color: 'var(--muted)' }}>Expected:</strong> {tc.expected_output}
+                        <div className="font-mono text-green-400">
+                          <span className="text-txt-tertiary font-semibold">Expected:</span> {tc.expected_output}
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-              </>
+              </div>
             )}
 
-            {activeTab === 'results' && (
-              <>
+            {/* Results tab */}
+            {rightTab === 'results' && (
+              <div className="flex-1 overflow-auto min-h-0 p-5">
                 {!output && (
-                  <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: '40px 0' }}>
-                    Run tests or check syntax to see results here.
+                  <div className="text-txt-tertiary text-[13px] text-center pt-16">
+                    Run tests or submit to see results here.
                   </div>
                 )}
-
-                {output?.type === 'syntax' && (
-                  <Card style={{ padding: 16, background: output.ok ? '#F0FDF4' : '#FEF2F2', border: `1px solid ${output.ok ? '#BBF7D0' : '#FECACA'}` }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6, color: output.ok ? '#065F46' : '#991B1B' }}>
-                      {output.ok ? 'Syntax OK' : 'Syntax Error'}
-                    </div>
-                    <pre style={{ fontSize: 12, whiteSpace: 'pre-wrap', margin: 0, color: '#374151', fontFamily: 'monospace' }}>
-                      {output.feedback}
-                    </pre>
-                  </Card>
-                )}
-
                 {output?.type === 'tests' && (
                   <div>
-                    <div style={{
-                      padding: '12px 16px', borderRadius: 8, marginBottom: 16,
-                      background: output.allPassed ? '#F0FDF4' : '#FEF2F2',
-                      border: `1px solid ${output.allPassed ? '#BBF7D0' : '#FECACA'}`,
-                    }}>
-                      <span style={{ fontWeight: 700, fontSize: 14, color: output.allPassed ? '#065F46' : '#991B1B' }}>
-                        {output.allPassed ? 'All Tests Passed!' : `${output.passedCount} / ${output.totalCount} Passed`}
-                      </span>
+                    <div className={`p-3 rounded-lg mb-4 border text-[13px] font-semibold
+                      ${output.allPassed ? 'bg-green-900/20 border-green-700/40 text-green-300' : 'bg-red-900/20 border-red-700/40 text-red-300'}`}>
+                      {output.allPassed ? '✓ All Tests Passed!' : `✗ ${output.passedCount} / ${output.totalCount} Passed`}
                     </div>
-
                     {output.results.map((r, i) => (
-                      <div key={i} style={{
-                        padding: '10px 12px', marginBottom: 8,
-                        background: r.passed ? '#F0FDF4' : '#FEF2F2',
-                        borderRadius: 6, border: `1px solid ${r.passed ? '#BBF7D0' : '#FECACA'}`,
-                        fontSize: 12,
-                      }}>
-                        <div style={{ fontWeight: 600, marginBottom: 4, color: r.passed ? '#065F46' : '#991B1B' }}>
-                          {r.passed ? 'PASS' : 'FAIL'} - Test #{i + 1}
+                      <div key={i} className={`p-3 mb-2 rounded-md border text-[12px]
+                        ${r.passed ? 'bg-green-900/15 border-green-700/30' : 'bg-red-900/15 border-red-700/30'}`}>
+                        <div className={`font-semibold mb-1 ${r.passed ? 'text-green-400' : 'text-red-400'}`}>
+                          {r.passed ? 'PASS' : 'FAIL'} — Test #{i + 1}
                         </div>
-                        <div style={{ fontFamily: 'monospace', color: '#374151' }}>
-                          Query: {r.input}
-                        </div>
-                        <div style={{ fontFamily: 'monospace', color: '#374151' }}>
-                          Expected: {r.expected} | Got: {r.actual}
-                        </div>
+                        <div className="font-mono text-txt-tertiary">Query: {r.input}</div>
+                        <div className="font-mono text-txt-tertiary">Expected: {r.expected} | Got: {r.actual}</div>
                       </div>
                     ))}
                   </div>
                 )}
-
                 {output?.type === 'submitted' && (
-                  <Card style={{ padding: 16, background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: '#065F46', marginBottom: 4 }}>
-                      Submitted Successfully
-                    </div>
-                    <div style={{ fontSize: 12, color: '#374151' }}>{output.message}</div>
-                  </Card>
+                  <div className="p-4 rounded-lg bg-green-900/20 border border-green-700/40">
+                    <div className="font-semibold text-[14px] text-green-300 mb-1">Submitted Successfully</div>
+                    <div className="text-[12px] text-txt-secondary">{output.message}</div>
+                  </div>
                 )}
-
                 {output?.type === 'error' && (
-                  <Card style={{ padding: 16, background: '#FEF2F2', border: '1px solid #FECACA' }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: '#991B1B', marginBottom: 4 }}>Error</div>
-                    <pre style={{ fontSize: 12, whiteSpace: 'pre-wrap', margin: 0, color: '#374151', fontFamily: 'monospace' }}>
-                      {output.feedback}
-                    </pre>
-                  </Card>
+                  <div className="p-4 rounded-lg bg-red-900/20 border border-red-700/40">
+                    <div className="font-semibold text-[14px] text-red-300 mb-1">Error</div>
+                    <pre className="text-[12px] whitespace-pre-wrap text-txt-secondary font-mono">{output.feedback}</pre>
+                  </div>
                 )}
-              </>
+              </div>
+            )}
+
+            {/* Feedback tab */}
+            {rightTab === 'feedback' && (
+              <div className="flex-1 overflow-auto min-h-0 p-4">
+                <pre className="font-mono text-[12px] leading-relaxed text-txt-secondary whitespace-pre-wrap">
+                  {feedback || 'Run a query or check syntax to see output here.'}
+                </pre>
+              </div>
+            )}
+
+            {/* Graph tab */}
+            {rightTab === 'graph' && (
+              <div className="flex-1 relative overflow-hidden bg-bg-primary" ref={canvasRef}>
+                {graph.nodes.length === 0 ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-txt-tertiary">
+                    <span className="text-4xl opacity-20">&#8866;</span>
+                    <p className="text-xs text-center leading-relaxed">Type Prolog code<br />to see the knowledge graph</p>
+                  </div>
+                ) : (
+                  <GraphCanvas
+                    nodes={graph.nodes} edges={graph.edges}
+                    width={canvasSize.width} height={canvasSize.height}
+                    selectedNodeId={selNode?.id}
+                    onNodeClick={onNodeClick}
+                    onNodeDragEnd={onNodeDragEnd}
+                    onEdgeRewire={onEdgeRewire}
+                  />
+                )}
+                {selNode && <NodeInfo node={selNode} edges={graph.edges} onClose={() => setSelNode(null)} />}
+              </div>
+            )}
+
+            {/* Trace tab */}
+            {rightTab === 'trace' && traceData && (
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <BacktrackTree trace={traceData} onHighlightLine={onHighlightLine} />
+              </div>
             )}
           </div>
         </div>
 
-        {/* Right: Code Editor */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <div style={{
-            padding: '8px 16px', background: '#0d0f14',
-            borderBottom: '1px solid #1e2030',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
-          }}>
-            <span style={{ fontSize: 11, color: '#666', fontFamily: 'monospace' }}>solution.pl</span>
-            <span style={{ fontSize: 10, color: '#444' }}>Prolog</span>
-          </div>
-          <div style={{ flex: 1, minHeight: 0 }}>
-            <CodeEditor value={code} onChange={setCode} highlightLines={[]} />
-          </div>
+        {/* Status bar */}
+        <div className={`font-mono text-[11px] px-4 py-1 bg-bg-secondary border-t border-border-subtle flex-shrink-0 truncate ${statusColor}`}>
+          {status.msg}
         </div>
       </div>
+
+      {/* Modal */}
+      <Modal
+        open={!!modal}
+        wide={modal?.type === 'confirm' && !!modal?.diff}
+        title={modal?.type === 'confirm' ? 'Auto-correction available' : ''}
+        onClose={() => setModal(null)}
+        actions={
+          modal?.type === 'confirm' ? (
+            <>
+              <button onClick={() => setModal(null)} className="text-xs px-3 py-1 border border-border-accent rounded">Cancel</button>
+              <button onClick={() => { modal.onConfirm(); setModal(null); }} className="text-xs px-3 py-1 bg-green-900/20 border border-green-700 text-green-300 rounded">Confirm</button>
+            </>
+          ) : null
+        }
+      >
+        {modal?.type === 'confirm' ? <DiffViewer diff={modal.diff} /> : <p>{modal?.message}</p>}
+      </Modal>
     </div>
   );
 };
