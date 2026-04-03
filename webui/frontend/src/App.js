@@ -383,7 +383,7 @@ export default function App() {
     if (r.changed && r.corrected_code) {
       setModal({
         type: 'confirm',
-        message: 'Auto-correction available — apply fix to editor?',
+        diff: r.diff || '',
         onConfirm: () => {
           setCode(r.corrected_code);
           posRef.current = {};
