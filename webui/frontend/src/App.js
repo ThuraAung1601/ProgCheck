@@ -8,6 +8,7 @@ import GraphCanvas from './components/GraphCanvas';
 import NodeInfo from './components/NodeInfo';
 import BacktrackTree from './components/BacktrackTree';
 import Modal from './components/Modal';
+import DiffViewer from './components/DiffViewer';
 import { parseProlog, clausesToGraph } from './utils/prologParser';
 import { rewireEdge } from './utils/rewire';
 import { simulateProlog } from './utils/prologEngineSimulator';
@@ -608,9 +609,10 @@ export default function App() {
       {/* ── Popup modal ── */}
       <Modal
         open={!!modal}
+        wide={modal?.type === 'confirm' && !!modal?.diff}
         title={
           modal?.type === 'save' ? 'Save File' :
-            modal?.type === 'confirm' ? 'Confirm Action' : ''
+            modal?.type === 'confirm' ? 'Auto-correction available — apply fix?' : ''
         }
         onClose={() => setModal(null)}
         actions={
@@ -664,6 +666,8 @@ export default function App() {
               setSaveFilename('');
             }}
           />
+        ) : modal?.type === 'confirm' ? (
+          <DiffViewer diff={modal.diff} />
         ) : (
           <p>{modal?.message}</p>
         )}
