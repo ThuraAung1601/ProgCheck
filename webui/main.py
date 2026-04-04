@@ -466,9 +466,6 @@ def full_diagnosis(payload: FullDiagnosisPayload) -> dict[str, Any]:
                             fix_output_path=fix_path,
                         )
 
-                        if test_file_path:
-                            test_file_path.unlink(missing_ok=True)
-
                         full_log = checker.run()
 
                         corrected = (
@@ -499,6 +496,8 @@ def full_diagnosis(payload: FullDiagnosisPayload) -> dict[str, Any]:
                         temp_student.unlink(missing_ok=True)
                         fix_path.unlink(missing_ok=True)
                         problem_path.unlink(missing_ok=True)
+                        if test_file_path:
+                            test_file_path.unlink(missing_ok=True)
 
         raise HTTPException(status_code=404, detail="Problem not found")
 

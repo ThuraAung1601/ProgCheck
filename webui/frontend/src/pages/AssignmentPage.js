@@ -154,7 +154,7 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
     problem_id: Number(question.question_id),
     student_file: 'assignment.pl',
     student_code: code,
-  }), [code, question]);
+  }), [code, question, question.question_id]);
 
   // Prolog checker actions
   const checkSyntax = () => withLoading(async () => {
@@ -250,13 +250,14 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
   const runDiagnosis = () => withLoading(async () => {
     const r = await apiFetch('/api/full-diagnosis', {
       ...buildPayload(),
-      test_cases: question.test_cases || [] 
+      test_cases_file: question.test_cases?.length ? question.test_cases : null,
     });
 
+    console.log('[diagnosis]', { changed: r.changed, hasCorrected: !!r.corrected_code, diff: r.diff?.slice(0, 80) });
     setFeedback(r.log || 'Diagnosis complete.');
     setRightTab('feedback');
 
-    if (r.changed && r.corrected_code) {
+    if (r.corrected_code) {
       setModal({
         type: 'confirm',
         diff: r.diff || '',
@@ -267,7 +268,6 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
         }
       });
     }
-
     setMsg('Diagnosis complete', 'ok');
   });
 

@@ -802,6 +802,9 @@ class PrologChecker:
         feedback = self.last_llm_feedback or self._build_human_feedback(analysis) or ""
         error_summary = analysis.get("error")
 
+        last_fixed_code = None
+        verified = False
+
         for attempt in range(1, self.max_fix_attempts + 1):
             self._log(log, f"Attempt {attempt}/{self.max_fix_attempts}")
             self._log(log, "Input summary:")
@@ -827,6 +830,8 @@ class PrologChecker:
                 self._log(log, "No corrected code returned. Stopping.")
                 break
 
+            last_fixed_code = fixed_code
+
             eval_result = self._evaluate_candidate(fixed_code, tests_text, log)
             if eval_result.get("status") == "correct":
                 self._log(log, "Auto-correction succeeded.")
@@ -834,10 +839,17 @@ class PrologChecker:
                     self.fix_output_path.write_text(fixed_code)
                 else:
                     self._log(log, "Corrected code saved in log only.")
+                verified = True
                 break
 
             error_summary = eval_result.get("error") or eval_result.get("syntax_error")
             feedback = self.last_llm_feedback or feedback
+
+        # If evaluation was inconclusive but the LLM did produce a suggestion, still
+        # surface it so the user can review the diff and decide.
+        if not verified and last_fixed_code and self.fix_output_path:
+            self._log(log, "Auto-correction unverified (evaluation inconclusive) — saving best attempt for review.")
+            self.fix_output_path.write_text(last_fixed_code)
 
         self._log(log, "Auto-correction finished.")
     
