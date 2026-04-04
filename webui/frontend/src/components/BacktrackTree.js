@@ -115,6 +115,7 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
   const [stepIdx, setStepIdx]     = useState(-1);
   const [selectedNode, setSelectedNode] = useState(null);
   const [showGhosts, setShowGhosts] = useState(true);
+  const [showBlocks, setShowBlocks] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [pan, setPan]             = useState({ x: 10, y: 10 });
   const [zoom, setZoom]           = useState(0.85);
@@ -125,7 +126,7 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
 
   useEffect(() => {
     setStepIdx(-1); setSelectedNode(null);
-    setShowGhosts(true); setIsPlaying(false);
+    setShowGhosts(true); setShowBlocks(true); setIsPlaying(false);
     setPan({ x: 10, y: 10 }); setZoom(compact ? 0.75 : 0.9);
   }, [trace, compact]);
 
@@ -181,6 +182,71 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
     trace?.forEach(n => { if (n.cutPrevented && n.cutBy) map[n.id] = n.cutBy; });
     return map;
   }, [trace]);
+
+  // ── Block (bounding box) computation ────────────────────────────────────
+  // A block is drawn only for nodes that matched a RULE (clause contains ':-').
+  // The box covers that node + all its direct children (body goals) + their
+  // full subtrees — i.e. the entire scope of that one rule invocation.
+  const blocks = useMemo(() => {
+    if (!showBlocks || !trace?.length) return [];
+    const PAD = 22;
+
+    // Build children map over visible, non-cut nodes
+    const childrenOf = {};
+    trace.forEach(n => { childrenOf[n.id] = []; });
+    trace.forEach(n => {
+      if (n.parentId && !n.cutPrevented && visibleIds.has(n.id))
+        childrenOf[n.parentId]?.push(n.id);
+    });
+
+    // Collect all descendant ids (inclusive)
+    function allDesc(id) {
+      const out = [id];
+      for (const c of (childrenOf[id] || [])) out.push(...allDesc(c));
+      return out;
+    }
+
+    const result = [];
+    trace.forEach(n => {
+      if (n.cutPrevented || !visibleIds.has(n.id)) return;
+
+      // Only draw a block when this node matched a RULE (has :- in clause)
+      const isRule = typeof n.clause === 'string' && n.clause.includes(':-');
+      if (!isRule) return;
+
+      // Scope = this node + all descendants
+      const ids = allDesc(n.id);
+      const pts = ids.map(id => positions[id]).filter(Boolean);
+      if (pts.length < 2) return; // no children yet visible — skip
+
+      const minX = Math.min(...pts.map(p => p.x)) - PAD;
+      const minY = Math.min(...pts.map(p => p.y)) - PAD;
+      const maxX = Math.max(...pts.map(p => p.x + NODE_W)) + PAD;
+      const maxY = Math.max(...pts.map(p => p.y + NODE_H)) + PAD;
+
+      result.push({
+        id: n.id,
+        label: n.goal.length > 28 ? n.goal.slice(0, 27) + '…' : n.goal,
+        clause: n.clause,
+        depth: n.depth || 0,
+        x: minX, y: minY, w: maxX - minX, h: maxY - minY,
+        result: n.result,
+      });
+    });
+
+    // Sort deepest first → inner boxes render on top of outer boxes
+    result.sort((a, b) => b.depth - a.depth);
+    return result;
+  }, [showBlocks, trace, positions, visibleIds]);
+
+  // Colour palette for block frames — cycling by depth
+  const BLOCK_COLORS = [
+    { stroke: 'rgba(133,183,235,0.35)', fill: 'rgba(133,183,235,0.04)', label: 'rgba(133,183,235,0.6)' },
+    { stroke: 'rgba(151,196,89,0.35)',  fill: 'rgba(151,196,89,0.04)',  label: 'rgba(151,196,89,0.6)' },
+    { stroke: 'rgba(239,159,39,0.35)',  fill: 'rgba(239,159,39,0.04)',  label: 'rgba(239,159,39,0.6)' },
+    { stroke: 'rgba(237,147,177,0.35)', fill: 'rgba(237,147,177,0.04)', label: 'rgba(237,147,177,0.6)' },
+    { stroke: 'rgba(99,102,241,0.35)',  fill: 'rgba(99,102,241,0.04)',  label: 'rgba(99,102,241,0.6)' },
+  ];
 
   const onWheel = useCallback(e => {
     e.preventDefault();
@@ -239,6 +305,12 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
             ✂
           </label>
         )}
+        <label className="flex items-center gap-1 cursor-pointer text-[10px] font-sans select-none"
+          style={{ color: showBlocks ? '#85B7EB' : '#4a5568' }}>
+          <input type="checkbox" checked={showBlocks} onChange={e => setShowBlocks(e.target.checked)}
+            className="accent-blue-500 w-2.5 h-2.5" />
+          ⬡
+        </label>
       </div>
 
       {/* Active step info */}
@@ -273,6 +345,29 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
           <rect width="100%" height="100%" fill="url(#bt-grid2)" className="pan-bg" />
           <g style={{ transition: 'transform 0.35s ease' }} transform={`translate(${pan.x},${pan.y})`}>
           <g transform={`scale(${zoom})`}>
+            {/* ── Block frames (bounding boxes, drawn behind everything) ── */}
+            {blocks.map((b, i) => {
+              const c = BLOCK_COLORS[b.depth % BLOCK_COLORS.length];
+              return (
+                <g key={`blk-${b.id}`}>
+                  <rect
+                    x={b.x} y={b.y} width={b.w} height={b.h} rx={12}
+                    fill={c.fill}
+                    stroke={c.stroke}
+                    strokeWidth={1.5}
+                    strokeDasharray="6 3"
+                  />
+                  {/* Label in top-left corner of the frame */}
+                  <text
+                    x={b.x + 10} y={b.y + 13}
+                    fontSize={8.5} fontFamily="'JetBrains Mono',monospace"
+                    fill={c.label} opacity={0.85}
+                  >
+                    {b.label}
+                  </text>
+                </g>
+              );
+            })}
             {/* Regular connectors */}
             {trace.map(node => {
               if (!node.parentId || !visibleIds.has(node.id) || node.cutPrevented) return null;
