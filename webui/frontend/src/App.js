@@ -348,7 +348,6 @@ export default function App() {
 
   const runDiagnosis = () => withLoading(async () => {
     const r = await apiFetch('/api/full-diagnosis', { ...buildPayload(), test_cases_file: selProblemPreset.test_cases || []  });
-    console.log('[diagnosis]', { changed: r.changed, hasCorrected: !!r.corrected_code, diff: r.diff?.slice(0, 80) });
     setFeedback(r.log || 'Diagnosis complete.');
     setRightTab('feedback');
     if (r.corrected_code) {

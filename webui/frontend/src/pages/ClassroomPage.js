@@ -17,6 +17,9 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
   const [loadingLabs, setLoadingLabs] = useState(false);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [error, setError] = useState(null);
+  const [showAddLab, setShowAddLab] = useState(false);
+  const [newLabTitle, setNewLabTitle] = useState('');
+  const [addingLab, setAddingLab] = useState(false);
 
   // ── fetch classrooms ───────────────────────────────────────
   useEffect(() => {
@@ -70,6 +73,27 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
         lab: selectedLab,
         classroom: selectedRoom,
       });
+    }
+  };
+
+  const handleAddLab = async () => {
+    if (!newLabTitle.trim() || !selectedRoom) return;
+    setAddingLab(true);
+    try {
+      const res = await fetch(API_BASE + `/api/labs/create?teacher_id=${user.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newLabTitle.trim(), classroom_id: selectedRoom.class_id }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setLabs(prev => [...prev, data]);
+      setNewLabTitle('');
+      setShowAddLab(false);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setAddingLab(false);
     }
   };
 
@@ -167,7 +191,10 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
                       onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
                       onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                     >
-                      <Icon name="code" size={14} color="#fff" /> Start Coding
+                      {role === 'teacher'
+                        ? <><Icon name="chart" size={14} color="#fff" /> See Results</>
+                        : <><Icon name="code" size={14} color="#fff" /> Start Coding</>
+                      }
                     </button>
                   </div>
 
@@ -211,12 +238,65 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
       {/* ── VIEW: Labs table for selected classroom ──────────── */}
       {selectedRoom && !selectedLab && (
         <>
-          <button
-            onClick={() => { setSelectedRoom(null); setLabs([]); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: accent, fontSize: 13, fontWeight: 600, marginBottom: 20, padding: 0 }}
-          >
-            <Icon name="arrow_left" size={14} color={accent} /> Back to classrooms
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <button
+              onClick={() => { setSelectedRoom(null); setLabs([]); }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: accent, fontSize: 13, fontWeight: 600, padding: 0 }}
+            >
+              <Icon name="arrow_left" size={14} color={accent} /> Back to classrooms
+            </button>
+            {role === 'teacher' && (
+              <button
+                onClick={() => setShowAddLab(v => !v)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '7px 16px', borderRadius: 8, border: `1px solid ${accent}`,
+                  background: showAddLab ? accent : 'transparent',
+                  color: showAddLab ? '#fff' : accent,
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                + Add Lab
+              </button>
+            )}
+          </div>
+
+          {role === 'teacher' && showAddLab && (
+            <div style={{
+              display: 'flex', gap: 10, alignItems: 'center',
+              padding: '14px 18px', marginBottom: 16,
+              background: '#F9FAFB', border: '1px solid var(--border)', borderRadius: 10,
+            }}>
+              <input
+                autoFocus
+                value={newLabTitle}
+                onChange={e => setNewLabTitle(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddLab()}
+                placeholder="Lab title…"
+                style={{
+                  flex: 1, padding: '8px 12px', borderRadius: 6,
+                  border: '1px solid var(--border)', fontSize: 13, outline: 'none',
+                }}
+              />
+              <button
+                onClick={handleAddLab}
+                disabled={addingLab || !newLabTitle.trim()}
+                style={{
+                  padding: '8px 18px', borderRadius: 6, border: 'none',
+                  background: accent, color: '#fff', fontSize: 13, fontWeight: 600,
+                  cursor: 'pointer', opacity: addingLab || !newLabTitle.trim() ? 0.5 : 1,
+                }}
+              >
+                {addingLab ? 'Adding…' : 'Create'}
+              </button>
+              <button
+                onClick={() => { setShowAddLab(false); setNewLabTitle(''); }}
+                style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)', background: '#fff', fontSize: 13, cursor: 'pointer', color: 'var(--muted)' }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
 
           {loadingLabs ? (
             <div style={{ color: 'var(--muted)', fontSize: 14 }}>Loading labs...</div>

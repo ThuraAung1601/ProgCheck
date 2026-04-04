@@ -69,6 +69,7 @@ class ResultResponse(BaseModel):
     score: int
     status: str
     submission_time: str
+    code_file: str
 
 
 # ========== Lab Routes ==========
@@ -441,7 +442,8 @@ def get_question_results(question_id: int):
                     question_id=result.question_id,
                     score=result.score,
                     status=result.status,
-                    submission_time=result.submission_time.isoformat()
+                    submission_time=result.submission_time.isoformat(),
+                    code_file=result.code_file
                 ))
         
         return results

@@ -65,6 +65,13 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
   const [traceData, setTraceData] = useState(null);
   const [modal, setModal] = useState(null);
 
+  // ── TEACHER ONLY: student/submission state ────────────────────────────
+  const [students, setStudents] = useState([]);
+  const [selStudent, setSelStudent] = useState('');
+  const [studentResults, setStudentResults] = useState([]);
+  const [selResultId, setSelResultId] = useState('');
+  const [testRunning, setTestRunning] = useState(false);
+
   const setMsg = useCallback((msg, kind = 'idle') => setStatus({ msg, kind }), []);
 
   // Canvas resize observer
@@ -89,6 +96,68 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
       if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current);
     };
   }, []);
+
+  // Teacher: fetch students + all submissions for this question on mount
+  useEffect(() => {
+    if (role !== 'teacher') return;
+    fetch(`${API_BASE}/api/classrooms/${classroom.class_id}/students`)
+      .then(r => r.ok ? r.json() : { students: [] })
+      .then(d => setStudents(d.students || []))
+      .catch(() => { });
+    fetch(`${API_BASE}/api/labs/results/question/${question.question_id}`)
+      .then(r => r.ok ? r.json() : [])
+      .then(d => setStudentResults(Array.isArray(d) ? d : []))
+      .catch(() => { });
+  }, [role, classroom.class_id, question.question_id]);
+
+  // Teacher: when submission selected, load code + auto-run tests
+  useEffect(() => {
+    if (!selResultId) return;
+    const result = studentResults.find(r => String(r.result_id) === selResultId);
+    if (!result) return;
+    const raw = result.code_file || '';
+    // Restore newlines: stored code uses '. ' between clauses instead of newlines
+    const studentCode = raw?.replace(/\.\s+([a-z%A-Z])/g, '.\n$1').trim() || '% No code found';
+    setCode(studentCode);
+    setFeedback('');
+    setLastResult(null);
+    setTraceData(null);
+    setOutput(null);
+    posRef.current = {};
+    if (!question.test_cases?.length) return;
+    setTestRunning(true);
+    setRightTab('results');
+    (async () => {
+      const results = [];
+      for (const tc of question.test_cases) {
+        try {
+          const q = tc.input.replace(/\.$/, '');
+          const res = await fetch(`${API_BASE}/api/query-run`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              problem_id: Number(question.question_id),
+              student_file: 'assignment.pl',
+              student_code: studentCode,
+              query: q,
+            }),
+          });
+          const r = res.ok ? await res.json() : { ok: false };
+          results.push({
+            input: tc.input,
+            expected: tc.expected_output,
+            passed: r.ok && !r.has_logic_error && tc.expected_output === 'true',
+            actual: r.ok ? (r.has_logic_error ? r.shapiro_mode : 'true') : 'failed',
+          });
+        } catch {
+          results.push({ input: tc.input, expected: tc.expected_output, passed: false, actual: 'error' });
+        }
+      }
+      const passedCount = results.filter(r => r.passed).length;
+      setOutput({ type: 'tests', results, passedCount, totalCount: results.length, allPassed: passedCount === results.length });
+      setTestRunning(false);
+    })();
+  }, [selResultId]);
 
   // Parse code -> graph (debounced)
   useEffect(() => {
@@ -253,7 +322,6 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
       test_cases_file: question.test_cases?.length ? question.test_cases : null,
     });
 
-    console.log('[diagnosis]', { changed: r.changed, hasCorrected: !!r.corrected_code, diff: r.diff?.slice(0, 80) });
     setFeedback(r.log || 'Diagnosis complete.');
     setRightTab('feedback');
 
@@ -340,6 +408,9 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
     ['!', '#f59e0b', 'cut'], ['✂', '#6366f1', 'cut-prevented'],
   ];
 
+  // Submissions filtered to selected student
+  const filteredResults = studentResults.filter(r => String(r.student_id) === selStudent);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontFamily: "'Google Sans', sans-serif" }}>
 
@@ -365,30 +436,62 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={handleRunTests}
-            disabled={submitLoading || !question.test_cases?.length}
-            style={{
-              padding: '6px 14px', borderRadius: 6, border: '1px solid ' + accent,
-              background: accent + '15', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              color: accent, opacity: submitLoading ? 0.5 : 1,
-            }}
-          >
-            {submitLoading ? 'Running...' : 'Run Tests'}
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={submitLoading}
-            style={{
-              padding: '6px 14px', borderRadius: 6, border: 'none',
-              background: accent, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              color: '#fff', opacity: submitLoading ? 0.5 : 1,
-            }}
-          >
-            Submit
-          </button>
-        </div>
+        {/* ── CHANGE 1: teacher sees student+submission selectors; student sees Run Tests+Submit ── */}
+        {role === 'teacher' ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <select
+              value={selStudent}
+              onChange={e => { setSelStudent(e.target.value); setSelResultId(''); setCode('% Select a submission to view student code'); setOutput(null); }}
+              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 12, minWidth: 150 }}
+            >
+              <option value="">— Select student —</option>
+              {students.map(s => (
+                <option key={s.student_id} value={String(s.student_id)}>
+                  {s.username || s.student_id}
+                </option>
+              ))}
+            </select>
+            <select
+              value={selResultId}
+              onChange={e => setSelResultId(e.target.value)}
+              disabled={!selStudent}
+              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 12, minWidth: 170, opacity: selStudent ? 1 : 0.5 }}
+            >
+              <option value="">— Select submission —</option>
+              {filteredResults.map((r, i) => (
+                <option key={r.result_id} value={String(r.result_id)}>
+                  Submission #{i + 1} · {new Date(r.submission_time).toLocaleDateString()}
+                </option>
+              ))}
+            </select>
+            {testRunning && <span style={{ fontSize: 12, color: 'var(--muted)' }}>Running tests…</span>}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={handleRunTests}
+              disabled={submitLoading || !question.test_cases?.length}
+              style={{
+                padding: '6px 14px', borderRadius: 6, border: '1px solid ' + accent,
+                background: accent + '15', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                color: accent, opacity: submitLoading ? 0.5 : 1,
+              }}
+            >
+              {submitLoading ? 'Running...' : 'Run Tests'}
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={submitLoading}
+              style={{
+                padding: '6px 14px', borderRadius: 6, border: 'none',
+                background: accent, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                color: '#fff', opacity: submitLoading ? 0.5 : 1,
+              }}
+            >
+              Submit
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main layout: editor left, all tabs right */}
@@ -405,11 +508,30 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
             placeholder="e.g. max(3,5,X)"
             className="bg-bg-elevated border border-border-accent text-txt-primary text-[11px] font-mono rounded px-2 py-1 w-40 focus:outline-none focus:border-accent-blue flex-shrink-0"
           />
-          <Btn onClick={checkSyntax} disabled={loading} title="Grammar-based syntax check">Syntax</Btn>
-          <Btn onClick={runQuery} disabled={loading} variant="primary" title="Run query, get proof tree">{loading ? '...' : 'Run'}</Btn>
-          <Btn onClick={visualize} disabled={!canVisualize} variant="success" title={!canVisualize ? 'Run a successful query first' : 'Visualize backtracking trace'}>Visualize</Btn>
-          <Btn onClick={runLlm} disabled={loading} variant="warning" title="LLM natural-language feedback">LLM</Btn>
-          <Btn onClick={runDiagnosis} disabled={loading} variant="danger" title="Full diagnosis with optional auto-fix">Diagnose</Btn>
+          {role !== 'teacher' && (
+            <>
+              <Btn onClick={checkSyntax} disabled={loading} title="Grammar-based syntax check">
+                Syntax
+              </Btn>
+
+              <Btn onClick={runQuery} disabled={loading} variant="primary" title="Run query, get proof tree">
+                {loading ? '...' : 'Run'}
+              </Btn>
+
+              <Btn onClick={visualize} disabled={!canVisualize} variant="success"
+                title={!canVisualize ? 'Run a successful query first' : 'Visualize backtracking trace'}>
+                Visualize
+              </Btn>
+
+              <Btn onClick={runLlm} disabled={loading} variant="warning" title="LLM natural-language feedback">
+                LLM
+              </Btn>
+
+              <Btn onClick={runDiagnosis} disabled={loading} variant="danger" title="Full diagnosis with optional auto-fix">
+                Diagnose
+              </Btn>
+            </>
+          )}
           {lastResult && (
             <span className={`ml-auto text-[10px] px-2 py-0.5 rounded border flex-shrink-0
               ${lastResult.has_logic_error ? 'text-red-300 border-red-700/40 bg-red-900/15' : 'text-green-300 border-green-700/40 bg-green-900/15'}`}>
@@ -421,18 +543,18 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
         {/* Editor + tabs */}
         <div className="flex flex-1 overflow-hidden min-h-0">
 
-          {/* Code editor */}
+          {/* Code editor — CHANGE 2: read-only for teacher */}
           <div className="flex flex-col border-r border-border-subtle flex-shrink-0" style={{ width: 420 }}>
             <div className="flex items-center justify-between px-3 h-7 bg-bg-secondary border-b border-border-subtle flex-shrink-0">
               <span className="text-[10px] font-semibold tracking-widest uppercase text-txt-tertiary">Prolog Source</span>
               <span className="text-[10px] text-txt-tertiary italic">
-                {rightTab === 'trace' ? 'active clause highlighted' : 'drag nodes · drag edge to rewire'}
+                {role === 'teacher' ? 'read-only' : rightTab === 'trace' ? 'active clause highlighted' : 'drag nodes · drag edge to rewire'}
               </span>
             </div>
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
               <CodeEditor
                 value={code}
-                onChange={setCode}
+                onChange={role === 'teacher' ? () => { } : setCode}
                 highlightLines={
                   rightTab === 'trace'
                     ? hlLines
@@ -502,12 +624,19 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
               </div>
             )}
 
-            {/* Results tab */}
+            {/* Results tab — CHANGE 3: spinner + teacher empty state */}
             {rightTab === 'results' && (
               <div className="flex-1 overflow-auto min-h-0 p-5">
-                {!output && (
+                {testRunning && (
+                  <div className="flex flex-col items-center gap-3 pt-16 text-txt-tertiary text-[13px]">
+                    <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+                    <div style={{ width: 28, height: 28, border: '3px solid rgba(133,183,235,.2)', borderTopColor: '#85B7EB', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                    Running tests against submission…
+                  </div>
+                )}
+                {!output && !testRunning && (
                   <div className="text-txt-tertiary text-[13px] text-center pt-16">
-                    Run tests or submit to see results here.
+                    {role === 'teacher' ? 'Select a student and submission to see results.' : 'Run tests or submit to see results here.'}
                   </div>
                 )}
                 {output?.type === 'tests' && (

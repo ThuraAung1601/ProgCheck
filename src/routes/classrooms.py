@@ -10,6 +10,11 @@ import random
 
 router = APIRouter(prefix="/api/classrooms", tags=["classrooms"])
 
+class Student(BaseModel):
+    student_id: str
+    username: str
+    email: str
+
 
 class ClassroomCreateRequest(BaseModel):
     class_name: str
@@ -29,6 +34,10 @@ class ClassroomResponse(BaseModel):
 
 class ClassroomListResponse(BaseModel):
     classrooms: List[ClassroomResponse]
+
+
+class ClassRoomStudentListResponse(BaseModel):
+    students: List[Student]
 
 
 @router.post("/create", response_model=ClassroomResponse)
@@ -153,6 +162,32 @@ def get_classroom(class_id: int):
             student_ids=list(c.student_ids),
             lab_ids=list(c.lab_ids),
             created_at=c.created_at.isoformat()
+        )
+    
+@router.get("/{class_id}/students", response_model=ClassRoomStudentListResponse)
+def get_classroom_students(class_id: int):
+    """Get list of students in a classroom"""
+    with DatabaseContext() as db:
+        if class_id not in db.classrooms:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Classroom not found"
+            )
+        
+        classroom = db.classrooms[class_id]
+
+        students = []
+        for student_id in classroom.student_ids:
+            if student_id in db.students:
+                s = db.students[student_id]
+                students.append(Student(
+                    student_id=s.student_id,
+                    username=getattr(s.settings, "display_name", None) or s.name,
+                    email=s.settings.email
+                ))
+
+        return ClassRoomStudentListResponse(
+            students=students
         )
 
 
