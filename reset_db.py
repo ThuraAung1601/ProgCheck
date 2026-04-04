@@ -25,6 +25,7 @@ except ImportError:
     print("[ERROR] ZODB not installed. Run: pip install ZODB")
     sys.exit(1)
 
+from datetime import datetime, timedelta
 from src.database.models import (
     Database, Teacher, Student,
     Classroom, Lab, LabQuestion, TestCase,
@@ -76,14 +77,16 @@ def _make_question(qid: int, qnum: int, title: str, problem: str,
 
 
 def _make_lab(lab_id: int, title: str, classroom_id: int,
-              questions: list[LabQuestion], active: bool = False) -> Lab:
+              questions: list[LabQuestion],
+              active_time: datetime = None,
+              complete_time: datetime = None) -> Lab:
     """Build a Lab with attached LabQuestions."""
     lab = Lab(lab_id, title)
     lab.classroom_id = classroom_id
+    lab.active_time = active_time
+    lab.complete_time = complete_time
     for q in questions:
         lab.add_question(q)
-    if active:
-        lab.activate()
     return lab
 
 
@@ -142,11 +145,18 @@ def seed_demo_data(db: DB):
     c101.add_student("S003")
     teacher.courses_teach.append(101)
 
+    _now = datetime.now()
+    _yesterday = _now - timedelta(days=1)
+    _next_week = _now + timedelta(days=7)
+    _two_weeks = _now + timedelta(days=14)
+    _past_end = _now - timedelta(hours=1)   # already completed
+
     lab1 = _make_lab(
         lab_id=1001,
         title="Basic Facts & Queries",
         classroom_id=101,
-        active=True,
+        active_time=_yesterday,
+        complete_time=_next_week,
         questions=[
             _make_question(
                 qid=10011, qnum=1, title="Parent Fact",
@@ -180,7 +190,8 @@ def seed_demo_data(db: DB):
         lab_id=1002,
         title="Unification & Variables",
         classroom_id=101,
-        active=False,
+        active_time=_next_week,
+        complete_time=_two_weeks,
         questions=[
             _make_question(
                 qid=10021, qnum=1, title="Unification Example",
@@ -216,7 +227,8 @@ def seed_demo_data(db: DB):
         lab_id=2001,
         title="Recursive Predicates",
         classroom_id=202,
-        active=True,
+        active_time=_yesterday,
+        complete_time=_next_week,
         questions=[
             _make_question(
                 qid=20011, qnum=1, title="Factorial",
@@ -251,7 +263,8 @@ def seed_demo_data(db: DB):
         lab_id=2002,
         title="List Operations",
         classroom_id=202,
-        active=True,
+        active_time=_yesterday,
+        complete_time=_next_week,
         questions=[
             _make_question(
                 qid=20021, qnum=1, title="List Append",
@@ -308,7 +321,8 @@ def seed_demo_data(db: DB):
         lab_id=3001,
         title="Search Algorithms in Prolog",
         classroom_id=303,
-        active=False,
+        active_time=None,
+        complete_time=None,
         questions=[
             _make_question(
                 qid=30011, qnum=1, title="Depth-First Search",
@@ -327,9 +341,10 @@ def seed_demo_data(db: DB):
 
     lab6 = _make_lab(
         lab_id=3002,
-        title="Cut & Negation", 
+        title="Cut & Negation",
         classroom_id=303,
-        active=False,
+        active_time=None,
+        complete_time=None,
         questions=[
             _make_question(
                 qid=30021, qnum=1, title="Cut - Maximum of Two Numbers",
@@ -357,7 +372,8 @@ def seed_demo_data(db: DB):
         lab_id=9999,
         title="Playground",
         classroom_id=None,  # not tied to one class
-        active=True,
+        active_time=_yesterday,
+        complete_time=_two_weeks,
         questions=[
             _make_question(
                 qid=99991,
@@ -542,13 +558,13 @@ def seed_demo_data(db: DB):
     print("    diana   (S004) -> C202 only")
     print()
     print("  Labs & questions")
-    print("    Lab 1001  Basic Facts & Queries       (active)   2 questions")
-    print("    Lab 1002  Unification & Variables     (inactive) 1 question")
-    print("    Lab 2001  Recursive Predicates        (active)   2 questions")
-    print("    Lab 2002  List Operations             (active)   3 questions")
-    print("    Lab 3001  Search Algorithms in Prolog (inactive) 1 question")
-    print("    Lab 3002  Cut & Negation              (inactive) 1 question")
-    print("    PlayGround Problem                    (inactive) 1 question")
+    print("    Lab 1001  Basic Facts & Queries       (active: yesterday→+7d)  2 questions")
+    print("    Lab 1002  Unification & Variables     (inactive: opens +7d)    1 question")
+    print("    Lab 2001  Recursive Predicates        (active: yesterday→+7d)  2 questions")
+    print("    Lab 2002  List Operations             (active: yesterday→+7d)  3 questions")
+    print("    Lab 3001  Search Algorithms in Prolog (inactive: no schedule)  1 question")
+    print("    Lab 3002  Cut & Negation              (inactive: no schedule)  1 question")
+    print("    Playground                            (active: yesterday→+14d) 8 questions")
 
 
 # ── main ─────────────────────────────────────────────────────────────────────

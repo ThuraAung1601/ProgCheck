@@ -4,6 +4,26 @@ import Card from '../components/Card.js';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
 
+// Status badge config
+const STATUS_CFG = {
+  active:    { bg: '#D1FAE5', color: '#065F46', label: 'Active' },
+  inactive:  { bg: 'var(--surface)', color: 'var(--muted)', label: 'Inactive' },
+  completed: { bg: '#FEF3C7', color: '#92400E', label: 'Completed' },
+};
+
+function StatusBadge({ status }) {
+  const cfg = STATUS_CFG[status] || STATUS_CFG.inactive;
+  return (
+    <span style={{
+      fontSize: 11, fontWeight: 600,
+      background: cfg.bg, color: cfg.color,
+      padding: '3px 10px', borderRadius: 99,
+    }}>
+      {cfg.label}
+    </span>
+  );
+}
+
 const ClassroomPage = ({ role, user, onOpenAssignment }) => {
   const accent = role === 'teacher' ? 'var(--sky)' : 'var(--mint)';
 
@@ -19,6 +39,8 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
   const [error, setError] = useState(null);
   const [showAddLab, setShowAddLab] = useState(false);
   const [newLabTitle, setNewLabTitle] = useState('');
+  const [newLabActiveTime, setNewLabActiveTime] = useState('');
+  const [newLabCompleteTime, setNewLabCompleteTime] = useState('');
   const [addingLab, setAddingLab] = useState(false);
 
   // ── fetch classrooms ───────────────────────────────────────
@@ -53,6 +75,9 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
   };
 
   const handleLabClick = (lab) => {
+    // Students can only enter active labs
+    if (role === 'student' && lab.status !== 'active') return;
+
     if (selectedLab?.lab_id === lab.lab_id) {
       setSelectedLab(null); setQuestions([]);
       return;
@@ -68,27 +93,41 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
 
   const handleStartCoding = (question) => {
     if (onOpenAssignment) {
-      onOpenAssignment({
-        question,
-        lab: selectedLab,
-        classroom: selectedRoom,
-      });
+      onOpenAssignment({ question, lab: selectedLab, classroom: selectedRoom });
     }
   };
 
   const handleAddLab = async () => {
     if (!newLabTitle.trim() || !selectedRoom) return;
+    if (!newLabActiveTime || !newLabCompleteTime) {
+      setError('Please set both Active Time and Complete Time for the lab.');
+      return;
+    }
+    if (new Date(newLabCompleteTime) <= new Date(newLabActiveTime)) {
+      setError('Complete time must be after active time.');
+      return;
+    }
     setAddingLab(true);
     try {
       const res = await fetch(API_BASE + `/api/labs/create?teacher_id=${user.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: newLabTitle.trim(), classroom_id: selectedRoom.class_id }),
+        body: JSON.stringify({
+          title: newLabTitle.trim(),
+          classroom_id: selectedRoom.class_id,
+          active_time: newLabActiveTime,
+          complete_time: newLabCompleteTime,
+        }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
       const data = await res.json();
       setLabs(prev => [...prev, data]);
       setNewLabTitle('');
+      setNewLabActiveTime('');
+      setNewLabCompleteTime('');
       setShowAddLab(false);
     } catch (e) {
       setError(e.message);
@@ -106,10 +145,19 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
   };
 
   // ── styles ─────────────────────────────────────────────────
-  const thStyle = { padding: '10px 24px', fontSize: 11, fontWeight: 700, color: 'var(--muted)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '.05em' };
+  const thStyle = {
+    padding: '10px 24px', fontSize: 11, fontWeight: 700,
+    color: 'var(--muted)', textAlign: 'left',
+    textTransform: 'uppercase', letterSpacing: '.05em',
+  };
+
+  const fmtTime = iso => iso ? new Date(iso).toLocaleString(undefined, {
+    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  }) : '—';
 
   return (
     <div className="fade-in" style={{ padding: '32px 24px', fontFamily: "'Google Sans', sans-serif", overflowY: 'auto', height: '100%' }}>
+
       {/* Breadcrumb */}
       <div style={{ marginBottom: 28 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
@@ -146,8 +194,8 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
 
       {error && (
         <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 16px', marginBottom: 20, color: '#991B1B', fontSize: 13 }}>
-          Failed to load: {error}
-          <button onClick={() => setError(null)} style={{ marginLeft: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#991B1B', fontWeight: 700 }}>x</button>
+          {error}
+          <button onClick={() => setError(null)} style={{ marginLeft: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#991B1B', fontWeight: 700 }}>×</button>
         </div>
       )}
 
@@ -197,14 +245,12 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
                       }
                     </button>
                   </div>
-
                   <div style={{ padding: '18px 24px' }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', marginBottom: 8 }}>Problem</div>
                     <pre style={{ fontSize: 13, lineHeight: 1.6, color: '#111827', whiteSpace: 'pre-wrap', margin: 0, fontFamily: "'Google Sans', sans-serif" }}>
                       {q.problem}
                     </pre>
                   </div>
-
                   {q.test_cases && q.test_cases.length > 0 && (
                     <div style={{ padding: '0 24px 18px' }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', marginBottom: 8 }}>
@@ -217,12 +263,8 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
                             background: '#F9FAFB', borderRadius: 6, fontSize: 12, fontFamily: 'monospace',
                           }}>
                             <span style={{ color: 'var(--muted)', minWidth: 20 }}>#{ti + 1}</span>
-                            <span style={{ color: '#111827' }}>
-                              <strong>Input:</strong> {tc.input}
-                            </span>
-                            <span style={{ color: '#065F46' }}>
-                              <strong>Expected:</strong> {tc.expected_output}
-                            </span>
+                            <span style={{ color: '#111827' }}><strong>Input:</strong> {tc.input}</span>
+                            <span style={{ color: '#065F46' }}><strong>Expected:</strong> {tc.expected_output}</span>
                           </div>
                         ))}
                       </div>
@@ -261,40 +303,63 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
             )}
           </div>
 
+          {/* Add Lab form */}
           {role === 'teacher' && showAddLab && (
             <div style={{
-              display: 'flex', gap: 10, alignItems: 'center',
-              padding: '14px 18px', marginBottom: 16,
+              padding: '18px 20px', marginBottom: 16,
               background: '#F9FAFB', border: '1px solid var(--border)', borderRadius: 10,
             }}>
-              <input
-                autoFocus
-                value={newLabTitle}
-                onChange={e => setNewLabTitle(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleAddLab()}
-                placeholder="Lab title…"
-                style={{
-                  flex: 1, padding: '8px 12px', borderRadius: 6,
-                  border: '1px solid var(--border)', fontSize: 13, outline: 'none',
-                }}
-              />
-              <button
-                onClick={handleAddLab}
-                disabled={addingLab || !newLabTitle.trim()}
-                style={{
-                  padding: '8px 18px', borderRadius: 6, border: 'none',
-                  background: accent, color: '#fff', fontSize: 13, fontWeight: 600,
-                  cursor: 'pointer', opacity: addingLab || !newLabTitle.trim() ? 0.5 : 1,
-                }}
-              >
-                {addingLab ? 'Adding…' : 'Create'}
-              </button>
-              <button
-                onClick={() => { setShowAddLab(false); setNewLabTitle(''); }}
-                style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)', background: '#fff', fontSize: 13, cursor: 'pointer', color: 'var(--muted)' }}
-              >
-                Cancel
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <input
+                  autoFocus
+                  value={newLabTitle}
+                  onChange={e => setNewLabTitle(e.target.value)}
+                  placeholder="Lab title…"
+                  style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13, outline: 'none' }}
+                />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <label style={{ fontSize: 12, color: 'var(--muted)' }}>
+                    Active from (students can start)
+                    <input
+                      type="datetime-local"
+                      value={newLabActiveTime}
+                      onChange={e => setNewLabActiveTime(e.target.value)}
+                      style={{ display: 'block', marginTop: 4, width: '100%', padding: '7px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13, outline: 'none' }}
+                    />
+                  </label>
+                  <label style={{ fontSize: 12, color: 'var(--muted)' }}>
+                    Complete at (lab closes)
+                    <input
+                      type="datetime-local"
+                      value={newLabCompleteTime}
+                      onChange={e => setNewLabCompleteTime(e.target.value)}
+                      style={{ display: 'block', marginTop: 4, width: '100%', padding: '7px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13, outline: 'none' }}
+                    />
+                  </label>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                  Questions and test cases can be added while the lab is <strong>inactive</strong> (before active time).
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={handleAddLab}
+                    disabled={addingLab || !newLabTitle.trim() || !newLabActiveTime || !newLabCompleteTime}
+                    style={{
+                      padding: '8px 18px', borderRadius: 6, border: 'none',
+                      background: accent, color: '#fff', fontSize: 13, fontWeight: 600,
+                      cursor: 'pointer', opacity: (addingLab || !newLabTitle.trim() || !newLabActiveTime || !newLabCompleteTime) ? 0.5 : 1,
+                    }}
+                  >
+                    {addingLab ? 'Creating…' : 'Create Lab'}
+                  </button>
+                  <button
+                    onClick={() => { setShowAddLab(false); setNewLabTitle(''); setNewLabActiveTime(''); setNewLabCompleteTime(''); }}
+                    style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)', background: '#fff', fontSize: 13, cursor: 'pointer', color: 'var(--muted)' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -310,37 +375,42 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
                     <th style={thStyle}>#</th>
                     <th style={thStyle}>Title</th>
                     <th style={thStyle}>Questions</th>
+                    <th style={thStyle}>Active From</th>
+                    <th style={thStyle}>Closes At</th>
                     <th style={thStyle}>Status</th>
                     <th style={thStyle}></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {labs.map((lab, i) => (
-                    <tr
-                      key={lab.lab_id}
-                      onClick={() => handleLabClick(lab)}
-                      style={{ borderTop: '1px solid var(--surface)', cursor: 'pointer', transition: 'background .15s' }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#F9FAFB'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <td style={{ padding: '14px 24px', fontSize: 14, color: 'var(--muted)' }}>{i + 1}</td>
-                      <td style={{ padding: '14px 24px', fontWeight: 600, fontSize: 14 }}>{lab.title}</td>
-                      <td style={{ padding: '14px 24px', fontSize: 14, color: 'var(--muted)' }}>{lab.question_count}</td>
-                      <td style={{ padding: '14px 24px' }}>
-                        <span style={{
-                          fontSize: 11, fontWeight: 600,
-                          background: lab.is_active ? '#D1FAE5' : 'var(--surface)',
-                          color: lab.is_active ? '#065F46' : 'var(--muted)',
-                          padding: '3px 10px', borderRadius: 99,
-                        }}>
-                          {lab.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '14px 24px', textAlign: 'right' }}>
-                        <Icon name="arrow_left" size={14} color="var(--muted)" style={{ transform: 'rotate(180deg)' }} />
-                      </td>
-                    </tr>
-                  ))}
+                  {labs.map((lab, i) => {
+                    const canEnter = role === 'teacher' || lab.status === 'active';
+                    return (
+                      <tr
+                        key={lab.lab_id}
+                        onClick={() => handleLabClick(lab)}
+                        style={{
+                          borderTop: '1px solid var(--surface)',
+                          cursor: canEnter ? 'pointer' : 'default',
+                          opacity: canEnter ? 1 : 0.6,
+                          transition: 'background .15s',
+                        }}
+                        onMouseEnter={e => { if (canEnter) e.currentTarget.style.background = '#F9FAFB'; }}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <td style={{ padding: '14px 24px', fontSize: 14, color: 'var(--muted)' }}>{i + 1}</td>
+                        <td style={{ padding: '14px 24px', fontWeight: 600, fontSize: 14 }}>{lab.title}</td>
+                        <td style={{ padding: '14px 24px', fontSize: 14, color: 'var(--muted)' }}>{lab.question_count}</td>
+                        <td style={{ padding: '14px 24px', fontSize: 12, color: 'var(--muted)' }}>{fmtTime(lab.active_time)}</td>
+                        <td style={{ padding: '14px 24px', fontSize: 12, color: 'var(--muted)' }}>{fmtTime(lab.complete_time)}</td>
+                        <td style={{ padding: '14px 24px' }}>
+                          <StatusBadge status={lab.status} />
+                        </td>
+                        <td style={{ padding: '14px 24px', textAlign: 'right' }}>
+                          {canEnter && <Icon name="arrow_left" size={14} color="var(--muted)" style={{ transform: 'rotate(180deg)' }} />}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </Card>

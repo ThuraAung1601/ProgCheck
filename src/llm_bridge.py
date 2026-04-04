@@ -111,6 +111,55 @@ Output ONLY Prolog test case facts, no explanations, no markdown.
     return result
 
 
+def generate_simple_test_cases(problem_text: str, student_code: str, api_key: str) -> list:
+    """Generate test cases as simple input/expected_output pairs for UI display.
+
+    Returns a list of dicts: [{input: str, expected_output: 'true'|'false'}, ...]
+    """
+    prompt = f"""You are a test case generator for Prolog programs.
+Generate test cases for the following problem.
+
+Problem:
+{problem_text}
+
+Student Code:
+{student_code}
+
+Output EXACTLY 6-10 test cases, one per line, in this format:
+QUERY|EXPECTED
+
+Rules:
+- QUERY: the Prolog query to run (no trailing dot, e.g. parent(tom,bob))
+- EXPECTED: either "true" if the query should succeed, or "false" if it should fail
+- Include a mix of positive cases (true) and negative cases (false)
+- Include edge cases relevant to the problem
+- No blank lines, no explanations, no headers — only QUERY|EXPECTED lines
+
+Example output:
+parent(tom,bob)|true
+parent(bob,tom)|false
+"""
+    result = _chat_completion(prompt, temperature=0.2, api_key=api_key)
+    test_cases = []
+    for i, line in enumerate(result.strip().splitlines()):
+        line = line.strip()
+        if '|' not in line or line.startswith('#') or line.startswith('%'):
+            continue
+        parts = line.split('|', 1)
+        if len(parts) != 2:
+            continue
+        query = parts[0].strip().rstrip('.')
+        expected = parts[1].strip().lower()
+        if expected not in ('true', 'false'):
+            expected = 'true'
+        test_cases.append({
+            'testcase_id': -(i + 1),   # negative IDs mark LLM-generated (not persisted)
+            'input': query,
+            'expected_output': expected,
+        })
+    return test_cases
+
+
 def translate_to_natural_language(analysis, problem_text, student_code, api_key):
     """Translate analysis output into natural language feedback."""
     if analysis['status'] == 'syntax_error':

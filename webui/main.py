@@ -32,6 +32,7 @@ for p in [str(ROOT), str(SRC)]:
 from src.checker import PrologChecker
 from src.database import init_database, close_database, get_root
 from src.routes import auth, settings, classrooms, labs
+from llm_bridge import generate_simple_test_cases as _gen_simple_tc
 
 # ── Pydantic models ───────────────────────────────────────────────────────
 
@@ -503,6 +504,42 @@ def full_diagnosis(payload: FullDiagnosisPayload) -> dict[str, Any]:
 
     finally:
         conn.close()
+
+class GenerateTestCasesPayload(BaseModel):
+    problem_id: int
+    student_code: str
+
+@app.post("/api/generate-diagnosis-testcases")
+def generate_diagnosis_testcases(payload: GenerateTestCasesPayload) -> dict[str, Any]:
+    """Generate LLM test cases for diagnosis in simple input/expected_output format."""
+    import os
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        return {"ok": False, "test_cases": [], "error": "GROQ_API_KEY not set"}
+
+    data, conn = get_root()
+    try:
+        qid = int(payload.problem_id)
+        problem_text = None
+        for lab in data.labs.values():
+            for q in lab.lab_question:
+                if q.question_id == qid:
+                    problem_text = q.problem
+                    break
+            if problem_text is not None:
+                break
+
+        if problem_text is None:
+            raise HTTPException(status_code=404, detail="Problem not found")
+
+        try:
+            test_cases = _gen_simple_tc(problem_text, payload.student_code, api_key)
+            return {"ok": True, "test_cases": test_cases}
+        except Exception as e:
+            return {"ok": False, "test_cases": [], "error": str(e)}
+    finally:
+        conn.close()
+
 
 @app.post("/api/apply-fix")
 def apply_fix(payload: ApplyFixPayload) -> dict[str, Any]:

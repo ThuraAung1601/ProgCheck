@@ -317,26 +317,63 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
   });
 
   const runDiagnosis = () => withLoading(async () => {
-    const r = await apiFetch('/api/full-diagnosis', {
-      ...buildPayload(),
-      test_cases_file: question.test_cases?.length ? question.test_cases : null,
-    });
+    // Step 1: generate LLM test cases, then show review modal
+    setMsg('Generating test cases…', 'idle');
 
-    setFeedback(r.log || 'Diagnosis complete.');
-    setRightTab('feedback');
-
-    if (r.corrected_code) {
-      setModal({
-        type: 'confirm',
-        diff: r.diff || '',
-        onConfirm: () => {
-          setCode(r.corrected_code);
-          posRef.current = {};
-          setMsg('Fix applied', 'ok');
-        }
+    let llmTcs = [];
+    try {
+      const gen = await apiFetch('/api/generate-diagnosis-testcases', {
+        problem_id: Number(question.question_id),
+        student_code: code,
       });
-    }
-    setMsg('Diagnosis complete', 'ok');
+      if (gen.ok) llmTcs = gen.test_cases || [];
+    } catch { /* non-fatal — proceed without generated cases */ }
+
+    // Merge: given test cases first, then LLM-generated (de-dup by input)
+    const givenTcs = (question.test_cases || []).map(tc => ({ ...tc, _source: 'given' }));
+    const seenInputs = new Set(givenTcs.map(tc => tc.input));
+    const merged = [
+      ...givenTcs,
+      ...llmTcs
+        .filter(tc => !seenInputs.has(tc.input))
+        .map(tc => ({ ...tc, _source: 'llm' })),
+    ];
+
+    // Step 2: show review modal — user can delete or add cases
+    setModal({
+      type: 'testcase-review',
+      testCases: merged,
+      onConfirm: async (confirmedTcs) => {
+        setLoading(true);
+        setModal(null);
+        try {
+          const r = await apiFetch('/api/full-diagnosis', {
+            ...buildPayload(),
+            test_cases_file: confirmedTcs.length ? confirmedTcs : null,
+          });
+          setFeedback(r.log || 'Diagnosis complete.');
+          setRightTab('feedback');
+          if (r.corrected_code) {
+            setModal({
+              type: 'confirm',
+              diff: r.diff || '',
+              onConfirm: () => {
+                setCode(r.corrected_code);
+                posRef.current = {};
+                setMsg('Fix applied', 'ok');
+              },
+            });
+          }
+          setMsg('Diagnosis complete', 'ok');
+        } catch (e) {
+          setFeedback(`Error: ${e.message}`);
+          setMsg(e.message, 'error');
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
+    setMsg('Review test cases', 'idle');
   });
 
   // Test runner & submit
@@ -389,6 +426,33 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
   const statusColor = status.kind === 'error' ? 'text-red-400'
     : status.kind === 'ok' ? 'text-green-400'
       : 'text-txt-tertiary';
+
+  // ── Test-case review modal state ─────────────────────────
+  const [reviewTcs, setReviewTcs] = useState([]);
+  const [newTcInput, setNewTcInput] = useState('');
+  const [newTcExpected, setNewTcExpected] = useState('true');
+
+  // Sync reviewTcs when modal opens with testcase-review type
+  useEffect(() => {
+    if (modal?.type === 'testcase-review') {
+      setReviewTcs(modal.testCases || []);
+      setNewTcInput('');
+      setNewTcExpected('true');
+    }
+  }, [modal?.type]);
+
+  const addReviewTc = () => {
+    const q = newTcInput.trim().replace(/\.$/, '');
+    if (!q) return;
+    setReviewTcs(prev => [...prev, {
+      testcase_id: Date.now(),
+      input: q,
+      expected_output: newTcExpected,
+      _source: 'manual',
+    }]);
+    setNewTcInput('');
+    setNewTcExpected('true');
+  };
 
   // All tabs: problem + results + checker tabs
   const rightTabs = [
@@ -718,22 +782,106 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Modal — auto-correction diff */}
       <Modal
-        open={!!modal}
-        wide={modal?.type === 'confirm' && !!modal?.diff}
-        title={modal?.type === 'confirm' ? 'Auto-correction available' : ''}
+        open={modal?.type === 'confirm'}
+        wide={!!modal?.diff}
+        title="Auto-correction available"
         onClose={() => setModal(null)}
         actions={
-          modal?.type === 'confirm' ? (
-            <>
-              <button onClick={() => setModal(null)} className="text-xs px-3 py-1 border border-border-accent rounded">Cancel</button>
-              <button onClick={() => { modal.onConfirm(); setModal(null); }} className="text-xs px-3 py-1 bg-green-900/20 border border-green-700 text-green-300 rounded">Confirm</button>
-            </>
-          ) : null
+          <>
+            <button onClick={() => setModal(null)} className="text-xs px-3 py-1 border border-border-accent rounded">Cancel</button>
+            <button onClick={() => { modal.onConfirm(); setModal(null); }} className="text-xs px-3 py-1 bg-green-900/20 border border-green-700 text-green-300 rounded">Apply Fix</button>
+          </>
         }
       >
-        {modal?.type === 'confirm' ? <DiffViewer diff={modal.diff} /> : <p>{modal?.message}</p>}
+        <DiffViewer diff={modal?.diff || ''} />
+      </Modal>
+
+      {/* Modal — test case review before diagnosis */}
+      <Modal
+        open={modal?.type === 'testcase-review'}
+        wide
+        title="Review test cases for diagnosis"
+        onClose={() => setModal(null)}
+        actions={
+          <>
+            <button onClick={() => setModal(null)} className="text-xs px-3 py-1 border border-border-accent rounded">Cancel</button>
+            <button
+              onClick={() => modal.onConfirm(reviewTcs)}
+              className="text-xs px-3 py-1 bg-red-900/20 border border-red-700 text-red-300 rounded"
+            >
+              Run Diagnosis ({reviewTcs.length} case{reviewTcs.length !== 1 ? 's' : ''})
+            </button>
+          </>
+        }
+      >
+        <div style={{ fontFamily: 'monospace', fontSize: 12 }}>
+          <p style={{ marginBottom: 10, fontSize: 12, color: 'var(--muted)', fontFamily: 'sans-serif' }}>
+            LLM will use these test cases. Remove any you don't want, or add your own.
+          </p>
+
+          {/* Existing test cases list */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14, maxHeight: 320, overflowY: 'auto' }}>
+            {reviewTcs.length === 0 && (
+              <div style={{ color: 'var(--muted)', fontSize: 12, padding: '6px 0' }}>No test cases — add some below.</div>
+            )}
+            {reviewTcs.map((tc, i) => (
+              <div key={tc.testcase_id} style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '6px 10px', borderRadius: 6,
+                background: tc._source === 'llm' ? '#EFF6FF' : tc._source === 'manual' ? '#F0FDF4' : '#F9FAFB',
+                border: '1px solid #E5E7EB',
+              }}>
+                <span style={{ color: 'var(--muted)', minWidth: 22, fontSize: 11 }}>#{i + 1}</span>
+                <span style={{ flex: 1, color: '#111827' }}>
+                  <strong>Query:</strong> {tc.input}
+                </span>
+                <span style={{
+                  minWidth: 40, textAlign: 'center', fontSize: 11, fontWeight: 600, padding: '1px 8px', borderRadius: 99,
+                  background: tc.expected_output === 'true' ? '#D1FAE5' : '#FEE2E2',
+                  color: tc.expected_output === 'true' ? '#065F46' : '#991B1B',
+                }}>
+                  {tc.expected_output}
+                </span>
+                <span style={{ fontSize: 10, color: 'var(--muted)', minWidth: 36 }}>
+                  {tc._source === 'llm' ? '🤖' : tc._source === 'manual' ? '✏️' : '📋'}
+                </span>
+                <button
+                  onClick={() => setReviewTcs(prev => prev.filter((_, j) => j !== i))}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', fontSize: 14, lineHeight: 1, padding: '0 2px' }}
+                  title="Remove"
+                >×</button>
+              </div>
+            ))}
+          </div>
+
+          {/* Add new test case */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', borderTop: '1px solid #E5E7EB', paddingTop: 12 }}>
+            <input
+              value={newTcInput}
+              onChange={e => setNewTcInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addReviewTc()}
+              placeholder="e.g. factorial(3,6)"
+              style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 12, fontFamily: 'monospace', outline: 'none' }}
+            />
+            <select
+              value={newTcExpected}
+              onChange={e => setNewTcExpected(e.target.value)}
+              style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 12 }}
+            >
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+            <button
+              onClick={addReviewTc}
+              disabled={!newTcInput.trim()}
+              style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: '#3B82F6', color: '#fff', fontSize: 12, cursor: 'pointer', opacity: newTcInput.trim() ? 1 : 0.4 }}
+            >
+              Add
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

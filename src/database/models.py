@@ -197,18 +197,35 @@ class Lab(Persistent):
       + editLab(string, int): void
       + getQuestion(int): list<LabQuestions>
     Extra (not in diagram but needed):
-      - title        : string
-      - classroom_id : int
-      - is_active    : bool
+      - title         : string
+      - classroom_id  : int
+      - active_time   : datetime  — when lab becomes accessible to students
+      - complete_time : datetime  — when lab closes (no more submissions)
+    Status is computed from current time:
+      inactive  : before active_time (teacher can edit, students cannot access)
+      active    : active_time <= now < complete_time (students can submit)
+      completed : now >= complete_time (closed for everyone)
     """
     def __init__(self, lab_id: int, title: str = ""):
         self.lab_id = lab_id                    # labID: int
         self.title = title                      # extra: human-readable title
         self.lab_question = PersistentList()    # labQuestion: list<LabQuestion>
         self.classroom_id = None                # extra: parent classroom reference
-        self.is_active = False                  # extra: visibility flag for students
+        self.active_time = None                 # extra: datetime when lab opens
+        self.complete_time = None               # extra: datetime when lab closes
         self.created_at = datetime.now()
         self.updated_at = datetime.now()
+
+    def get_current_status(self) -> str:
+        """Compute status based on current time relative to active/complete windows."""
+        now = datetime.now()
+        if self.active_time is None:
+            return "inactive"
+        if now < self.active_time:
+            return "inactive"
+        if self.complete_time is not None and now >= self.complete_time:
+            return "completed"
+        return "active"
 
     def create_lab(self, title: str):
         """createLab(string): void"""
@@ -239,14 +256,6 @@ class Lab(Persistent):
             if q.question_id == question_id:
                 return q
         return None
-
-    def activate(self):
-        self.is_active = True
-        self.updated_at = datetime.now()
-
-    def deactivate(self):
-        self.is_active = False
-        self.updated_at = datetime.now()
 
 
 class Classroom(Persistent):
