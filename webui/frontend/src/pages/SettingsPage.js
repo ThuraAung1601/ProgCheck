@@ -1,27 +1,165 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Icon from '../components/Icon.js';
 import Avatar from '../components/Avatar.js';
 import InputField from '../components/InputField.js';
 import Toggle from '../components/Toggle.js';
 import Card from '../components/Card.js';
 
-const SettingsPage = ({ role, user, onUserUpdate }) => {
-  const [theme, setTheme] = useState('dark');
-  const [tabSize, setTabSize] = useState('2');
-  const [autoSave, setAutoSave] = useState(true);
-  const [emailAlerts, setEmailAlerts] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [name, setName] = useState(user.name || user.display_name || '');
-  const accent = role === 'teacher' ? '#5BA3F5' : '#4ECBA0';
-  const accentLight = role === 'teacher' ? '#EAF2FF' : '#E6F9F2';
+const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
 
-  const handleSave = () => {
-    onUserUpdate({ ...user, name });
+const SettingsPage = ({ role, user, onUserUpdate }) => {
+  // ── local UI state ──────────────────────────────────────────
+  const [theme, setThemeLocal] = useState('dark');
+  const [tabSize, setTabSize] = useState('2');
+  const [autoSave, setAutoSaveLocal] = useState(true);
+  const [emailAlerts, setEmailAlertsLocal] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [name, setName] = useState(user?.name || user?.display_name || '');
+
+  // ── API state ───────────────────────────────────────────────
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [successMsg, setSuccessMsg] = useState('');
+
+  // ── password change state ───────────────────────────────────
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  const accent = role === 'teacher' ? '#5BA3F5' : '#4ECBA0';
+
+  // ── load settings on mount ──────────────────────────────────
+  useEffect(() => {
+    if (!user?.id) return;
+    setLoading(true);
+    fetch(`${API_BASE}/api/settings/profile/${user.id}?role=${role}`)
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then(data => {
+        setName(data.display_name || '');
+        setThemeLocal(data.theme || 'dark');
+        setAutoSaveLocal(data.auto_save ?? true);
+        setEmailAlertsLocal(data.email_alerts ?? true);
+        setLoading(false);
+      })
+      .catch(e => {
+        setError('Failed to load settings: ' + e.message);
+        setLoading(false);
+      });
+  }, [user?.id, role]);
+
+  // ── generic save helper ─────────────────────────────────────
+  const saveSettings = useCallback(async (patch) => {
+    if (!user?.id) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/settings/profile/${user.id}?role=${role}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(patch),
+        }
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      // Sync parent if display_name changed
+      if (patch.display_name !== undefined && onUserUpdate) {
+        onUserUpdate({ ...user, name: data.display_name, display_name: data.display_name });
+      }
+      setSuccessMsg('Saved');
+      setTimeout(() => setSuccessMsg(''), 2000);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }, [user, role, onUserUpdate]);
+
+  // ── toggle handlers that immediately persist ────────────────
+  const handleThemeChange = (t) => {
+    setThemeLocal(t);
+    saveSettings({ theme: t });
+  };
+
+  const handleAutoSaveChange = (val) => {
+    setAutoSaveLocal(val);
+    saveSettings({ auto_save: val });
+  };
+
+  const handleEmailAlertsChange = (val) => {
+    setEmailAlertsLocal(val);
+    saveSettings({ email_alerts: val });
+  };
+
+  // ── profile modal save ──────────────────────────────────────
+  const handleSave = async () => {
+    await saveSettings({ display_name: name });
     setShowModal(false);
   };
 
+  // ── password change ─────────────────────────────────────────
+  const handlePasswordChange = async () => {
+    setPasswordError('');
+    setPasswordSuccess('');
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      setPasswordError('All fields are required.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters.');
+      return;
+    }
+    setPasswordLoading(true);
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/settings/password-change/${user.id}?role=${role}&old_password=${encodeURIComponent(oldPassword)}&new_password=${encodeURIComponent(newPassword)}`,
+        { method: 'POST' }
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || `HTTP ${res.status}`);
+      }
+      setPasswordSuccess('Password changed successfully.');
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => {
+        setShowPasswordModal(false);
+        setPasswordSuccess('');
+      }, 1500);
+    } catch (e) {
+      setPasswordError(e.message);
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ padding: '32px 24px', height: '100%', overflowY: 'auto', fontFamily: "'Google Sans', sans-serif", color: '#6B7280' }}>
+        Loading settings…
+      </div>
+    );
+  }
+
   return (
-    <div className="fade-in" style={{ padding: '32px 24px', height: '100%', background: '#F5F7FA', fontFamily: "'Google Sans', sans-serif" }}>
+    <div className="fade-in" style={{ padding: '32px 24px', height: '100%', overflowY: 'auto', background: '#F5F7FA', fontFamily: "'Google Sans', sans-serif" }}>
       <div style={{ marginBottom: 28, textAlign: 'left' }}>
         <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-.03em', color: '#111827' }}>Settings</h1>
         <p style={{ color: '#6B7280', fontSize: 14, marginTop: 4 }}>
@@ -29,91 +167,120 @@ const SettingsPage = ({ role, user, onUserUpdate }) => {
         </p>
       </div>
 
+      {/* Error / success banners */}
+      {error && (
+        <div style={{
+          background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8,
+          padding: '10px 16px', marginBottom: 16, color: '#991B1B', fontSize: 13,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          {error}
+          <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#991B1B', fontWeight: 700 }}>×</button>
+        </div>
+      )}
+      {successMsg && (
+        <div style={{
+          background: '#D1FAE5', border: '1px solid #6EE7B7', borderRadius: 8,
+          padding: '10px 16px', marginBottom: 16, color: '#065F46', fontSize: 13,
+        }}>
+          ✓ {successMsg}
+        </div>
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 900 }}>
+
+        {/* ── Profile Details ── */}
         <Card style={{ padding: 24, background: '#F9FAFB', border: '1px solid #E5E7EB' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
             <Icon name="lock" size={18} color={accent} />
             <span style={{ fontWeight: 700, fontSize: 15, color: '#111827' }}>Profile Details</span>
           </div>
-          
+
           <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr', gap: 24, alignItems: 'flex-start' }}>
             <div style={{ position: 'relative' }}>
-              <Avatar name={user.name} size={72} role={role} />
-              <button 
+              <Avatar name={name} size={72} role={role} />
+              <button
                 onClick={() => setShowModal(true)}
                 style={{
-                  position: 'absolute', 
-                  bottom: 0, 
-                  right: 0,
-                  width: 26, 
-                  height: 26, 
-                  borderRadius: '50%', 
-                  background: '#111827',
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  border: 'none',
-                  cursor: 'pointer'
+                  position: 'absolute', bottom: 0, right: 0,
+                  width: 26, height: 26, borderRadius: '50%', background: '#111827',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: 'none', cursor: 'pointer',
                 }}
               >
                 <Icon name="camera" size={12} color="#fff" />
               </button>
             </div>
-            
+
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', marginBottom: 8, textAlign: 'left' }}>
                 Display Name
               </div>
-              <input 
-                type="text"
-                value={name}
-                readOnly
-                onChange={(e) => setName(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  fontSize: 14,
-                  color: '#111827',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: 8,
-                  background: '#fff',
-                  fontFamily: 'inherit'
-                }}
-                placeholder="Your name"
-              />
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  type="text"
+                  value={name}
+                  readOnly
+                  style={{
+                    width: '100%', padding: '10px 12px', fontSize: 14,
+                    color: '#111827', border: '1px solid #E5E7EB', borderRadius: 8,
+                    background: '#fff', fontFamily: 'inherit',
+                  }}
+                  placeholder="Your name"
+                />
+                <button
+                  onClick={() => setShowModal(true)}
+                  style={{
+                    padding: '10px 14px', borderRadius: 8, border: `1px solid ${accent}`,
+                    background: 'transparent', color: accent, fontSize: 12,
+                    fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                  }}
+                >
+                  Edit
+                </button>
+              </div>
             </div>
 
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', marginBottom: 8, textAlign: 'left' }}>
                 Email Address
               </div>
-              <input 
+              <input
                 type="email"
-                value={user.email || ''}
+                value={user?.email || ''}
                 readOnly
                 style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  fontSize: 14,
-                  color: '#374151',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: 8,
-                  background: '#F9FAFB',
-                  fontFamily: 'inherit',
-                  cursor: 'not-allowed'
+                  width: '100%', padding: '10px 12px', fontSize: 14,
+                  color: '#374151', border: '1px solid #E5E7EB', borderRadius: 8,
+                  background: '#F9FAFB', fontFamily: 'inherit', cursor: 'not-allowed',
                 }}
               />
             </div>
           </div>
+
+          {/* Change password link */}
+          <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid #E5E7EB' }}>
+            <button
+              onClick={() => setShowPasswordModal(true)}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: accent, fontSize: 13, fontWeight: 600, padding: 0,
+              }}
+            >
+              Change Password…
+            </button>
+          </div>
         </Card>
 
+        {/* ── User Preferences ── */}
         <Card style={{ padding: 24, background: '#F9FAFB', border: '1px solid #E5E7EB' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
             <Icon name="sliders" size={18} color={accent} />
             <span style={{ fontWeight: 700, fontSize: 15, color: '#111827' }}>User Preferences</span>
           </div>
-          
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 24 }}>
+            {/* Theme — persisted to backend */}
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', marginBottom: 8 }}>
                 Color Theme
@@ -122,19 +289,12 @@ const SettingsPage = ({ role, user, onUserUpdate }) => {
                 {['dark', 'light'].map(t => (
                   <button
                     key={t}
-                    onClick={() => setTheme(t)}
+                    onClick={() => handleThemeChange(t)}
                     style={{
-                      flex: 1,
-                      padding: '8px',
-                      borderRadius: 8,
-                      fontSize: 12,
-                      fontWeight: 600,
+                      flex: 1, padding: '8px', borderRadius: 8, fontSize: 12, fontWeight: 600,
                       background: theme === t ? accent : '#E5E7EB',
                       color: theme === t ? '#fff' : '#6B7280',
-                      border: 'none',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      textTransform: 'capitalize'
+                      border: 'none', cursor: 'pointer', transition: 'all 0.2s', textTransform: 'capitalize',
                     }}
                   >
                     {t}
@@ -143,6 +303,7 @@ const SettingsPage = ({ role, user, onUserUpdate }) => {
               </div>
             </div>
 
+            {/* Tab size — local only (not in backend schema) */}
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', marginBottom: 8 }}>
                 Tab Size
@@ -151,15 +312,9 @@ const SettingsPage = ({ role, user, onUserUpdate }) => {
                 value={tabSize}
                 onChange={(e) => setTabSize(e.target.value)}
                 style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: 8,
-                  fontSize: 13,
-                  border: '1px solid #E5E7EB',
-                  background: '#fff',
-                  color: '#111827',
-                  fontFamily: 'inherit',
-                  cursor: 'pointer'
+                  width: '100%', padding: '8px 12px', borderRadius: 8, fontSize: 13,
+                  border: '1px solid #E5E7EB', background: '#fff', color: '#111827',
+                  fontFamily: 'inherit', cursor: 'pointer',
                 }}
               >
                 <option value="2">2 Spaces</option>
@@ -168,21 +323,23 @@ const SettingsPage = ({ role, user, onUserUpdate }) => {
             </div>
           </div>
 
+          {/* Auto-save — persisted to backend */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 20, borderTop: '1px solid #E5E7EB' }}>
             <div>
               <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2 }}>Auto-Save</div>
               <div style={{ fontSize: 12, color: 'var(--muted)' }}>Automatically save your changes after every modification</div>
             </div>
-            <Toggle value={autoSave} onChange={setAutoSave} />
+            <Toggle value={autoSave} onChange={handleAutoSaveChange} />
           </div>
         </Card>
 
+        {/* ── Notifications ── */}
         <Card style={{ padding: 24, background: '#F9FAFB', border: '1px solid #E5E7EB' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
             <Icon name="bell" size={18} color={accent} />
             <span style={{ fontWeight: 700, fontSize: 15, color: '#111827' }}>Notifications</span>
           </div>
-          
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -191,43 +348,27 @@ const SettingsPage = ({ role, user, onUserUpdate }) => {
               </div>
               <div style={{ fontSize: 12, color: 'var(--muted)' }}>Receive notifications and security alerts via email</div>
             </div>
-            <Toggle value={emailAlerts} onChange={setEmailAlerts} />
+            <Toggle value={emailAlerts} onChange={handleEmailAlertsChange} />
           </div>
         </Card>
+
       </div>
 
-      {/* Edit Profile Modal */}
+      {/* ── Edit Name Modal ── */}
       {showModal && (
         <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          fontFamily: "'Google Sans', sans-serif"
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 1000, fontFamily: "'Google Sans', sans-serif",
         }}>
           <div style={{
-            background: '#fff',
-            borderRadius: 16,
-            padding: 32,
-            maxWidth: 500,
-            width: '90%',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+            background: '#fff', borderRadius: 16, padding: 32,
+            maxWidth: 500, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
           }}>
             <div style={{ marginBottom: 24 }}>
-              <h2 style={{ fontSize: 24, fontWeight: 800, color: '#111827', marginBottom: 8 }}>
-                Edit Profile
-              </h2>
-              <p style={{ fontSize: 14, color: '#6B7280' }}>
-                Update your display name and profile information
-              </p>
+              <h2 style={{ fontSize: 24, fontWeight: 800, color: '#111827', marginBottom: 8 }}>Edit Profile</h2>
+              <p style={{ fontSize: 14, color: '#6B7280' }}>Update your display name</p>
             </div>
-
             <div style={{ marginBottom: 24 }}>
               <InputField
                 label="Display Name"
@@ -236,38 +377,102 @@ const SettingsPage = ({ role, user, onUserUpdate }) => {
                 placeholder="Enter your name"
               />
             </div>
-
             <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setShowModal(false)}
                 style={{
-                  padding: '8px 16px',
-                  borderRadius: 8,
-                  border: '1px solid #E5E7EB',
-                  background: '#fff',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
+                  padding: '8px 16px', borderRadius: 8, border: '1px solid #E5E7EB',
+                  background: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer',
                 }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
+                disabled={saving}
                 style={{
-                  padding: '8px 16px',
-                  borderRadius: 8,
-                  border: 'none',
-                  background: accent,
-                  color: '#fff',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
+                  padding: '8px 16px', borderRadius: 8, border: 'none',
+                  background: saving ? '#9CA3AF' : accent, color: '#fff',
+                  fontSize: 14, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer',
                 }}
               >
-                Save Changes
+                {saving ? 'Saving…' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Change Password Modal ── */}
+      {showPasswordModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 1000, fontFamily: "'Google Sans', sans-serif",
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: 16, padding: 32,
+            maxWidth: 440, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+          }}>
+            <div style={{ marginBottom: 24 }}>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#111827', marginBottom: 6 }}>Change Password</h2>
+              <p style={{ fontSize: 14, color: '#6B7280' }}>Enter your current password, then choose a new one.</p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
+              {[
+                { label: 'Current Password', value: oldPassword, setter: setOldPassword },
+                { label: 'New Password', value: newPassword, setter: setNewPassword },
+                { label: 'Confirm New Password', value: confirmPassword, setter: setConfirmPassword },
+              ].map(({ label, value, setter }) => (
+                <div key={label}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', marginBottom: 6 }}>{label}</div>
+                  <input
+                    type="password"
+                    value={value}
+                    onChange={e => setter(e.target.value)}
+                    style={{
+                      width: '100%', padding: '10px 12px', fontSize: 14,
+                      border: '1px solid #E5E7EB', borderRadius: 8,
+                      fontFamily: 'inherit', outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {passwordError && (
+              <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 6, padding: '8px 12px', marginBottom: 14, color: '#991B1B', fontSize: 13 }}>
+                {passwordError}
+              </div>
+            )}
+            {passwordSuccess && (
+              <div style={{ background: '#D1FAE5', border: '1px solid #6EE7B7', borderRadius: 6, padding: '8px 12px', marginBottom: 14, color: '#065F46', fontSize: 13 }}>
+                ✓ {passwordSuccess}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => { setShowPasswordModal(false); setOldPassword(''); setNewPassword(''); setConfirmPassword(''); setPasswordError(''); setPasswordSuccess(''); }}
+                style={{
+                  padding: '8px 16px', borderRadius: 8, border: '1px solid #E5E7EB',
+                  background: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePasswordChange}
+                disabled={passwordLoading}
+                style={{
+                  padding: '8px 16px', borderRadius: 8, border: 'none',
+                  background: passwordLoading ? '#9CA3AF' : accent, color: '#fff',
+                  fontSize: 14, fontWeight: 600, cursor: passwordLoading ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {passwordLoading ? 'Saving…' : 'Update Password'}
               </button>
             </div>
           </div>
