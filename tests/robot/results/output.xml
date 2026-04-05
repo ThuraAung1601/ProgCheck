@@ -1,0 +1,549 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot generator="Robot 7.4.1 (Python 3.12.2 on win32)" generated="2026-04-05T22:38:51.995716" rpa="false" schemaversion="5">
+<suite id="s1" name="Robot" source="C:\n\year3\sem2\team_pj\progcheck\tests\robot">
+<suite id="s1-s1" name="Auth" source="C:\n\year3\sem2\team_pj\progcheck\tests\robot\auth.robot">
+<kw name="Create Session" owner="common" type="SETUP">
+<kw name="Create Session" owner="common">
+<msg time="2026-04-05T22:38:52.079234" level="FAIL">Keyword 'common.Create Session' expected 0 arguments, got 3.</msg>
+<arg>progcheck</arg>
+<arg>${BASE_URL}</arg>
+<arg>verify=False</arg>
+<doc>Open a requests session to the ProgCheck API server.</doc>
+<status status="FAIL" start="2026-04-05T22:38:52.079234" elapsed="0.000000">Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</kw>
+<doc>Open a requests session to the ProgCheck API server.</doc>
+<status status="FAIL" start="2026-04-05T22:38:52.078229" elapsed="0.001005">Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</kw>
+<test id="s1-s1-t1" name="TC-AUTH-001 Student Registration Returns Token" line="21">
+<doc>UFR-1: A new student can register and receives a non-empty auth token.</doc>
+<tag>auth</tag>
+<tag>functional</tag>
+<tag>positive</tag>
+<tag>registration</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.079234" elapsed="0.000995">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s1-t2" name="TC-AUTH-002 Teacher Registration Returns Token" line="35">
+<doc>UFR-1: A new teacher can register and receives a valid token.</doc>
+<tag>auth</tag>
+<tag>functional</tag>
+<tag>positive</tag>
+<tag>registration</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.080229" elapsed="0.001003">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s1-t3" name="TC-AUTH-003 Duplicate Student Registration Rejected" line="46">
+<doc>SFR-1: Registering the same student_id twice returns 409 Conflict.</doc>
+<tag>auth</tag>
+<tag>functional</tag>
+<tag>negative</tag>
+<tag>registration</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.081232" elapsed="0.000999">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s1-t4" name="TC-AUTH-004 Missing Student ID Rejected" line="58">
+<doc>SFR-1: student_id is mandatory; omitting it returns 400.</doc>
+<tag>auth</tag>
+<tag>functional</tag>
+<tag>negative</tag>
+<tag>registration</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.083227" elapsed="0.000000">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s1-t5" name="TC-AUTH-005 Invalid Role Rejected" line="67">
+<doc>SFR-2, SNFR-4: Roles other than student/teacher are rejected.</doc>
+<tag>auth</tag>
+<tag>functional</tag>
+<tag>negative</tag>
+<tag>registration</tag>
+<tag>security</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.084222" elapsed="0.000000">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s1-t6" name="TC-AUTH-006 Response Does Not Expose Password Hash" line="76">
+<doc>SNFR-11: bcrypt hash must not appear in the registration response.</doc>
+<tag>auth</tag>
+<tag>functional</tag>
+<tag>security</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.085234" elapsed="0.000000">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s1-t7" name="TC-AUTH-007 Student Login With Valid Credentials" line="91">
+<doc>UFR-1: registered student can log in and receives a token.</doc>
+<tag>auth</tag>
+<tag>functional</tag>
+<tag>login</tag>
+<tag>positive</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.086231" elapsed="0.001010">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s1-t8" name="TC-AUTH-008 Login With Wrong Password Returns 401" line="105">
+<doc>UFR-1: incorrect password must be rejected with 401.</doc>
+<tag>auth</tag>
+<tag>functional</tag>
+<tag>login</tag>
+<tag>negative</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.087241" elapsed="0.000995">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s1-t9" name="TC-AUTH-009 Student Cannot Login On Teacher Endpoint" line="119">
+<doc>SFR-2: student credentials must fail on the teacher login endpoint.</doc>
+<tag>auth</tag>
+<tag>functional</tag>
+<tag>login</tag>
+<tag>negative</tag>
+<tag>role</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.088236" elapsed="0.000993">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s1-t10" name="TC-AUTH-010 Login Response Structure Is Correct" line="133">
+<doc>SFR-1: login response must include user.id, user.username, user.role, token.</doc>
+<tag>auth</tag>
+<tag>contract</tag>
+<tag>functional</tag>
+<tag>login</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.089229" elapsed="0.001003">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s1-t11" name="TC-AUTH-011 Login Responds Within 5 Seconds" line="156">
+<doc>SNFR-1: login must respond within the 5-second budget.</doc>
+<tag>auth</tag>
+<tag>functional</tag>
+<tag>performance</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.090232" elapsed="0.000996">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<doc>Acceptance tests for user authentication (UFR-1, UFR-2, SFR-1, SFR-2).
+
+Requires the ProgCheck server running at http://localhost:8000.
+Run with: robot tests/robot/auth.robot</doc>
+<status status="FAIL" start="2026-04-05T22:38:52.034679" elapsed="0.056549">Suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</suite>
+<suite id="s1-s2" name="Lab Management" source="C:\n\year3\sem2\team_pj\progcheck\tests\robot\lab_management.robot">
+<kw name="Run Keywords" owner="BuiltIn" type="SETUP">
+<kw name="Create Session" owner="common">
+<kw name="Create Session" owner="common">
+<msg time="2026-04-05T22:38:52.102516" level="FAIL">Keyword 'common.Create Session' expected 0 arguments, got 3.</msg>
+<arg>progcheck</arg>
+<arg>${BASE_URL}</arg>
+<arg>verify=False</arg>
+<doc>Open a requests session to the ProgCheck API server.</doc>
+<status status="FAIL" start="2026-04-05T22:38:52.102516" elapsed="0.000000">Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</kw>
+<doc>Open a requests session to the ProgCheck API server.</doc>
+<status status="FAIL" start="2026-04-05T22:38:52.102516" elapsed="0.000993">Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</kw>
+<arg>Create Session</arg>
+<arg>AND</arg>
+<arg>Setup Suite Users</arg>
+<doc>Executes all the given keywords in a sequence.</doc>
+<status status="FAIL" start="2026-04-05T22:38:52.102516" elapsed="0.000993">Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</kw>
+<test id="s1-s2-t1" name="TC-LAB-001 Teacher Creates Classroom" line="44">
+<doc>UFR-12: Instructor can create a classroom.</doc>
+<tag>classroom</tag>
+<tag>functional</tag>
+<tag>instructor</tag>
+<tag>lab</tag>
+<tag>positive</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.103509" elapsed="0.000000">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s2-t2" name="TC-LAB-002 Non-Owner Teacher Cannot Create Lab In Foreign Classroom" line="56">
+<doc>SFR-2: unauthorized teacher gets 403 when creating lab in another's classroom.</doc>
+<tag>functional</tag>
+<tag>instructor</tag>
+<tag>lab</tag>
+<tag>negative</tag>
+<tag>security</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.103509" elapsed="0.001006">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s2-t3" name="TC-LAB-003 Teacher Creates Inactive Lab" line="75">
+<doc>SFR-4: new lab with no time window is inactive.</doc>
+<tag>creation</tag>
+<tag>functional</tag>
+<tag>instructor</tag>
+<tag>lab</tag>
+<tag>positive</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.104515" elapsed="0.000999">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s2-t4" name="TC-LAB-004 Teacher Creates Active Lab" line="85">
+<doc>SFR-4: lab with past start and future end is active.</doc>
+<tag>creation</tag>
+<tag>functional</tag>
+<tag>instructor</tag>
+<tag>lab</tag>
+<tag>positive</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.105514" elapsed="0.001002">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s2-t5" name="TC-LAB-005 Lab With Complete Before Active Rejected" line="100">
+<doc>SFR-4: invalid time window returns 422.</doc>
+<tag>creation</tag>
+<tag>functional</tag>
+<tag>instructor</tag>
+<tag>lab</tag>
+<tag>negative</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.107520" elapsed="0.000000">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s2-t6" name="TC-LAB-006 Teacher Adds Question To Inactive Lab" line="118">
+<doc>UFR-13: instructor adds a question with problem text.</doc>
+<tag>functional</tag>
+<tag>instructor</tag>
+<tag>lab</tag>
+<tag>positive</tag>
+<tag>question</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.108516" elapsed="0.000997">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s2-t7" name="TC-LAB-007 Adding Question To Active Lab Is Forbidden" line="130">
+<doc>SFR-4: question editing is locked once lab goes active.</doc>
+<tag>functional</tag>
+<tag>instructor</tag>
+<tag>lab</tag>
+<tag>negative</tag>
+<tag>question</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.109513" elapsed="0.000000">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s2-t8" name="TC-LAB-008 Teacher Retrieves Lab Questions" line="139">
+<doc>UFR-4: questions are retrievable per lab.</doc>
+<tag>functional</tag>
+<tag>instructor</tag>
+<tag>lab</tag>
+<tag>positive</tag>
+<tag>question</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.110374" elapsed="0.000000">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s2-t9" name="TC-LAB-009 Teacher Adds Test Case To Question" line="147">
+<doc>SFR-4: instructor can attach a test case to a question.</doc>
+<tag>functional</tag>
+<tag>instructor</tag>
+<tag>lab</tag>
+<tag>positive</tag>
+<tag>testcase</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.111383" elapsed="0.000000">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s2-t10" name="TC-LAB-010 Student Submits To Active Lab" line="161">
+<doc>UFR-5: student can submit code while lab is active.</doc>
+<tag>functional</tag>
+<tag>instructor</tag>
+<tag>lab</tag>
+<tag>positive</tag>
+<tag>submission</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.112382" elapsed="0.000000">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s2-t11" name="TC-LAB-011 Submission To Inactive Lab Rejected" line="193">
+<doc>SFR-5: submitting before lab opens returns 403.</doc>
+<tag>functional</tag>
+<tag>instructor</tag>
+<tag>lab</tag>
+<tag>negative</tag>
+<tag>submission</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.113386" elapsed="0.000000">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s2-t12" name="TC-LAB-012 Instructor Views Student Results" line="202">
+<doc>UFR-14: teacher retrieves all submissions for a question.</doc>
+<tag>functional</tag>
+<tag>instructor</tag>
+<tag>lab</tag>
+<tag>submission</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.114391" elapsed="0.000991">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s2-t13" name="TC-LAB-013 Student Views Own Submission History" line="209">
+<doc>UFR-11: student retrieves their own submission list.</doc>
+<tag>functional</tag>
+<tag>instructor</tag>
+<tag>lab</tag>
+<tag>student</tag>
+<tag>submission</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.115382" elapsed="0.001000">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s2-t14" name="TC-LAB-014 Lab List Responds Within 5 Seconds" line="220">
+<doc>SNFR-1: fetching classroom labs must be fast.</doc>
+<tag>functional</tag>
+<tag>instructor</tag>
+<tag>lab</tag>
+<tag>performance</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.116382" elapsed="0.001004">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<doc>Acceptance tests for instructor classroom and lab management
+(UFR-12, UFR-13, UFR-14, SFR-3, SFR-4, SFR-5).
+
+Requires the ProgCheck server running at http://localhost:8000.
+Run with: robot tests/robot/lab_management.robot</doc>
+<status status="FAIL" start="2026-04-05T22:38:52.092230" elapsed="0.026160">Suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</suite>
+<suite id="s1-s3" name="Prolog Submission" source="C:\n\year3\sem2\team_pj\progcheck\tests\robot\prolog_submission.robot">
+<kw name="Run Keywords" owner="BuiltIn" type="SETUP">
+<kw name="Create Session" owner="common">
+<kw name="Create Session" owner="common">
+<msg time="2026-04-05T22:38:52.129381" level="FAIL">Keyword 'common.Create Session' expected 0 arguments, got 3.</msg>
+<arg>progcheck</arg>
+<arg>${BASE_URL}</arg>
+<arg>verify=False</arg>
+<doc>Open a requests session to the ProgCheck API server.</doc>
+<status status="FAIL" start="2026-04-05T22:38:52.129381" elapsed="0.000000">Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</kw>
+<doc>Open a requests session to the ProgCheck API server.</doc>
+<status status="FAIL" start="2026-04-05T22:38:52.128385" elapsed="0.000996">Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</kw>
+<arg>Create Session</arg>
+<arg>AND</arg>
+<arg>Setup Prolog Suite</arg>
+<doc>Executes all the given keywords in a sequence.</doc>
+<status status="FAIL" start="2026-04-05T22:38:52.128385" elapsed="0.000996">Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</kw>
+<test id="s1-s3-t1" name="TC-PRL-001 Syntax Check Passes For Correct Code" line="57">
+<doc>SFR-6: syntactically valid Prolog returns ok=true.</doc>
+<tag>functional</tag>
+<tag>positive</tag>
+<tag>prolog</tag>
+<tag>submission</tag>
+<tag>syntax</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.129381" elapsed="0.000000">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s3-t2" name="TC-PRL-002 Syntax Check Fails For Invalid Code" line="66">
+<doc>SFR-6, UFR-8: file with syntax error returns ok=false and non-empty error.</doc>
+<tag>functional</tag>
+<tag>negative</tag>
+<tag>prolog</tag>
+<tag>submission</tag>
+<tag>syntax</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.130381" elapsed="0.001001">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s3-t3" name="TC-PRL-003 Syntax Error Message Is Human-Readable" line="77">
+<doc>UFR-8: syntax_error must not be a raw Prolog exception term.</doc>
+<tag>functional</tag>
+<tag>prolog</tag>
+<tag>quality</tag>
+<tag>submission</tag>
+<tag>syntax</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.132385" elapsed="0.000000">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s3-t4" name="TC-PRL-004 Syntax Check Responds Within 5 Seconds" line="87">
+<doc>SNFR-1: syntax check must be fast.</doc>
+<tag>functional</tag>
+<tag>performance</tag>
+<tag>prolog</tag>
+<tag>submission</tag>
+<tag>syntax</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.133393" elapsed="0.000999">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s3-t5" name="TC-PRL-005 Query Run Returns Proof Tree And Trace" line="99">
+<doc>SFR-11, UFR-9: correct code returns proof_tree and trace strings.</doc>
+<tag>functional</tag>
+<tag>positive</tag>
+<tag>prolog</tag>
+<tag>query</tag>
+<tag>submission</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.135396" elapsed="0.000999">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s3-t6" name="TC-PRL-006 Query Run Detects Logic Error" line="113">
+<doc>UFR-10: wrong code returns has_logic_error information.</doc>
+<tag>functional</tag>
+<tag>negative</tag>
+<tag>prolog</tag>
+<tag>query</tag>
+<tag>submission</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.136395" elapsed="0.000997">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s3-t7" name="TC-PRL-007 Query Run Responds Within 5 Seconds" line="128">
+<doc>SNFR-1: query execution must respect response budget.</doc>
+<tag>functional</tag>
+<tag>performance</tag>
+<tag>prolog</tag>
+<tag>query</tag>
+<tag>submission</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.137392" elapsed="0.000000">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s3-t8" name="TC-PRL-008 Full Diagnosis On Correct Code Shows No Failures" line="141">
+<doc>SFR-10, UFR-7: correct code should produce no failure entries in the log.</doc>
+<tag>diagnosis</tag>
+<tag>functional</tag>
+<tag>positive</tag>
+<tag>prolog</tag>
+<tag>submission</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.138393" elapsed="0.000000">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s3-t9" name="TC-PRL-009 Full Diagnosis On Wrong Code Reports Failure" line="153">
+<doc>UFR-7, UFR-10: wrong base case causes test failure in log.</doc>
+<tag>diagnosis</tag>
+<tag>functional</tag>
+<tag>negative</tag>
+<tag>prolog</tag>
+<tag>submission</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.139395" elapsed="0.000000">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s3-t10" name="TC-PRL-010 Full Diagnosis Responds Within 5 Seconds" line="165">
+<doc>SNFR-1: full diagnosis must complete within the 5-second budget.</doc>
+<tag>diagnosis</tag>
+<tag>functional</tag>
+<tag>performance</tag>
+<tag>prolog</tag>
+<tag>submission</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.140393" elapsed="0.000000">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s3-t11" name="TC-PRL-011 Full Diagnosis With Custom Test Cases" line="173">
+<doc>SFR-9, UFR-5: teacher-supplied test cases are respected.</doc>
+<tag>diagnosis</tag>
+<tag>functional</tag>
+<tag>prolog</tag>
+<tag>submission</tag>
+<tag>testcase</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.141398" elapsed="0.000000">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s3-t12" name="TC-PRL-012 Generate Testcases Degrades Gracefully Without LLM" line="189">
+<doc>SNFR-10: endpoint returns ok=false and empty list when LLM unavailable.</doc>
+<tag>degradation</tag>
+<tag>functional</tag>
+<tag>llm</tag>
+<tag>prolog</tag>
+<tag>submission</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.142394" elapsed="0.000000">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s3-t13" name="TC-PRL-013 Diagnosis Log Does Not Expose API Keys" line="205">
+<doc>SNFR-8: GROQ_API_KEY must not appear in the diagnosis log.</doc>
+<tag>functional</tag>
+<tag>prolog</tag>
+<tag>security</tag>
+<tag>submission</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.143394" elapsed="0.000998">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<test id="s1-s3-t14" name="TC-PRL-014 Infinite Loop Code Does Not Hang Server" line="219">
+<doc>SNFR-4: non-terminating student code must be cut off by depth/time limit.</doc>
+<tag>functional</tag>
+<tag>performance</tag>
+<tag>prolog</tag>
+<tag>safety</tag>
+<tag>submission</tag>
+<status status="FAIL" start="2026-04-05T22:38:52.145398" elapsed="0.000000">Parent suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</test>
+<doc>Acceptance tests for Prolog code submission and diagnosis pipeline
+(UFR-5..UFR-10, SFR-6..SFR-13, SNFR-1, SNFR-4, SNFR-10).
+
+Requires the ProgCheck server running at http://localhost:8000.
+Run with: robot tests/robot/prolog_submission.robot</doc>
+<status status="FAIL" start="2026-04-05T22:38:52.119389" elapsed="0.027008">Suite setup failed:
+Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+</suite>
+<status status="FAIL" start="2026-04-05T22:38:51.996718" elapsed="0.151193"/>
+</suite>
+<statistics>
+<total>
+<stat pass="0" fail="39" skip="0">All Tests</stat>
+</total>
+<tag>
+<stat pass="0" fail="11" skip="0">auth</stat>
+<stat pass="0" fail="1" skip="0">classroom</stat>
+<stat pass="0" fail="1" skip="0">contract</stat>
+<stat pass="0" fail="3" skip="0">creation</stat>
+<stat pass="0" fail="1" skip="0">degradation</stat>
+<stat pass="0" fail="4" skip="0">diagnosis</stat>
+<stat pass="0" fail="39" skip="0">functional</stat>
+<stat pass="0" fail="14" skip="0">instructor</stat>
+<stat pass="0" fail="14" skip="0">lab</stat>
+<stat pass="0" fail="1" skip="0">llm</stat>
+<stat pass="0" fail="4" skip="0">login</stat>
+<stat pass="0" fail="12" skip="0">negative</stat>
+<stat pass="0" fail="6" skip="0">performance</stat>
+<stat pass="0" fail="13" skip="0">positive</stat>
+<stat pass="0" fail="14" skip="0">prolog</stat>
+<stat pass="0" fail="1" skip="0">quality</stat>
+<stat pass="0" fail="3" skip="0">query</stat>
+<stat pass="0" fail="3" skip="0">question</stat>
+<stat pass="0" fail="5" skip="0">registration</stat>
+<stat pass="0" fail="1" skip="0">role</stat>
+<stat pass="0" fail="1" skip="0">safety</stat>
+<stat pass="0" fail="4" skip="0">security</stat>
+<stat pass="0" fail="1" skip="0">student</stat>
+<stat pass="0" fail="18" skip="0">submission</stat>
+<stat pass="0" fail="4" skip="0">syntax</stat>
+<stat pass="0" fail="2" skip="0">testcase</stat>
+</tag>
+<suite>
+<stat name="Robot" id="s1" pass="0" fail="39" skip="0">Robot</stat>
+<stat name="Auth" id="s1-s1" pass="0" fail="11" skip="0">Robot.Auth</stat>
+<stat name="Lab Management" id="s1-s2" pass="0" fail="14" skip="0">Robot.Lab Management</stat>
+<stat name="Prolog Submission" id="s1-s3" pass="0" fail="14" skip="0">Robot.Prolog Submission</stat>
+</suite>
+</statistics>
+<errors>
+<msg time="2026-04-05T22:38:52.039670" level="WARN">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 50: The '[Return]' setting is deprecated. Use the 'RETURN' statement instead.</msg>
+<msg time="2026-04-05T22:38:52.039670" level="WARN">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 61: The '[Return]' setting is deprecated. Use the 'RETURN' statement instead.</msg>
+<msg time="2026-04-05T22:38:52.039670" level="WARN">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 68: The '[Return]' setting is deprecated. Use the 'RETURN' statement instead.</msg>
+<msg time="2026-04-05T22:38:52.040680" level="WARN">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 75: The '[Return]' setting is deprecated. Use the 'RETURN' statement instead.</msg>
+<msg time="2026-04-05T22:38:52.040680" level="WARN">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 84: The '[Return]' setting is deprecated. Use the 'RETURN' statement instead.</msg>
+<msg time="2026-04-05T22:38:52.041679" level="WARN">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 99: The '[Return]' setting is deprecated. Use the 'RETURN' statement instead.</msg>
+<msg time="2026-04-05T22:38:52.041679" level="WARN">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 108: The '[Return]' setting is deprecated. Use the 'RETURN' statement instead.</msg>
+<msg time="2026-04-05T22:38:52.041679" level="WARN">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 116: The '[Return]' setting is deprecated. Use the 'RETURN' statement instead.</msg>
+<msg time="2026-04-05T22:38:52.045696" level="ERROR">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 3: Importing library 'RequestsLibrary' failed: ModuleNotFoundError: No module named 'RequestsLibrary'
+Traceback (most recent call last):
+  None
+PYTHONPATH:
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Scripts\robot.exe
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\python312.zip
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\DLLs
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312
+  C:\Users\pawns\AppData\Roaming\Python\Python312\site-packages
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages\win32
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages\win32\lib
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages\Pythonwin</msg>
+<msg time="2026-04-05T22:38:52.097225" level="ERROR">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 3: Importing library 'RequestsLibrary' failed: ModuleNotFoundError: No module named 'RequestsLibrary'
+Traceback (most recent call last):
+  None
+PYTHONPATH:
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Scripts\robot.exe
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\python312.zip
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\DLLs
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312
+  C:\Users\pawns\AppData\Roaming\Python\Python312\site-packages
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages\win32
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages\win32\lib
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages\Pythonwin</msg>
+<msg time="2026-04-05T22:38:52.124383" level="ERROR">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 3: Importing library 'RequestsLibrary' failed: ModuleNotFoundError: No module named 'RequestsLibrary'
+Traceback (most recent call last):
+  None
+PYTHONPATH:
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Scripts\robot.exe
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\python312.zip
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\DLLs
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312
+  C:\Users\pawns\AppData\Roaming\Python\Python312\site-packages
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages\win32
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages\win32\lib
+  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages\Pythonwin</msg>
+</errors>
+</robot>

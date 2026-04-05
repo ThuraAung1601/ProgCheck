@@ -98,7 +98,14 @@ def print_labs(labs):
     for lid, lab in labs.items():
         print(f"\n  [{lid}]  {lab.title}")
         print(f"    classroom_id  : {lab.classroom_id}")
-        print(f"    is_active     : {lab.is_active}")
+        if hasattr(lab, 'get_current_status'):
+            print(f"    status        : {lab.get_current_status()}")
+            active_time   = getattr(lab, 'active_time',   None)
+            complete_time = getattr(lab, 'complete_time', None)
+            print(f"    active_time   : {fmt_dt(active_time)   if active_time   else '—'}")
+            print(f"    complete_time : {fmt_dt(complete_time) if complete_time else '—'}")
+        else:
+            print(f"    is_active     : {getattr(lab, 'is_active', '—')}")
         print(f"    questions     : {len(lab.lab_question)}")
         print(f"    created_at    : {fmt_dt(lab.created_at)}")
         for qi, q in enumerate(lab.lab_question, 1):
