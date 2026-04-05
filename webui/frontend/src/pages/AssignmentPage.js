@@ -7,6 +7,7 @@ import NodeInfo from '../components/NodeInfo.js';
 import BacktrackTree from '../components/BacktrackTree.js';
 import Modal from '../components/Modal.js';
 import DiffViewer from '../components/DiffViewer.js';
+import { TestCaseReviewBody } from '../App.js';
 import { parseProlog, clausesToGraph } from '../utils/prologParser.js';
 import { rewireEdge } from '../utils/rewire.js';
 import { simulateProlog } from '../utils/prologEngineSimulator.js';
@@ -37,15 +38,11 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
   const { question, lab, classroom } = assignmentData;
   const accent = role === 'teacher' ? 'var(--sky)' : 'var(--mint)';
 
-  // Results state
   const [output, setOutput] = useState(null);
   const [submitLoading, setSubmitLoading] = useState(false);
-
-  // Code / editor state
   const [code, setCode] = useState('% Write your Prolog solution here\n');
   const [loading, setLoading] = useState(false);
 
-  // Graph state
   const [graph, setGraph] = useState({ nodes: [], edges: [] });
   const [selNode, setSelNode] = useState(null);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 500 });
@@ -55,7 +52,6 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
   const obsRef = useRef(null);
   const resizeTimerRef = useRef(null);
 
-  // Prolog checker state
   const [query, setQuery] = useState('');
   const [feedback, setFeedback] = useState('');
   const [status, setStatus] = useState({ msg: 'Ready', kind: 'idle' });
@@ -65,7 +61,7 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
   const [traceData, setTraceData] = useState(null);
   const [modal, setModal] = useState(null);
 
-  // ── TEACHER ONLY: student/submission state ────────────────────────────
+  // Teacher state
   const [students, setStudents] = useState([]);
   const [selStudent, setSelStudent] = useState('');
   const [studentResults, setStudentResults] = useState([]);
@@ -73,6 +69,32 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
   const [testRunning, setTestRunning] = useState(false);
 
   const setMsg = useCallback((msg, kind = 'idle') => setStatus({ msg, kind }), []);
+
+  // ── Test-case review modal state ──────────────────────────────────────
+  const [reviewTcs, setReviewTcs] = useState([]);
+  const [newTcInput, setNewTcInput] = useState('');
+  const [newTcExpected, setNewTcExpected] = useState('true');
+
+  useEffect(() => {
+    if (modal?.type === 'testcase-review') {
+      setReviewTcs(modal.testCases || []);
+      setNewTcInput('');
+      setNewTcExpected('true');
+    }
+  }, [modal?.type]);
+
+  const addReviewTc = () => {
+    const q = newTcInput.trim().replace(/\.$/, '');
+    if (!q) return;
+    setReviewTcs(prev => [...prev, {
+      testcase_id: Date.now(),
+      input: q,
+      expected_output: newTcExpected,
+      _source: 'manual',
+    }]);
+    setNewTcInput('');
+    setNewTcExpected('true');
+  };
 
   // Canvas resize observer
   const canvasRef = useCallback((el) => {
@@ -97,7 +119,7 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
     };
   }, []);
 
-  // Teacher: fetch students + all submissions for this question on mount
+  // Teacher: fetch students + submissions
   useEffect(() => {
     if (role !== 'teacher') return;
     fetch(`${API_BASE}/api/classrooms/${classroom.class_id}/students`)
@@ -110,13 +132,12 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
       .catch(() => { });
   }, [role, classroom.class_id, question.question_id]);
 
-  // Teacher: when submission selected, load code + auto-run tests
+  // Teacher: load submission + auto-run tests when selected
   useEffect(() => {
     if (!selResultId) return;
     const result = studentResults.find(r => String(r.result_id) === selResultId);
     if (!result) return;
     const raw = result.code_file || '';
-    // Restore newlines: stored code uses '. ' between clauses instead of newlines
     const studentCode = raw?.replace(/\.\s+([a-z%A-Z])/g, '.\n$1').trim() || '% No code found';
     setCode(studentCode);
     setFeedback('');
@@ -159,7 +180,7 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
     })();
   }, [selResultId]);
 
-  // Parse code -> graph (debounced)
+  // Parse code → graph
   useEffect(() => {
     clearTimeout(parseTimer.current);
     parseTimer.current = setTimeout(() => {
@@ -176,7 +197,6 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
     return () => clearTimeout(parseTimer.current);
   }, [code]);
 
-  // Graph interaction
   const onNodeDragEnd = useCallback((positions) => {
     const posMap = Object.fromEntries(positions.map(p => [p.id, { x: p.x, y: p.y }]));
     posRef.current = { ...posRef.current, ...posMap };
@@ -201,7 +221,6 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
       : []);
   }, []);
 
-  // API helper
   const apiFetch = async (path, body) => {
     const res = await fetch(API_BASE + path, {
       method: body ? 'POST' : 'GET',
@@ -223,9 +242,8 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
     problem_id: Number(question.question_id),
     student_file: 'assignment.pl',
     student_code: code,
-  }), [code, question, question.question_id]);
+  }), [code, question.question_id]);
 
-  // Prolog checker actions
   const checkSyntax = () => withLoading(async () => {
     const r = await apiFetch('/api/syntax-check', buildPayload());
     setFeedback(r.feedback || 'Syntax OK.');
@@ -235,40 +253,18 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
 
   const runQuery = () => withLoading(async () => {
     const q = normalizeQuery(query);
-    if (!q) {
-      setMsg('Enter a query first', 'error');
-      return;
-    }
-
-    const r = await apiFetch('/api/query-run', {
-      ...buildPayload(),
-      query: q
-    });
-
+    if (!q) { setMsg('Enter a query first', 'error'); return; }
+    const r = await apiFetch('/api/query-run', { ...buildPayload(), query: q });
     setLastResult(r);
     setCanVisualize(!!r.ok && !r.has_logic_error);
-
-    if (!r.ok) {
-      setFeedback(r.feedback || 'Query failed.');
-      setRightTab('feedback');
-      return;
-    }
-
-    const verdict = r.has_logic_error
-      ? (r.shapiro_mode || 'unknown')
-      : 'correct';
-
+    if (!r.ok) { setFeedback(r.feedback || 'Query failed.'); setRightTab('feedback'); return; }
+    const verdict = r.has_logic_error ? (r.shapiro_mode || 'unknown') : 'correct';
     setFeedback([
-      `Query: ${r.query}`,
-      `Status: ${verdict}`,
-      '',
-      'Execution Trace:', r.trace || '',
-      '',
-      'Proof Tree:', r.proof_tree || '',
-      '',
+      `Query: ${r.query}`, `Status: ${verdict}`, '',
+      'Execution Trace:', r.trace || '', '',
+      'Proof Tree:', r.proof_tree || '', '',
       'Debug Summary:', r.debug_summary || '',
     ].join('\n'));
-
     setRightTab('feedback');
     setMsg(`Query done — ${verdict}`, r.has_logic_error ? 'error' : 'ok');
   });
@@ -290,36 +286,21 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
 
   const runLlm = () => withLoading(async () => {
     const q = normalizeQuery(query);
-    if (!q) {
-      setMsg('Enter a query first', 'error');
-      return;
-    }
-
-    const r = await apiFetch('/api/llm-feedback', {
-      ...buildPayload(),
-      query: q
-    });
-
+    if (!q) { setMsg('Enter a query first', 'error'); return; }
+    const r = await apiFetch('/api/llm-feedback', { ...buildPayload(), query: q });
     setLastResult(r);
-
     setFeedback([
-      'LLM Feedback:', r.feedback || '',
-      '',
-      'Execution Trace:', r.trace || '',
-      '',
-      'Proof Tree:', r.proof_tree || '',
-      '',
+      'LLM Feedback:', r.feedback || '', '',
+      'Execution Trace:', r.trace || '', '',
+      'Proof Tree:', r.proof_tree || '', '',
       'Debug Summary:', r.debug_summary || '',
     ].join('\n'));
-
     setRightTab('feedback');
     setMsg('LLM feedback ready', 'ok');
   });
 
   const runDiagnosis = () => withLoading(async () => {
-    // Step 1: generate LLM test cases, then show review modal
     setMsg('Generating test cases…', 'idle');
-
     let llmTcs = [];
     try {
       const gen = await apiFetch('/api/generate-diagnosis-testcases', {
@@ -327,19 +308,15 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
         student_code: code,
       });
       if (gen.ok) llmTcs = gen.test_cases || [];
-    } catch { /* non-fatal — proceed without generated cases */ }
+    } catch { /* non-fatal */ }
 
-    // Merge: given test cases first, then LLM-generated (de-dup by input)
     const givenTcs = (question.test_cases || []).map(tc => ({ ...tc, _source: 'given' }));
     const seenInputs = new Set(givenTcs.map(tc => tc.input));
     const merged = [
       ...givenTcs,
-      ...llmTcs
-        .filter(tc => !seenInputs.has(tc.input))
-        .map(tc => ({ ...tc, _source: 'llm' })),
+      ...llmTcs.filter(tc => !seenInputs.has(tc.input)).map(tc => ({ ...tc, _source: 'llm' })),
     ];
 
-    // Step 2: show review modal — user can delete or add cases
     setModal({
       type: 'testcase-review',
       testCases: merged,
@@ -376,7 +353,6 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
     setMsg('Review test cases', 'idle');
   });
 
-  // Test runner & submit
   const handleRunTests = async () => {
     if (!question.test_cases || question.test_cases.length === 0) return;
     setSubmitLoading(true);
@@ -390,9 +366,7 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
           input: tc.input,
           expected: tc.expected_output,
           passed: r.ok && !r.has_logic_error && tc.expected_output === 'true',
-          actual: r.ok
-            ? (r.has_logic_error ? r.shapiro_mode : 'true')
-            : 'failed',
+          actual: r.ok ? (r.has_logic_error ? r.shapiro_mode : 'true') : 'failed',
         });
       } catch (e) {
         results.push({ input: tc.input, expected: tc.expected_output, passed: false, actual: 'error: ' + e.message });
@@ -427,34 +401,6 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
     : status.kind === 'ok' ? 'text-green-400'
       : 'text-txt-tertiary';
 
-  // ── Test-case review modal state ─────────────────────────
-  const [reviewTcs, setReviewTcs] = useState([]);
-  const [newTcInput, setNewTcInput] = useState('');
-  const [newTcExpected, setNewTcExpected] = useState('true');
-
-  // Sync reviewTcs when modal opens with testcase-review type
-  useEffect(() => {
-    if (modal?.type === 'testcase-review') {
-      setReviewTcs(modal.testCases || []);
-      setNewTcInput('');
-      setNewTcExpected('true');
-    }
-  }, [modal?.type]);
-
-  const addReviewTc = () => {
-    const q = newTcInput.trim().replace(/\.$/, '');
-    if (!q) return;
-    setReviewTcs(prev => [...prev, {
-      testcase_id: Date.now(),
-      input: q,
-      expected_output: newTcExpected,
-      _source: 'manual',
-    }]);
-    setNewTcInput('');
-    setNewTcExpected('true');
-  };
-
-  // All tabs: problem + results + checker tabs
   const rightTabs = [
     ['problem', '📋 Problem', false],
     ['results', '✅ Results', false],
@@ -472,7 +418,6 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
     ['!', '#f59e0b', 'cut'], ['✂', '#6366f1', 'cut-prevented'],
   ];
 
-  // Submissions filtered to selected student
   const filteredResults = studentResults.filter(r => String(r.student_id) === selStudent);
 
   return (
@@ -485,10 +430,8 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
         background: '#fff', flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button
-            onClick={onBack}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: accent, fontSize: 13, fontWeight: 600, padding: 0 }}
-          >
+          <button onClick={onBack}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: accent, fontSize: 13, fontWeight: 600, padding: 0 }}>
             <Icon name="arrow_left" size={14} color={accent} /> Back
           </button>
           <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
@@ -500,14 +443,11 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
           </div>
         </div>
 
-        {/* ── CHANGE 1: teacher sees student+submission selectors; student sees Run Tests+Submit ── */}
         {role === 'teacher' ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <select
-              value={selStudent}
+            <select value={selStudent}
               onChange={e => { setSelStudent(e.target.value); setSelResultId(''); setCode('% Select a submission to view student code'); setOutput(null); }}
-              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 12, minWidth: 150 }}
-            >
+              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 12, minWidth: 150 }}>
               <option value="">— Select student —</option>
               {students.map(s => (
                 <option key={s.student_id} value={String(s.student_id)}>
@@ -515,12 +455,9 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
                 </option>
               ))}
             </select>
-            <select
-              value={selResultId}
-              onChange={e => setSelResultId(e.target.value)}
+            <select value={selResultId} onChange={e => setSelResultId(e.target.value)}
               disabled={!selStudent}
-              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 12, minWidth: 170, opacity: selStudent ? 1 : 0.5 }}
-            >
+              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 12, minWidth: 170, opacity: selStudent ? 1 : 0.5 }}>
               <option value="">— Select submission —</option>
               {filteredResults.map((r, i) => (
                 <option key={r.result_id} value={String(r.result_id)}>
@@ -532,68 +469,38 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
           </div>
         ) : (
           <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={handleRunTests}
+            <button onClick={handleRunTests}
               disabled={submitLoading || !question.test_cases?.length}
-              style={{
-                padding: '6px 14px', borderRadius: 6, border: '1px solid ' + accent,
-                background: accent + '15', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                color: accent, opacity: submitLoading ? 0.5 : 1,
-              }}
-            >
+              style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid ' + accent, background: accent + '15', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: accent, opacity: submitLoading ? 0.5 : 1 }}>
               {submitLoading ? 'Running...' : 'Run Tests'}
             </button>
-            <button
-              onClick={handleSubmit}
-              disabled={submitLoading}
-              style={{
-                padding: '6px 14px', borderRadius: 6, border: 'none',
-                background: accent, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                color: '#fff', opacity: submitLoading ? 0.5 : 1,
-              }}
-            >
+            <button onClick={handleSubmit} disabled={submitLoading}
+              style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: accent, fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#fff', opacity: submitLoading ? 0.5 : 1 }}>
               Submit
             </button>
           </div>
         )}
       </div>
 
-      {/* Main layout: editor left, all tabs right */}
+      {/* Main layout */}
       <div className="flex flex-col flex-1 overflow-hidden min-h-0 bg-bg-primary text-txt-primary font-sans">
 
         {/* Toolbar */}
         <header className="flex items-center gap-2 px-3 h-[46px] bg-bg-secondary border-b border-border-subtle flex-shrink-0 z-10 overflow-hidden">
           <span className="font-mono text-[12px] font-semibold text-txt-tertiary flex-shrink-0">solution.pl</span>
           <div className="w-px h-5 bg-border-accent mx-1 flex-shrink-0" />
-          <input
-            value={query}
-            onChange={e => setQuery(e.target.value)}
+          <input value={query} onChange={e => setQuery(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && runQuery()}
             placeholder="e.g. max(3,5,X)"
-            className="bg-bg-elevated border border-border-accent text-txt-primary text-[11px] font-mono rounded px-2 py-1 w-40 focus:outline-none focus:border-accent-blue flex-shrink-0"
-          />
+            className="bg-bg-elevated border border-border-accent text-txt-primary text-[11px] font-mono rounded px-2 py-1 w-40 focus:outline-none focus:border-accent-blue flex-shrink-0" />
           {role !== 'teacher' && (
             <>
-              <Btn onClick={checkSyntax} disabled={loading} title="Grammar-based syntax check">
-                Syntax
-              </Btn>
-
-              <Btn onClick={runQuery} disabled={loading} variant="primary" title="Run query, get proof tree">
-                {loading ? '...' : 'Run'}
-              </Btn>
-
+              <Btn onClick={checkSyntax} disabled={loading} title="Grammar-based syntax check">Syntax</Btn>
+              <Btn onClick={runQuery} disabled={loading} variant="primary" title="Run query, get proof tree">{loading ? '...' : 'Run'}</Btn>
               <Btn onClick={visualize} disabled={!canVisualize} variant="success"
-                title={!canVisualize ? 'Run a successful query first' : 'Visualize backtracking trace'}>
-                Visualize
-              </Btn>
-
-              <Btn onClick={runLlm} disabled={loading} variant="warning" title="LLM natural-language feedback">
-                LLM
-              </Btn>
-
-              <Btn onClick={runDiagnosis} disabled={loading} variant="danger" title="Full diagnosis with optional auto-fix">
-                Diagnose
-              </Btn>
+                title={!canVisualize ? 'Run a successful query first' : 'Visualize backtracking trace'}>Visualize</Btn>
+              <Btn onClick={runLlm} disabled={loading} variant="warning" title="LLM natural-language feedback">LLM</Btn>
+              <Btn onClick={runDiagnosis} disabled={loading} variant="danger" title="Full diagnosis with optional auto-fix">Diagnose</Btn>
             </>
           )}
           {lastResult && (
@@ -607,7 +514,6 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
         {/* Editor + tabs */}
         <div className="flex flex-1 overflow-hidden min-h-0">
 
-          {/* Code editor — CHANGE 2: read-only for teacher */}
           <div className="flex flex-col border-r border-border-subtle flex-shrink-0" style={{ width: 420 }}>
             <div className="flex items-center justify-between px-3 h-7 bg-bg-secondary border-b border-border-subtle flex-shrink-0">
               <span className="text-[10px] font-semibold tracking-widest uppercase text-txt-tertiary">Prolog Source</span>
@@ -619,33 +525,20 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
               <CodeEditor
                 value={code}
                 onChange={role === 'teacher' ? () => { } : setCode}
-                highlightLines={
-                  rightTab === 'trace'
-                    ? hlLines
-                    : selNode?.lineStart != null ? [selNode.lineStart] : []
-                }
+                highlightLines={rightTab === 'trace' ? hlLines : selNode?.lineStart != null ? [selNode.lineStart] : []}
               />
             </div>
           </div>
 
-          {/* Right tabbed panel */}
           <div className="flex-1 flex flex-col min-h-0 min-w-0">
-
-            {/* Tab bar */}
             <div className="flex items-center h-8 bg-bg-secondary border-b border-border-subtle flex-shrink-0 overflow-x-auto">
               {rightTabs.map(([id, label, disabled]) => (
-                <button
-                  key={id}
-                  onClick={() => !disabled && setRightTab(id)}
-                  disabled={disabled}
+                <button key={id} onClick={() => !disabled && setRightTab(id)} disabled={disabled}
                   title={disabled ? 'Run a query then click Visualize to enable' : undefined}
                   className={`h-full px-4 text-[11px] border-none border-r border-border-subtle transition-all whitespace-nowrap flex-shrink-0
-                    ${disabled
-                      ? 'text-txt-tertiary opacity-35 cursor-not-allowed'
-                      : rightTab === id
-                        ? 'bg-bg-primary text-txt-primary font-medium cursor-pointer'
-                        : 'bg-transparent text-txt-tertiary hover:bg-bg-elevated hover:text-txt-secondary cursor-pointer'
-                    }`}>
+                    ${disabled ? 'text-txt-tertiary opacity-35 cursor-not-allowed'
+                      : rightTab === id ? 'bg-bg-primary text-txt-primary font-medium cursor-pointer'
+                        : 'bg-transparent text-txt-tertiary hover:bg-bg-elevated hover:text-txt-secondary cursor-pointer'}`}>
                   {label}
                   {id === 'trace' && traceData && <span className="ml-1 text-[9px] text-indigo-400">●</span>}
                 </button>
@@ -659,14 +552,11 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
               )}
             </div>
 
-            {/* Problem tab */}
             {rightTab === 'problem' && (
               <div className="flex-1 overflow-auto min-h-0 p-5">
                 <div className="mb-5">
                   <div className="text-[11px] font-semibold tracking-widest uppercase text-txt-tertiary mb-3">Problem Description</div>
-                  <pre className="font-sans text-[13px] leading-relaxed text-txt-secondary whitespace-pre-wrap">
-                    {question.problem}
-                  </pre>
+                  <pre className="font-sans text-[13px] leading-relaxed text-txt-secondary whitespace-pre-wrap">{question.problem}</pre>
                 </div>
                 {question.test_cases && question.test_cases.length > 0 && (
                   <div>
@@ -688,7 +578,6 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
               </div>
             )}
 
-            {/* Results tab — CHANGE 3: spinner + teacher empty state */}
             {rightTab === 'results' && (
               <div className="flex-1 overflow-auto min-h-0 p-5">
                 {testRunning && (
@@ -736,7 +625,6 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
               </div>
             )}
 
-            {/* Feedback tab */}
             {rightTab === 'feedback' && (
               <div className="flex-1 overflow-auto min-h-0 p-4">
                 <pre className="font-mono text-[12px] leading-relaxed text-txt-secondary whitespace-pre-wrap">
@@ -745,7 +633,6 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
               </div>
             )}
 
-            {/* Graph tab */}
             {rightTab === 'graph' && (
               <div className="flex-1 relative overflow-hidden bg-bg-primary" ref={canvasRef}>
                 {graph.nodes.length === 0 ? (
@@ -767,7 +654,6 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
               </div>
             )}
 
-            {/* Trace tab */}
             {rightTab === 'trace' && traceData && (
               <div className="flex-1 min-h-0 overflow-hidden">
                 <BacktrackTree trace={traceData} onHighlightLine={onHighlightLine} />
@@ -776,13 +662,12 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
           </div>
         </div>
 
-        {/* Status bar */}
         <div className={`font-mono text-[11px] px-4 py-1 bg-bg-secondary border-t border-border-subtle flex-shrink-0 truncate ${statusColor}`}>
           {status.msg}
         </div>
       </div>
 
-      {/* Modal — auto-correction diff */}
+      {/* Auto-correction diff modal */}
       <Modal
         open={modal?.type === 'confirm'}
         wide={!!modal?.diff}
@@ -790,15 +675,16 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
         onClose={() => setModal(null)}
         actions={
           <>
-            <button onClick={() => setModal(null)} className="text-xs px-3 py-1 border border-border-accent rounded">Cancel</button>
-            <button onClick={() => { modal.onConfirm(); setModal(null); }} className="text-xs px-3 py-1 bg-green-900/20 border border-green-700 text-green-300 rounded">Apply Fix</button>
+            <button onClick={() => setModal(null)} className="text-xs px-3 py-1 border border-border-accent rounded text-txt-secondary">Cancel</button>
+            <button onClick={() => { modal.onConfirm(); setModal(null); }}
+              className="text-xs px-3 py-1 bg-green-900/20 border border-green-700 text-green-300 rounded">Apply Fix</button>
           </>
         }
       >
         <DiffViewer diff={modal?.diff || ''} />
       </Modal>
 
-      {/* Modal — test case review before diagnosis */}
+      {/* Test-case review modal */}
       <Modal
         open={modal?.type === 'testcase-review'}
         wide
@@ -806,7 +692,7 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
         onClose={() => setModal(null)}
         actions={
           <>
-            <button onClick={() => setModal(null)} className="text-xs px-3 py-1 border border-border-accent rounded">Cancel</button>
+            <button onClick={() => setModal(null)} className="text-xs px-3 py-1 border border-border-accent rounded text-txt-secondary">Cancel</button>
             <button
               onClick={() => modal.onConfirm(reviewTcs)}
               className="text-xs px-3 py-1 bg-red-900/20 border border-red-700 text-red-300 rounded"
@@ -816,72 +702,15 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
           </>
         }
       >
-        <div style={{ fontFamily: 'monospace', fontSize: 12 }}>
-          <p style={{ marginBottom: 10, fontSize: 12, color: 'var(--muted)', fontFamily: 'sans-serif' }}>
-            LLM will use these test cases. Remove any you don't want, or add your own.
-          </p>
-
-          {/* Existing test cases list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14, maxHeight: 320, overflowY: 'auto' }}>
-            {reviewTcs.length === 0 && (
-              <div style={{ color: 'var(--muted)', fontSize: 12, padding: '6px 0' }}>No test cases — add some below.</div>
-            )}
-            {reviewTcs.map((tc, i) => (
-              <div key={tc.testcase_id} style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '6px 10px', borderRadius: 6,
-                background: tc._source === 'llm' ? '#EFF6FF' : tc._source === 'manual' ? '#F0FDF4' : '#F9FAFB',
-                border: '1px solid #E5E7EB',
-              }}>
-                <span style={{ color: 'var(--muted)', minWidth: 22, fontSize: 11 }}>#{i + 1}</span>
-                <span style={{ flex: 1, color: '#111827' }}>
-                  <strong>Query:</strong> {tc.input}
-                </span>
-                <span style={{
-                  minWidth: 40, textAlign: 'center', fontSize: 11, fontWeight: 600, padding: '1px 8px', borderRadius: 99,
-                  background: tc.expected_output === 'true' ? '#D1FAE5' : '#FEE2E2',
-                  color: tc.expected_output === 'true' ? '#065F46' : '#991B1B',
-                }}>
-                  {tc.expected_output}
-                </span>
-                <span style={{ fontSize: 10, color: 'var(--muted)', minWidth: 36 }}>
-                  {tc._source === 'llm' ? '🤖' : tc._source === 'manual' ? '✏️' : '📋'}
-                </span>
-                <button
-                  onClick={() => setReviewTcs(prev => prev.filter((_, j) => j !== i))}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', fontSize: 14, lineHeight: 1, padding: '0 2px' }}
-                  title="Remove"
-                >×</button>
-              </div>
-            ))}
-          </div>
-
-          {/* Add new test case */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', borderTop: '1px solid #E5E7EB', paddingTop: 12 }}>
-            <input
-              value={newTcInput}
-              onChange={e => setNewTcInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && addReviewTc()}
-              placeholder="e.g. factorial(3,6)"
-              style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 12, fontFamily: 'monospace', outline: 'none' }}
-            />
-            <select
-              value={newTcExpected}
-              onChange={e => setNewTcExpected(e.target.value)}
-              style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 12 }}
-            >
-              <option value="true">true</option>
-              <option value="false">false</option>
-            </select>
-            <button
-              onClick={addReviewTc}
-              disabled={!newTcInput.trim()}
-              style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: '#3B82F6', color: '#fff', fontSize: 12, cursor: 'pointer', opacity: newTcInput.trim() ? 1 : 0.4 }}
-            >
-              Add
-            </button>
-          </div>
-        </div>
+        <TestCaseReviewBody
+          reviewTcs={reviewTcs}
+          setReviewTcs={setReviewTcs}
+          newTcInput={newTcInput}
+          setNewTcInput={setNewTcInput}
+          newTcExpected={newTcExpected}
+          setNewTcExpected={setNewTcExpected}
+          addReviewTc={addReviewTc}
+        />
       </Modal>
     </div>
   );

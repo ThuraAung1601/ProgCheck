@@ -14,8 +14,6 @@ import { rewireEdge } from './utils/rewire';
 import { simulateProlog } from './utils/prologEngineSimulator';
 import { extractSourceClauses } from './utils/engineOutputParser';
 
-// ── API ───────────────────────────────────────────────────────────────────
-// const API_BASE = process.env.REACT_APP_API_BASE || '';
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
 
 async function apiFetch(path, body) {
@@ -30,7 +28,6 @@ async function apiFetch(path, body) {
 
 const normalizeQuery = q => (q || '').trim().replace(/\.$/, '');
 
-// ── Reusable UI atoms ─────────────────────────────────────────────────────
 function Btn({ onClick, children, disabled, variant = 'default', title }) {
   const base = 'font-sans text-[11px] px-3 py-1 rounded border cursor-pointer transition-all whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed';
   const styles = {
@@ -48,7 +45,6 @@ function Btn({ onClick, children, disabled, variant = 'default', title }) {
   );
 }
 
-
 function SaveInput({ value, onChange, onSubmit }) {
   return (
     <input
@@ -59,23 +55,18 @@ function SaveInput({ value, onChange, onSubmit }) {
       onChange={(e) => onChange(e.target.value)}
       placeholder="factorial.pl"
       className="w-full bg-bg-elevated border border-border-accent text-txt-primary text-xs px-2 py-1 rounded focus:outline-none focus:border-accent-blue"
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') {
-          onSubmit();
-        }
-      }}
+      onKeyDown={(e) => { if (e.key === 'Enter') onSubmit(); }}
     />
   );
 }
 
-// ── Main App ──────────────────────────────────────────────────────────────
 export default function App() {
-  // Authentication & screen routing
+  // Auth & routing
   const [screen, setScreen] = useState('landing');
   const [user, setUser] = useState(null);
   const [userRole, setUserRole] = useState(null);
 
-  // Render state
+  // Modal
   const [modal, setModal] = useState(null);
 
   // Playground state
@@ -102,29 +93,95 @@ export default function App() {
   const [hlLines, setHlLines] = useState([]);
   const posRef = useRef({});
   const parseTimer = useRef(null);
-  // Use a callback ref so the ResizeObserver reattaches whenever
-  // the graph tab mounts (the div only exists when rightTab === 'graph')
-  // Use a ref to track the ResizeObserver instance so we can clean it up properly
   const obsRef = useRef(null);
   const resizeTimerRef = useRef(null);
 
+  // ── Test-case review modal state (for diagnosis) ─────────────────────
+  const [reviewTcs, setReviewTcs] = useState([]);
+  const [newTcInput, setNewTcInput] = useState('');
+  const [newTcExpected, setNewTcExpected] = useState('true');
+
+  // Sync reviewTcs when modal opens
+  useEffect(() => {
+    if (modal?.type === 'testcase-review') {
+      setReviewTcs(modal.testCases || []);
+      setNewTcInput('');
+      setNewTcExpected('true');
+    }
+  }, [modal?.type]);
+
+  const addReviewTc = () => {
+    const q = newTcInput.trim().replace(/\.$/, '');
+    if (!q) return;
+    setReviewTcs(prev => [...prev, {
+      testcase_id: Date.now(),
+      input: q,
+      expected_output: newTcExpected,
+      _source: 'manual',
+    }]);
+    setNewTcInput('');
+    setNewTcExpected('true');
+  };
+
+  // ── Teacher: add new problem to lab 9999 ─────────────────────────────
+  const [showAddProblem, setShowAddProblem] = useState(false);
+  const [newProbTitle, setNewProbTitle] = useState('');
+  const [newProbText, setNewProbText] = useState('');
+  const [newProbTcs, setNewProbTcs] = useState([]);       // [{input, expected_output}]
+  const [newProbTcInput, setNewProbTcInput] = useState('');
+  const [newProbTcExpected, setNewProbTcExpected] = useState('true');
+  const [savingProblem, setSavingProblem] = useState(false);
+  const [probError, setProbError] = useState('');
+
+  const addNewProbTc = () => {
+    const q = newProbTcInput.trim().replace(/\.$/, '');
+    if (!q) return;
+    setNewProbTcs(prev => [...prev, { id: Date.now(), input: q, expected_output: newProbTcExpected }]);
+    setNewProbTcInput('');
+    setNewProbTcExpected('true');
+  };
+
+  const handleSaveProblem = async () => {
+    if (!newProbTitle.trim() || !newProbText.trim()) return;
+    setSavingProblem(true);
+    setProbError('');
+    try {
+      // 1. Create question in lab 9999
+      const q = await apiFetch('/api/labs/9999/questions', {
+        title: newProbTitle.trim(),
+        problem: newProbText.trim(),
+      });
+      // 2. Add each test case
+      for (const tc of newProbTcs) {
+        await apiFetch(`/api/labs/9999/questions/${q.question_id}/testcases`, {
+          input: tc.input,
+          expected_output: tc.expected_output,
+        });
+      }
+      // 3. Refresh problems list
+      const updated = await apiFetch('/api/labs/9999/questions');
+      setProblems(Array.isArray(updated) ? updated : []);
+      // 4. Auto-select the new problem
+      setSelProblemPreset(String(q.question_id));
+      setProblemDraft(q.problem);
+      // 5. Reset form
+      setNewProbTitle(''); setNewProbText(''); setNewProbTcs([]);
+      setNewProbTcInput(''); setNewProbTcExpected('true');
+      setShowAddProblem(false);
+      setMsg('Problem saved to lab 9999', 'ok');
+    } catch (e) {
+      setProbError(e.message);
+    } finally {
+      setSavingProblem(false);
+    }
+  };
+
   const canvasRef = useCallback((el) => {
-    // Clean up old observer
-    if (obsRef.current) {
-      obsRef.current.disconnect();
-      obsRef.current = null;
-    }
-    if (resizeTimerRef.current) {
-      clearTimeout(resizeTimerRef.current);
-      resizeTimerRef.current = null;
-    }
-
-    // Set up new observer if element exists
+    if (obsRef.current) { obsRef.current.disconnect(); obsRef.current = null; }
+    if (resizeTimerRef.current) { clearTimeout(resizeTimerRef.current); resizeTimerRef.current = null; }
     if (!el) return;
-
     const obs = new ResizeObserver(entries => {
       const { width, height } = entries[0].contentRect;
-      // Debounce resize updates to avoid excessive state changes
       if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current);
       resizeTimerRef.current = setTimeout(() => {
         if (width > 10 && height > 10) setCanvasSize({ width, height });
@@ -134,53 +191,36 @@ export default function App() {
     obsRef.current = obs;
   }, []);
 
-  // Clean up ResizeObserver on unmount
   useEffect(() => {
     return () => {
-      if (obsRef.current) {
-        obsRef.current.disconnect();
-      }
-      if (resizeTimerRef.current) {
-        clearTimeout(resizeTimerRef.current);
-      }
+      if (obsRef.current) obsRef.current.disconnect();
+      if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current);
     };
   }, []);
 
-  // Right panel tab: 'problem' | 'feedback' | 'graph' | 'trace'
-  // 'trace' is only selectable after visualize has been run
   const [rightTab, setRightTab] = useState('problem');
-  const [traceData, setTraceData] = useState(null);   // null = trace not yet generated
+  const [traceData, setTraceData] = useState(null);
 
   const setMsg = useCallback((msg, kind = 'idle') => setStatus({ msg, kind }), []);
-
-  const handleUserUpdate = useCallback((updatedUser) => {
-    setUser(updatedUser);
-  }, []);
+  const handleUserUpdate = useCallback((updatedUser) => setUser(updatedUser), []);
 
   const fetchOptions = useCallback(async () => {
     try {
-      // Load user's saved .pl files
       const d = await apiFetch('/api/options');
       setMyFiles(d.students || []);
     } catch (e) {
       setMsg(`Options load failed: ${e.message}`, 'error');
     }
     try {
-      // Load playground problem presets from lab 9999
       const questions = await apiFetch('/api/labs/9999/questions');
       setProblems(Array.isArray(questions) ? questions : []);
-    } catch (e) {
-      // Lab 9999 may not exist yet — silently ignore
+    } catch {
       setProblems([]);
     }
   }, [setMsg]);
 
-  // Load options on mount
-  useEffect(() => {
-    fetchOptions();
-  }, [fetchOptions]);
+  useEffect(() => { fetchOptions(); }, [fetchOptions]);
 
-  // Parse code → graph (debounced)
   useEffect(() => {
     clearTimeout(parseTimer.current);
     parseTimer.current = setTimeout(() => {
@@ -188,23 +228,18 @@ export default function App() {
         const clauses = parseProlog(code);
         const newGraph = clausesToGraph(clauses, posRef.current);
         setGraph(newGraph);
-        // Clear selected node if it no longer exists in the new graph
         setSelNode(prev => {
           if (!prev) return null;
-          const nodeExists = newGraph.nodes.some(n => n.id === prev.id);
-          return nodeExists ? prev : null;
+          return newGraph.nodes.some(n => n.id === prev.id) ? prev : null;
         });
       } catch { /* ignore while typing */ }
     }, 350);
     return () => clearTimeout(parseTimer.current);
   }, [code]);
 
-  // ── Graph interaction ─────────────────────────────────────────────────
   const onNodeDragEnd = useCallback((positions) => {
     const posMap = Object.fromEntries(positions.map(p => [p.id, { x: p.x, y: p.y }]));
     posRef.current = { ...posRef.current, ...posMap };
-
-    // Update graph positions only (don't reorder code here - avoid circular updates)
     setGraph(prev => ({
       ...prev,
       nodes: prev.nodes.map(n => posMap[n.id] ? { ...n, ...posMap[n.id] } : n)
@@ -226,7 +261,6 @@ export default function App() {
       : []);
   }, []);
 
-  // ── ProgCheck actions ─────────────────────────────────────────────────
   const withLoading = useCallback(async (fn) => {
     setLoading(true);
     try { await fn(); }
@@ -257,17 +291,12 @@ export default function App() {
 
   const saveCode = useCallback(() => withLoading(async () => {
     const doSave = async (filename) => {
-      await apiFetch('/api/apply-fix', {
-        student_file: filename,
-        corrected_code: code,
-        accept: true,
-      });
+      await apiFetch('/api/apply-fix', { student_file: filename, corrected_code: code, accept: true });
       await fetchOptions();
       setCurrentFilename(filename);
       setIsNewFile(false);
       setMsg('Saved', 'ok');
     };
-
     if (isNewFile || !currentFilename) {
       setModal({
         type: 'save',
@@ -279,7 +308,6 @@ export default function App() {
       });
       return;
     }
-
     await doSave(currentFilename);
   }), [currentFilename, code, isNewFile, withLoading, fetchOptions, setMsg]);
 
@@ -315,13 +343,9 @@ export default function App() {
     if (!r.ok) { setFeedback(r.feedback || 'Query failed.'); setRightTab('feedback'); return; }
     const verdict = r.has_logic_error ? (r.shapiro_mode || 'unknown') : 'correct';
     setFeedback([
-      `Query: ${r.query}`,
-      `Status: ${verdict}`,
-      '',
-      'Execution Trace:', r.trace || '',
-      '',
-      'Proof Tree:', r.proof_tree || '',
-      '',
+      `Query: ${r.query}`, `Status: ${verdict}`, '',
+      'Execution Trace:', r.trace || '', '',
+      'Proof Tree:', r.proof_tree || '', '',
       'Debug Summary:', r.debug_summary || '',
     ].join('\n'));
     setRightTab('feedback');
@@ -334,34 +358,75 @@ export default function App() {
     const r = await apiFetch('/api/llm-feedback', { ...buildPayload(), query: q });
     setLastResult(r);
     setFeedback([
-      'LLM Feedback:', r.feedback || '',
-      '',
-      'Execution Trace:', r.trace || '',
-      '',
-      'Proof Tree:', r.proof_tree || '',
-      '',
+      'LLM Feedback:', r.feedback || '', '',
+      'Execution Trace:', r.trace || '', '',
+      'Proof Tree:', r.proof_tree || '', '',
       'Debug Summary:', r.debug_summary || '',
     ].join('\n'));
     setRightTab('feedback');
     setMsg('LLM feedback ready', 'ok');
   });
 
+  // ── runDiagnosis: same 2-step flow as AssignmentPage ─────────────────
   const runDiagnosis = () => withLoading(async () => {
-    const r = await apiFetch('/api/full-diagnosis', { ...buildPayload(), test_cases_file: selProblemPreset.test_cases || []  });
-    setFeedback(r.log || 'Diagnosis complete.');
-    setRightTab('feedback');
-    if (r.corrected_code) {
-      setModal({
-        type: 'confirm',
-        diff: r.diff || '',
-        onConfirm: () => {
-          setCode(r.corrected_code);
-          posRef.current = {};
-          setMsg('Fix applied', 'ok');
-        }
+    setMsg('Generating test cases…', 'idle');
+
+    // Step 1: ask LLM to generate test cases
+    let llmTcs = [];
+    try {
+      const gen = await apiFetch('/api/generate-diagnosis-testcases', {
+        problem_id: Number(selProblemPreset),
+        student_code: code,
       });
-    }
-    setMsg('Diagnosis complete', 'ok');
+      if (gen.ok) llmTcs = gen.test_cases || [];
+    } catch { /* non-fatal */ }
+
+    // Merge with preset test cases (de-dup by input)
+    const selectedProblem = problems.find(p => String(p.question_id) === String(selProblemPreset));
+    const givenTcs = (selectedProblem?.test_cases || []).map(tc => ({ ...tc, _source: 'given' }));
+    const seenInputs = new Set(givenTcs.map(tc => tc.input));
+    const merged = [
+      ...givenTcs,
+      ...llmTcs
+        .filter(tc => !seenInputs.has(tc.input))
+        .map(tc => ({ ...tc, _source: 'llm' })),
+    ];
+
+    // Step 2: show review modal — user can add/remove before running
+    setModal({
+      type: 'testcase-review',
+      testCases: merged,
+      onConfirm: async (confirmedTcs) => {
+        setLoading(true);
+        setModal(null);
+        try {
+          const r = await apiFetch('/api/full-diagnosis', {
+            ...buildPayload(),
+            test_cases_file: confirmedTcs.length ? confirmedTcs : null,
+          });
+          setFeedback(r.log || 'Diagnosis complete.');
+          setRightTab('feedback');
+          if (r.corrected_code) {
+            setModal({
+              type: 'confirm',
+              diff: r.diff || '',
+              onConfirm: () => {
+                setCode(r.corrected_code);
+                posRef.current = {};
+                setMsg('Fix applied', 'ok');
+              },
+            });
+          }
+          setMsg('Diagnosis complete', 'ok');
+        } catch (e) {
+          setFeedback(`Error: ${e.message}`);
+          setMsg(e.message, 'error');
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
+    setMsg('Review test cases', 'idle');
   });
 
   const visualize = useCallback(() => {
@@ -379,21 +444,17 @@ export default function App() {
     }
   }, [code, query, setMsg]);
 
-  // ── Render ────────────────────────────────────────────────────────────
   const statusColor = status.kind === 'error' ? 'text-red-400'
     : status.kind === 'ok' ? 'text-green-400'
       : 'text-txt-tertiary';
 
-  // Tab definitions for right panel
-  // Each tab: [id, label, disabled]
   const rightTabs = [
     ['problem', '📋 Problem', false],
     ['feedback', '💬 Feedback', false],
     ['graph', '⬡ Graph', false],
-    ['trace', '↯ Trace', !traceData],   // disabled until Visualize runs
+    ['trace', '↯ Trace', !traceData],
   ];
 
-  // Legend items for the graph tab
   const graphLegend = [
     ['F', '#85B7EB', 'fact'], ['R', '#97C459', 'rule'],
     ['A', '#EF9F27', 'atom'], ['V', '#ED93B1', 'var'],
@@ -403,14 +464,10 @@ export default function App() {
     ['!', '#f59e0b', 'cut'], ['✂', '#6366f1', 'cut-prevented'],
   ];
 
-  // Prolog Checker UI Component
   const PrologCheckerUI = () => (
     <div className="flex flex-col h-full w-full overflow-hidden bg-bg-primary text-txt-primary font-sans">
 
-      {/* ── Top bar ── */}
       <header className="flex items-center gap-2 px-3 h-[46px] bg-bg-secondary border-b border-border-subtle flex-shrink-0 z-10 overflow-hidden">
-
-        {/* Brand */}
         <div className="flex items-center gap-1.5 mr-1 flex-shrink-0">
           <span className="text-xl font-bold text-accent-blue leading-none">⊢</span>
           <span className="font-mono text-[14px] font-semibold tracking-tight">
@@ -418,7 +475,6 @@ export default function App() {
           </span>
         </div>
 
-        {/* File management */}
         <select
           value={currentFilename}
           onChange={e => e.target.value && loadFile(e.target.value)}
@@ -432,18 +488,18 @@ export default function App() {
 
         <div className="w-px h-5 bg-border-accent mx-0.5 flex-shrink-0" />
 
-        {/* Query + actions */}
         <input
           id="query-input"
           name="query-input"
-          value={query} onChange={e => setQuery(e.target.value)}
+          value={query}
+          onChange={e => setQuery(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && runQuery()}
           placeholder="e.g. max(3,5,X)"
           className="bg-bg-elevated border border-border-accent text-txt-primary text-[11px] font-mono rounded px-2 py-1 w-40 focus:outline-none focus:border-accent-blue flex-shrink-0"
         />
         <Btn onClick={checkSyntax} disabled={loading} title="Grammar-based syntax check">Syntax</Btn>
         <Btn onClick={runQuery} disabled={loading} variant="primary" title="Run query, get proof tree">{loading ? '…' : 'Run'}</Btn>
-        <Btn onClick={visualize} disabled={!canVisualize} variant="success" title={!canVisualize ? `Cannot visualize: run a successful query first` : "Parse proof tree into backtracking visualizer"}>Visualize</Btn>
+        <Btn onClick={visualize} disabled={!canVisualize} variant="success" title={!canVisualize ? 'Run a successful query first' : 'Visualize backtracking trace'}>Visualize</Btn>
         <Btn onClick={runLlm} disabled={loading} variant="warning" title="LLM natural-language feedback">LLM</Btn>
         <Btn onClick={runDiagnosis} disabled={loading} variant="danger" title="Full diagnosis with optional auto-fix">Diagnose</Btn>
 
@@ -457,61 +513,41 @@ export default function App() {
         )}
       </header>
 
-      {/* ── Main layout: left = editor, right = tabs ── */}
       <div className="flex flex-1 overflow-hidden min-h-0">
-
-        {/* ── LEFT: full-height code editor ── */}
         <div className="flex flex-col border-r border-border-subtle flex-shrink-0" style={{ width: 420 }}>
           <div className="flex items-center justify-between px-3 h-7 bg-bg-secondary border-b border-border-subtle flex-shrink-0">
             <span className="text-[10px] font-semibold tracking-widest uppercase text-txt-tertiary font-mono">
               {currentFilename ? currentFilename.split('/').pop() : 'untitled.pl'}
             </span>
             <span className="text-[10px] text-txt-tertiary italic">
-              {rightTab === 'trace'
-                ? 'active clause highlighted'
-                : 'drag nodes · drag edge ● to rewire'}
+              {rightTab === 'trace' ? 'active clause highlighted' : 'drag nodes · drag edge ● to rewire'}
             </span>
           </div>
-          {/* CodeEditor fills all remaining height */}
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
             <CodeEditor
               value={code}
               onChange={setCode}
               highlightLines={
-                rightTab === 'trace'
-                  ? hlLines
+                rightTab === 'trace' ? hlLines
                   : selNode?.lineStart != null ? [selNode.lineStart] : []
               }
             />
           </div>
         </div>
 
-        {/* ── RIGHT: tabbed panel ── */}
         <div className="flex-1 flex flex-col min-h-0 min-w-0">
-
-          {/* Tab bar */}
           <div className="flex items-center h-8 bg-bg-secondary border-b border-border-subtle flex-shrink-0">
             {rightTabs.map(([id, label, disabled]) => (
-              <button
-                key={id}
-                onClick={() => !disabled && setRightTab(id)}
-                disabled={disabled}
+              <button key={id} onClick={() => !disabled && setRightTab(id)} disabled={disabled}
                 title={disabled ? 'Run a query then click Visualize to enable' : undefined}
                 className={`h-full px-4 text-[11px] border-none border-r border-border-subtle transition-all whitespace-nowrap
-                  ${disabled
-                    ? 'text-txt-tertiary opacity-35 cursor-not-allowed'
-                    : rightTab === id
-                      ? 'bg-bg-primary text-txt-primary font-medium cursor-pointer'
-                      : 'bg-transparent text-txt-tertiary hover:bg-bg-elevated hover:text-txt-secondary cursor-pointer'
-                  }`}>
+                  ${disabled ? 'text-txt-tertiary opacity-35 cursor-not-allowed'
+                    : rightTab === id ? 'bg-bg-primary text-txt-primary font-medium cursor-pointer'
+                      : 'bg-transparent text-txt-tertiary hover:bg-bg-elevated hover:text-txt-secondary cursor-pointer'}`}>
                 {label}
-                {id === 'trace' && traceData && (
-                  <span className="ml-1 text-[9px] text-indigo-400">●</span>
-                )}
+                {id === 'trace' && traceData && <span className="ml-1 text-[9px] text-indigo-400">●</span>}
               </button>
             ))}
-
-            {/* Legend — only shown for graph / trace tabs */}
             {(rightTab === 'graph' || rightTab === 'trace') && (
               <div className="flex gap-2 ml-auto px-3">
                 {(rightTab === 'graph' ? graphLegend : traceLegend).map(([sym, color, tip]) => (
@@ -521,30 +557,24 @@ export default function App() {
             )}
           </div>
 
-          {/* ── Tab content ── */}
-
-          {/* Problem */}
           {rightTab === 'problem' && (
             <div className="flex-1 overflow-auto min-h-0 flex flex-col">
 
-              {/* Preset selector */}
+              {/* ── Preset selector bar ── */}
               <div className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border-b border-border-subtle flex-shrink-0">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary flex-shrink-0">
-                  Load preset
-                </span>
-
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary flex-shrink-0">Problem</span>
                 <select
                   value={selProblemPreset}
                   onChange={e => {
                     const qid = e.target.value;
                     setSelProblemPreset(qid);
-
                     if (qid) {
                       const q = problems.find(p => String(p.question_id) === qid);
                       if (q) setProblemDraft(q.problem || q.description || '');
                     } else {
                       setProblemDraft('');
                     }
+                    setShowAddProblem(false);
                   }}
                   className="bg-bg-elevated border border-border-accent text-txt-secondary text-[11px] rounded px-2 py-1 font-mono focus:outline-none focus:border-accent-blue flex-1 min-w-0"
                 >
@@ -555,30 +585,163 @@ export default function App() {
                     </option>
                   ))}
                 </select>
-
-                {problemDraft && (
+                {selProblemPreset && (
+                  <button onClick={() => { setProblemDraft(''); setSelProblemPreset(''); setShowAddProblem(false); }}
+                    className="text-[10px] text-txt-tertiary hover:text-txt-secondary flex-shrink-0" title="Clear">
+                    ✕
+                  </button>
+                )}
+                {/* Teacher: add new problem */}
+                {userRole === 'teacher' && (
                   <button
-                    onClick={() => {
-                      setProblemDraft('');
-                      setSelProblemPreset('');
-                    }}
-                    className="text-[10px] text-txt-tertiary hover:text-txt-secondary flex-shrink-0"
-                    title="Clear"
+                    onClick={() => { setShowAddProblem(v => !v); setSelProblemPreset(''); setProblemDraft(''); setProbError(''); }}
+                    className={`text-[10px] font-semibold px-2 py-0.5 rounded border flex-shrink-0 transition-all
+                      ${showAddProblem
+                        ? 'bg-accent-blue/20 border-accent-blue/50 text-[#85B7EB]'
+                        : 'border-border-accent text-txt-tertiary hover:text-txt-secondary'}`}
                   >
-                    ✕ clear
+                    + New
                   </button>
                 )}
               </div>
 
-              <div className="flex-1 min-h-0 overflow-auto bg-bg-primary p-4">
-                <pre className="font-mono text-[12px] leading-relaxed text-txt-secondary whitespace-pre-wrap">
-                  {problemDraft || 'Select a problem to view description.'}
-                </pre>
-              </div>
+              {/* ── Teacher: add-problem form ── */}
+              {userRole === 'teacher' && showAddProblem && (
+                <div className="flex-shrink-0 border-b border-border-subtle bg-bg-secondary p-3 flex flex-col gap-2">
+                  <div className="text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary mb-1">
+                    New Problem → Lab 9999
+                  </div>
+
+                  {/* Title */}
+                  <input
+                    autoFocus
+                    value={newProbTitle}
+                    onChange={e => setNewProbTitle(e.target.value)}
+                    placeholder="Title…"
+                    className="bg-bg-elevated border border-border-accent text-txt-primary text-[11px] rounded px-2 py-1 focus:outline-none focus:border-accent-blue w-full"
+                  />
+
+                  {/* Problem text */}
+                  <textarea
+                    value={newProbText}
+                    onChange={e => setNewProbText(e.target.value)}
+                    placeholder="Problem description…"
+                    rows={4}
+                    className="bg-bg-elevated border border-border-accent text-txt-primary text-[11px] font-mono rounded px-2 py-1 focus:outline-none focus:border-accent-blue w-full resize-y"
+                  />
+
+                  {/* Test cases */}
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-txt-tertiary font-semibold">Test Cases</span>
+                    {newProbTcs.length > 0 && (
+                      <div className="flex flex-col gap-1 max-h-28 overflow-y-auto">
+                        {newProbTcs.map((tc, i) => (
+                          <div key={tc.id} className="flex items-center gap-2 px-2 py-1 rounded border border-border-subtle bg-bg-elevated text-[11px]">
+                            <span className="font-mono text-txt-secondary flex-1 truncate">{tc.input}</span>
+                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border flex-shrink-0
+                              ${tc.expected_output === 'true'
+                                ? 'bg-green-900/20 border-green-700/40 text-green-300'
+                                : 'bg-red-900/20 border-red-700/40 text-red-300'}`}>
+                              {tc.expected_output}
+                            </span>
+                            <button
+                              onClick={() => setNewProbTcs(prev => prev.filter((_, j) => j !== i))}
+                              className="text-txt-tertiary hover:text-red-400 text-[13px] leading-none px-0.5 flex-shrink-0"
+                            >×</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {/* Add test case row */}
+                    <div className="flex gap-1.5 items-center">
+                      <input
+                        value={newProbTcInput}
+                        onChange={e => setNewProbTcInput(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && addNewProbTc()}
+                        placeholder="e.g. max(3,5,X)"
+                        className="flex-1 min-w-0 bg-bg-elevated border border-border-accent text-txt-primary text-[11px] font-mono rounded px-2 py-1 focus:outline-none focus:border-accent-blue"
+                      />
+                      <select
+                        value={newProbTcExpected}
+                        onChange={e => setNewProbTcExpected(e.target.value)}
+                        className="bg-bg-elevated border border-border-accent text-txt-secondary text-[11px] rounded px-1.5 py-1 focus:outline-none flex-shrink-0"
+                      >
+                        <option value="true">true</option>
+                        <option value="false">false</option>
+                      </select>
+                      <button
+                        onClick={addNewProbTc}
+                        disabled={!newProbTcInput.trim()}
+                        className="text-[10px] px-2 py-1 bg-accent-blue/20 border border-accent-blue/50 text-[#85B7EB] rounded disabled:opacity-40 flex-shrink-0"
+                      >+ TC</button>
+                    </div>
+                  </div>
+
+                  {probError && (
+                    <div className="text-[11px] text-red-400 bg-red-900/15 border border-red-700/40 rounded px-2 py-1">{probError}</div>
+                  )}
+
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={handleSaveProblem}
+                      disabled={savingProblem || !newProbTitle.trim() || !newProbText.trim()}
+                      className="text-xs px-3 py-1 bg-accent-blue/20 border border-accent-blue/50 text-[#85B7EB] rounded disabled:opacity-40"
+                    >
+                      {savingProblem ? 'Saving…' : 'Save Problem'}
+                    </button>
+                    <button
+                      onClick={() => { setShowAddProblem(false); setNewProbTitle(''); setNewProbText(''); setNewProbTcs([]); setProbError(''); }}
+                      className="text-xs px-3 py-1 border border-border-accent text-txt-tertiary rounded"
+                    >Cancel</button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Problem content ── */}
+              {!showAddProblem && (
+                <div className="flex-1 min-h-0 overflow-auto bg-bg-primary p-4">
+                  {selProblemPreset ? (() => {
+                    const prob = problems.find(p => String(p.question_id) === selProblemPreset);
+                    return (
+                      <>
+                        {/* Problem description */}
+                        <div className="mb-5">
+                          <div className="text-[11px] font-semibold tracking-widest uppercase text-txt-tertiary mb-3">
+                            Problem Description
+                          </div>
+                          <pre className="font-sans text-[13px] leading-relaxed text-txt-secondary whitespace-pre-wrap">
+                            {problemDraft}
+                          </pre>
+                        </div>
+
+                        {/* Test cases */}
+                        {prob?.test_cases && prob.test_cases.length > 0 && (
+                          <div>
+                            <div className="text-[11px] font-semibold tracking-widest uppercase text-txt-tertiary mb-3">
+                              Test Cases ({prob.test_cases.length})
+                            </div>
+                            {prob.test_cases.map((tc, i) => (
+                              <div key={tc.testcase_id} className="p-3 mb-2 rounded-md border border-border-subtle bg-bg-elevated text-[12px]">
+                                <div className="font-mono text-txt-secondary mb-1">
+                                  <span className="text-txt-tertiary font-semibold">#{i + 1} Input:</span> {tc.input}
+                                </div>
+                                <div className="font-mono text-green-400">
+                                  <span className="text-txt-tertiary font-semibold">Expected:</span> {tc.expected_output}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })() : (
+                    <p className="text-[12px] text-txt-tertiary">Select a problem above to view its description and test cases.</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
-          {/* Feedback */}
           {rightTab === 'feedback' && (
             <div className="flex-1 overflow-auto min-h-0 p-4">
               <pre className="font-mono text-[12px] leading-relaxed text-txt-secondary whitespace-pre-wrap">
@@ -587,7 +750,6 @@ export default function App() {
             </div>
           )}
 
-          {/* Knowledge Graph */}
           {rightTab === 'graph' && (
             <div className="flex-1 relative overflow-hidden bg-bg-primary" ref={canvasRef}>
               {graph.nodes.length === 0 ? (
@@ -607,13 +769,10 @@ export default function App() {
                   onEdgeRewire={onEdgeRewire}
                 />
               )}
-              {selNode && (
-                <NodeInfo node={selNode} edges={graph.edges} onClose={() => setSelNode(null)} />
-              )}
+              {selNode && <NodeInfo node={selNode} edges={graph.edges} onClose={() => setSelNode(null)} />}
             </div>
           )}
 
-          {/* Backtracking Trace */}
           {rightTab === 'trace' && traceData && (
             <div className="flex-1 min-h-0 overflow-hidden">
               <BacktrackTree trace={traceData} onHighlightLine={onHighlightLine} />
@@ -622,81 +781,81 @@ export default function App() {
         </div>
       </div>
 
-      {/* ── Status bar ── */}
       <div className={`font-mono text-[11px] px-4 py-1 bg-bg-secondary border-t border-border-subtle flex-shrink-0 truncate ${statusColor}`}>
         {status.msg}
       </div>
 
-      {/* ── Popup modal ── */}
+      {/* ── Save modal ── */}
       <Modal
-        open={!!modal}
-        wide={modal?.type === 'confirm' && !!modal?.diff}
-        title={
-          modal?.type === 'save' ? 'Save File' :
-            modal?.type === 'confirm' ? 'Auto-correction available — apply fix?' : ''
-        }
+        open={modal?.type === 'save'}
+        title="Save File"
         onClose={() => setModal(null)}
         actions={
-          modal?.type === 'save' ? (
-            <>
-              <button
-                onClick={() => setModal(null)}
-                className="text-xs px-3 py-1 border border-border-accent rounded"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  modal.resolve(saveFilename);
-                  setModal(null);
-                  setSaveFilename('');
-                }}
-                className="text-xs px-3 py-1 bg-accent-blue/20 border border-accent-blue rounded text-[#85B7EB]"
-              >
-                Save
-              </button>
-            </>
-          ) : modal?.type === 'confirm' ? (
-            <>
-              <button
-                onClick={() => setModal(null)}
-                className="text-xs px-3 py-1 border border-border-accent rounded"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  modal.onConfirm();
-                  setModal(null);
-                }}
-                className="text-xs px-3 py-1 bg-green-900/20 border border-green-700 text-green-300 rounded"
-              >
-                Confirm
-              </button>
-            </>
-          ) : null
+          <>
+            <button onClick={() => setModal(null)} className="text-xs px-3 py-1 border border-border-accent rounded text-txt-secondary">Cancel</button>
+            <button
+              onClick={() => { modal.resolve(saveFilename); setModal(null); setSaveFilename(''); }}
+              className="text-xs px-3 py-1 bg-accent-blue/20 border border-accent-blue rounded text-[#85B7EB]"
+            >
+              Save
+            </button>
+          </>
         }
       >
-        {modal?.type === 'save' ? (
-          <SaveInput
-            value={saveFilename}
-            onChange={setSaveFilename}
-            onSubmit={() => {
-              modal.resolve(saveFilename);
-              setModal(null);
-              setSaveFilename('');
-            }}
-          />
-        ) : modal?.type === 'confirm' ? (
-          <DiffViewer diff={modal.diff} />
-        ) : (
-          <p>{modal?.message}</p>
-        )}
+        <SaveInput value={saveFilename} onChange={setSaveFilename}
+          onSubmit={() => { modal.resolve(saveFilename); setModal(null); setSaveFilename(''); }} />
+      </Modal>
+
+      {/* ── Auto-correction diff modal ── */}
+      <Modal
+        open={modal?.type === 'confirm'}
+        wide={!!modal?.diff}
+        title="Auto-correction available"
+        onClose={() => setModal(null)}
+        actions={
+          <>
+            <button onClick={() => setModal(null)} className="text-xs px-3 py-1 border border-border-accent rounded text-txt-secondary">Cancel</button>
+            <button onClick={() => { modal.onConfirm(); setModal(null); }}
+              className="text-xs px-3 py-1 bg-green-900/20 border border-green-700 text-green-300 rounded">
+              Apply Fix
+            </button>
+          </>
+        }
+      >
+        <DiffViewer diff={modal?.diff || ''} />
+      </Modal>
+
+      {/* ── Test-case review modal ── */}
+      <Modal
+        open={modal?.type === 'testcase-review'}
+        wide
+        title="Review test cases for diagnosis"
+        onClose={() => setModal(null)}
+        actions={
+          <>
+            <button onClick={() => setModal(null)} className="text-xs px-3 py-1 border border-border-accent rounded text-txt-secondary">Cancel</button>
+            <button
+              onClick={() => modal.onConfirm(reviewTcs)}
+              className="text-xs px-3 py-1 bg-red-900/20 border border-red-700 text-red-300 rounded"
+            >
+              Run Diagnosis ({reviewTcs.length} case{reviewTcs.length !== 1 ? 's' : ''})
+            </button>
+          </>
+        }
+      >
+        <TestCaseReviewBody
+          reviewTcs={reviewTcs}
+          setReviewTcs={setReviewTcs}
+          newTcInput={newTcInput}
+          setNewTcInput={setNewTcInput}
+          newTcExpected={newTcExpected}
+          setNewTcExpected={setNewTcExpected}
+          addReviewTc={addReviewTc}
+        />
       </Modal>
     </div>
   );
 
-  // Main render with screen-based routing
   return (
     <>
       <GlobalStyle />
@@ -709,10 +868,7 @@ export default function App() {
       {screen === 'login' && (
         <LoginPage
           defaultRole={userRole}
-          onLogin={(userData, role) => {
-            setUser({ ...userData, role });
-            setScreen('dashboard');
-          }}
+          onLogin={(userData, role) => { setUser({ ...userData, role }); setScreen('dashboard'); }}
           onBack={() => setScreen('landing')}
         />
       )}
@@ -720,11 +876,7 @@ export default function App() {
         <Dashboard
           user={user}
           role={user.role}
-          onLogout={() => {
-            setUser(null);
-            setUserRole(null);
-            setScreen('landing');
-          }}
+          onLogout={() => { setUser(null); setUserRole(null); setScreen('landing'); }}
           onUserUpdate={handleUserUpdate}
           sidebarCollapsed={sidebarCollapsed}
           onSidebarChange={setSidebarCollapsed}
@@ -732,5 +884,87 @@ export default function App() {
         />
       )}
     </>
+  );
+}
+
+// ── Shared test-case review body (used in both App and AssignmentPage) ──
+export function TestCaseReviewBody({
+  reviewTcs, setReviewTcs,
+  newTcInput, setNewTcInput,
+  newTcExpected, setNewTcExpected,
+  addReviewTc,
+}) {
+  const sourceBadge = {
+    llm:    { label: 'AI',     cls: 'bg-accent-blue/10 border-accent-blue/30 text-[#85B7EB]' },
+    manual: { label: 'Manual', cls: 'bg-green-900/20 border-green-700/40 text-green-300' },
+    given:  { label: 'Given',  cls: 'bg-bg-elevated border-border-accent text-txt-tertiary' },
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-[11px] text-txt-tertiary">
+        LLM will use these test cases. Remove any you don't want, or add your own.
+      </p>
+
+      {/* Test case list */}
+      <div className="flex flex-col gap-1.5 max-h-72 overflow-y-auto pr-1">
+        {reviewTcs.length === 0 && (
+          <p className="text-[11px] text-txt-tertiary py-2 text-center">No test cases — add some below.</p>
+        )}
+        {reviewTcs.map((tc, i) => {
+          const badge = sourceBadge[tc._source] || sourceBadge.given;
+          return (
+            <div key={tc.testcase_id}
+              className="flex items-center gap-2 px-3 py-2 rounded-md border border-border-subtle bg-bg-elevated text-[11px]">
+              <span className="text-txt-tertiary w-5 flex-shrink-0">#{i + 1}</span>
+              <span className="font-mono text-txt-secondary flex-1 min-w-0 truncate">
+                {tc.input}
+              </span>
+              <span className={`flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded border ${
+                tc.expected_output === 'true'
+                  ? 'bg-green-900/20 border-green-700/40 text-green-300'
+                  : 'bg-red-900/20 border-red-700/40 text-red-300'
+              }`}>
+                {tc.expected_output}
+              </span>
+              <span className={`flex-shrink-0 text-[10px] font-medium px-2 py-0.5 rounded border ${badge.cls}`}>
+                {badge.label}
+              </span>
+              <button
+                onClick={() => setReviewTcs(prev => prev.filter((_, j) => j !== i))}
+                className="flex-shrink-0 text-txt-tertiary hover:text-red-400 transition-colors text-[13px] leading-none px-0.5"
+                title="Remove"
+              >×</button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Add new test case */}
+      <div className="flex gap-2 items-center pt-2 border-t border-border-subtle">
+        <input
+          value={newTcInput}
+          onChange={e => setNewTcInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && addReviewTc()}
+          placeholder="e.g. factorial(3,6)"
+          className="flex-1 min-w-0 bg-bg-elevated border border-border-accent text-txt-primary text-[11px] font-mono rounded px-2 py-1 focus:outline-none focus:border-accent-blue"
+        />
+        <select
+          value={newTcExpected}
+          onChange={e => setNewTcExpected(e.target.value)}
+          className="bg-bg-elevated border border-border-accent text-txt-secondary text-[11px] rounded px-2 py-1 focus:outline-none flex-shrink-0"
+        >
+          <option value="true">true</option>
+          <option value="false">false</option>
+        </select>
+        <button
+          onClick={addReviewTc}
+          disabled={!newTcInput.trim()}
+          className="text-xs px-3 py-1 bg-accent-blue/20 border border-accent-blue/50 text-[#85B7EB] rounded disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+        >
+          Add
+        </button>
+      </div>
+    </div>
   );
 }

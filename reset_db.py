@@ -440,7 +440,11 @@ def seed_demo_data(db: DB):
                     "- Base case: factorial of 0 is 1\n"
                     "- Recursive case: factorial of N is N * factorial(N-1)"
                 ),
-                test_cases=[]
+                test_cases=[
+                    ("factorial(0, 1)", "true"),
+                    ("factorial(3, 6)", "true"),
+                    ("factorial(5, 120)", "true"),
+                    ]
             ),
             _make_question(
                 qid=99995,
