@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from '../components/Icon.js';
 import InputField from '../components/InputField.js';
 import Button from '../components/Button.js';
@@ -16,16 +16,24 @@ const LoginPage = ({ defaultRole = 'student', defaultIsRegistering = false, onLo
   const accentDark = role === 'teacher' ? '#3681D6' : '#2FA57E';
   const accentLight = role === 'teacher' ? '#EAF2FF' : '#E6F9F2';
 
+  useEffect(() => {
+    setIsRegistering(defaultIsRegistering);
+  }, [defaultIsRegistering]);
+
+  useEffect(() => {
+    setRole(defaultRole);
+  }, [defaultRole]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!username || !password) {
       setErr('Please enter both username and password');
       return;
     }
-    
+
     setErr('');
     setLoading(true);
-    
+
     try {
       const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
       const endpoint = role === 'student' ? `${apiUrl}/api/auth/login/student` : `${apiUrl}/api/auth/login/teacher`;
@@ -37,18 +45,18 @@ const LoginPage = ({ defaultRole = 'student', defaultIsRegistering = false, onLo
           password,
         }),
       });
-      
+
       if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.detail || 'Login failed');
       }
-      
+
       const data = await res.json();
       // Store token in localStorage
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('userId', data.user.id);
       localStorage.setItem('userRole', data.user.role);
-      
+
       onLogin(data.user, data.user.role);
     } catch (e) {
       setErr(e.message || 'Login failed');
@@ -63,10 +71,10 @@ const LoginPage = ({ defaultRole = 'student', defaultIsRegistering = false, onLo
       setErr('Please fill all required fields');
       return;
     }
-    
+
     setErr('');
     setLoading(true);
-    
+
     try {
       const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
       const res = await fetch(`${apiUrl}/api/auth/register`, {
@@ -80,18 +88,18 @@ const LoginPage = ({ defaultRole = 'student', defaultIsRegistering = false, onLo
           teacher_id: role === 'teacher' ? studentId : undefined,
         }),
       });
-      
+
       if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.detail || 'Registration failed');
       }
-      
+
       const data = await res.json();
       // Store token in localStorage
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('userId', data.user.id);
       localStorage.setItem('userRole', data.user.role);
-      
+
       onLogin(data.user, data.user.role);
     } catch (e) {
       setErr(e.message || 'Registration failed');
@@ -104,26 +112,26 @@ const LoginPage = ({ defaultRole = 'student', defaultIsRegistering = false, onLo
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', background: '#F5F7FA', fontFamily: "'Google Sans', sans-serif" }}>
-      <div style={{ 
-        flex: 1, 
-        display: 'flex', 
-        flexDirection: 'column', 
-        padding: '40px 56px', 
-        justifyContent: 'center', 
-        maxWidth: 520 
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '40px 56px',
+        justifyContent: 'center',
+        maxWidth: 520
       }}>
-        <button 
+        <button
           onClick={onBack}
           style={{
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 8, 
-            fontSize: 13, 
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            fontSize: 13,
             fontWeight: 600,
-            color: '#6B7280', 
+            color: '#6B7280',
             background: 'none',
             cursor: 'pointer',
-            marginBottom: 48, 
+            marginBottom: 48,
             alignSelf: 'flex-start',
             border: 'none'
           }}
@@ -133,12 +141,12 @@ const LoginPage = ({ defaultRole = 'student', defaultIsRegistering = false, onLo
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 40 }}>
           <div style={{
-            width: 44, 
-            height: 44, 
+            width: 44,
+            height: 44,
             borderRadius: 12,
             background: `linear-gradient(135deg, ${accent}, ${accentDark})`,
-            display: 'flex', 
-            alignItems: 'center', 
+            display: 'flex',
+            alignItems: 'center',
             justifyContent: 'center'
           }}>
             <Icon name="code" size={22} color="#fff" />
@@ -147,7 +155,7 @@ const LoginPage = ({ defaultRole = 'student', defaultIsRegistering = false, onLo
         </div>
 
         <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-.04em', marginBottom: 8, color: '#111827' }}>
-          {isRegistering 
+          {isRegistering
             ? (role === 'student' ? 'Create Student Account' : 'Create Teacher Account')
             : (role === 'student' ? 'Student Log In' : 'Instructor Log In')
           }
@@ -159,36 +167,36 @@ const LoginPage = ({ defaultRole = 'student', defaultIsRegistering = false, onLo
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
             {isRegistering && (role === 'student' ? (
-              <InputField 
-                label="Student ID" 
-                value={studentId} 
+              <InputField
+                label="Student ID"
+                value={studentId}
                 onChange={setStudentId}
-                placeholder="e.g. 66011148" 
-                icon="id" 
+                placeholder="e.g. 66011148"
+                icon="id"
               />
             ) : (
-              <InputField 
-                label="Teacher ID" 
-                value={studentId} 
+              <InputField
+                label="Teacher ID"
+                value={studentId}
                 onChange={setStudentId}
-                placeholder="e.g. T-001" 
-                icon="id" 
+                placeholder="e.g. T-001"
+                icon="id"
               />
             ))}
-            <InputField 
-              label="Username" 
-              value={username} 
+            <InputField
+              label="Username"
+              value={username}
               onChange={setUsername}
-              placeholder="Choose a username" 
-              icon="user" 
+              placeholder="Choose a username"
+              icon="user"
             />
-            <InputField 
-              label="Password" 
-              value={password} 
+            <InputField
+              label="Password"
+              value={password}
               onChange={setPassword}
-              placeholder="Enter your password" 
-              type="password" 
-              icon="lock" 
+              placeholder="Enter your password"
+              type="password"
+              icon="lock"
             />
           </div>
 
@@ -199,7 +207,7 @@ const LoginPage = ({ defaultRole = 'student', defaultIsRegistering = false, onLo
             </div>
           )}
 
-          <Button 
+          <Button
             type="submit"
             size="lg"
             style={{
@@ -221,7 +229,7 @@ const LoginPage = ({ defaultRole = 'student', defaultIsRegistering = false, onLo
               if (onSwitchMode) {
                 onSwitchMode(next);
               } else {
-                setIsRegistering(!isRegistering);
+                setIsRegistering(prev => !prev);
               }
             }}
             style={{
@@ -249,57 +257,57 @@ const LoginPage = ({ defaultRole = 'student', defaultIsRegistering = false, onLo
         </div>
       </div> */}
       {/* --- RIGHT SIDE BANNER --- */}
-      <div style={{ 
-        flex: 1, 
-        background: `linear-gradient(135deg, ${accent}, ${accentDark})`, 
-        display: 'flex', 
-        alignItems: 'center', 
+      <div style={{
+        flex: 1,
+        background: `linear-gradient(135deg, ${accent}, ${accentDark})`,
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'center',
         padding: '60px',
         position: 'relative',
         overflow: 'hidden'
       }}>
         {/* Main Content Wrapper */}
-        <div style={{ 
-          maxWidth: 440, 
+        <div style={{
+          maxWidth: 440,
           color: '#fff',
           zIndex: 1,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'flex-start' /* Left-aligns everything for a cleaner look */
         }}>
-          
+
           {/* Frosted Glass Icon Box */}
           <div style={{
-            width: 64, 
-            height: 64, 
+            width: 64,
+            height: 64,
             borderRadius: 16,
             background: 'rgba(255,255,255,0.15)',
             backdropFilter: 'blur(10px)',
             border: '1px solid rgba(255,255,255,0.2)',
-            display: 'flex', 
-            alignItems: 'center', 
+            display: 'flex',
+            alignItems: 'center',
             justifyContent: 'center',
             marginBottom: 32
           }}>
             <Icon name="code" size={32} color="#fff" />
           </div>
 
-          <h2 style={{ 
-            fontSize: 46, 
-            fontWeight: 800, 
-            lineHeight: 1.15, 
+          <h2 style={{
+            fontSize: 46,
+            fontWeight: 800,
+            lineHeight: 1.15,
             letterSpacing: '-.03em',
-            marginBottom: 60 
+            marginBottom: 60
           }}>
-            Welcome to<br/>ProgCheck
+            Welcome to<br />ProgCheck
           </h2>
-          
-          <p style={{ 
-            fontSize: 18, 
-            lineHeight: 1.6, 
-            opacity: 0.85, 
-            fontWeight: 400 
+
+          <p style={{
+            fontSize: 18,
+            lineHeight: 1.6,
+            opacity: 0.85,
+            fontWeight: 400
           }}>
             Your intelligent Prolog code evaluation platform. Combine symbolic reasoning with LLMs for transparent, explainable feedback.
           </p>

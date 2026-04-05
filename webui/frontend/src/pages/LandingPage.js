@@ -4,6 +4,7 @@ import Button from '../components/Button.js';
 
 const LandingPage = ({ onStudentLogin, onTeacherLogin, onSignup }) => {
   const [scrolled, setScrolled] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -12,21 +13,21 @@ const LandingPage = ({ onStudentLogin, onTeacherLogin, onSignup }) => {
   }, []);
 
   return (
-    <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        minHeight: '100vh', 
-        background: '#F5F7FA', 
-        fontFamily: "'Google Sans', sans-serif" 
-        }}>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: '100vh',
+      background: '#F5F7FA',
+      fontFamily: "'Google Sans', sans-serif"
+    }}>
       <nav style={{
-        position: 'sticky', 
-        top: 0, 
+        position: 'sticky',
+        top: 0,
         zIndex: 200,
-        padding: '0 56px', 
-        height: 64, 
-        display: 'flex', 
-        alignItems: 'center', 
+        padding: '0 56px',
+        height: 64,
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'space-between',
         background: scrolled ? 'rgba(255,255,255,.95)' : 'transparent',
         backdropFilter: scrolled ? 'blur(12px)' : 'none',
@@ -35,48 +36,50 @@ const LandingPage = ({ onStudentLogin, onTeacherLogin, onSignup }) => {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
-            width: 34, 
-            height: 34, 
+            width: 34,
+            height: 34,
             borderRadius: 9,
             background: 'linear-gradient(135deg, #5BA3F5, #3681D6)',
-            display: 'flex', 
-            alignItems: 'center', 
+            display: 'flex',
+            alignItems: 'center',
             justifyContent: 'center'
           }}>
             <Icon name="code" size={17} color="#fff" />
           </div>
           <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-.02em' }}>ProgCheck</span>
         </div>
-        
+
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           <button style={{ fontSize: 14, fontWeight: 500, color: '#374151', background: 'none', cursor: 'pointer', border: 'none' }}>
             Read our Features
           </button>
-          <Button onClick={onStudentLogin} size="md">Get Started</Button>
+          <Button onClick={() => setShowRoleModal(true)} size="md">
+            Get Started
+          </Button>
         </div>
       </nav>
 
       <section style={{
-        flex: 1,                  
-        justifyContent: 'center', 
+        flex: 1,
+        justifyContent: 'center',
         padding: '80px 56px',
-        padding: '80px 56px 100px', 
-        display: 'flex', 
+        padding: '80px 56px 100px',
+        display: 'flex',
         alignItems: 'center',
-        gap: 100, 
-        maxWidth: 1200, 
+        gap: 100,
+        maxWidth: 1200,
         margin: '0 auto',
         width: '100%'
       }}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
           <div style={{
-            display: 'inline-flex', 
-            alignItems: 'center', 
+            display: 'inline-flex',
+            alignItems: 'center',
             gap: 8,
-            padding: '6px 14px', 
-            borderRadius: 99, 
+            padding: '6px 14px',
+            borderRadius: 99,
             background: '#EAF2FF',
-            border: '1px solid #BFDBFE', 
+            border: '1px solid #BFDBFE',
             marginBottom: 28
           }}>
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#5BA3F5' }} />
@@ -84,29 +87,29 @@ const LandingPage = ({ onStudentLogin, onTeacherLogin, onSignup }) => {
               NEURO-SYMBOLIC AI FOR EDUCATION
             </span>
           </div>
-          
+
           <h1 style={{
-            fontSize: 58, 
-            fontWeight: 800, 
-            letterSpacing: '-.05em', 
+            fontSize: 58,
+            fontWeight: 800,
+            letterSpacing: '-.05em',
             lineHeight: 1.1,
-            marginBottom: 22, 
+            marginBottom: 22,
             color: '#111827'
           }}>
             ProgCheck
             <span style={{ display: 'block', color: '#5BA3F5' }}>for Prolog</span>
           </h1>
-          
-          <p style={{ 
-            fontSize: 17, 
-            color: '#6B7280', 
-            lineHeight: 1.65, 
-            marginBottom: 40, 
-            maxWidth: 440 
+
+          <p style={{
+            fontSize: 17,
+            color: '#6B7280',
+            lineHeight: 1.65,
+            marginBottom: 40,
+            maxWidth: 440
           }}>
             An intelligent coding assistant that combines symbolic reasoning with LLMs — giving students transparent, explainable feedback on their Prolog submissions.
           </p>
-          
+
           <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Button onClick={onStudentLogin} size="lg" style={{
               background: 'linear-gradient(135deg, #4ECBA0, #2FA57E)',
@@ -122,25 +125,15 @@ const LandingPage = ({ onStudentLogin, onTeacherLogin, onSignup }) => {
             }}>
               Teacher Login
             </Button>
-            {onSignup && (
-              <Button onClick={onSignup} size="lg" style={{
-                background: '#fff',
-                color: '#374151',
-                border: '1.5px solid #D1D5DB',
-                boxShadow: '0 2px 8px rgba(0,0,0,.08)'
-              }}>
-                Sign Up
-              </Button>
-            )}
           </div>
         </div>
 
         <div style={{ flex: 1, position: 'relative', maxWidth: 480 }}>
           <div style={{
-            background: '#1a1a2e', 
-            borderRadius: 20, 
+            background: '#1a1a2e',
+            borderRadius: 20,
             overflow: 'hidden',
-            boxShadow: '0 24px 80px rgba(0,0,0,.2)', 
+            boxShadow: '0 24px 80px rgba(0,0,0,.2)',
             border: '1px solid #333'
           }}>
             <div style={{ padding: '12px 16px', background: '#12122a', borderBottom: '1px solid #333', display: 'flex', gap: 7 }}>
@@ -149,7 +142,7 @@ const LandingPage = ({ onStudentLogin, onTeacherLogin, onSignup }) => {
               <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#28C840' }} />
               <span style={{ marginLeft: 10, fontSize: 12, color: '#666', fontFamily: 'var(--mono)' }}>solution.pl</span>
             </div>
-            
+
             <div style={{ padding: '20px', fontFamily: 'var(--mono)', fontSize: 13, lineHeight: 1.8, color: '#e0e0e0' }}>
               <div style={{ color: '#6A9955' }}>% Recursive predicate for list length</div>
               <div><span style={{ color: '#569CD6' }}>my_length</span>(<span style={{ color: '#CE9178' }}>[]</span>, <span style={{ color: '#B5CEA8' }}>0</span>).</div>
@@ -157,12 +150,12 @@ const LandingPage = ({ onStudentLogin, onTeacherLogin, onSignup }) => {
               <div style={{ paddingLeft: 20 }}><span style={{ color: '#569CD6' }}>my_length</span>(<span style={{ color: '#9CDCFE' }}>T</span>, <span style={{ color: '#9CDCFE' }}>N1</span>),</div>
               <div style={{ paddingLeft: 20 }}><span style={{ color: '#9CDCFE' }}>N</span> <span style={{ color: '#D4D4D4' }}>is</span> <span style={{ color: '#9CDCFE' }}>N1</span> + <span style={{ color: '#B5CEA8' }}>1</span>.</div>
             </div>
-            
+
             <div style={{
-              margin: '0 16px 16px', 
-              padding: '12px 16px', 
+              margin: '0 16px 16px',
+              padding: '12px 16px',
               borderRadius: 10,
-              background: 'rgba(78,203,160,.15)', 
+              background: 'rgba(78,203,160,.15)',
               border: '1px solid rgba(78,203,160,.3)'
             }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#2FA57E', marginBottom: 4 }}>
@@ -174,12 +167,12 @@ const LandingPage = ({ onStudentLogin, onTeacherLogin, onSignup }) => {
         </div>
       </section>
 
-      <footer style={{ 
+      <footer style={{
         marginTop: 'auto',
-        padding: '24px 56px', 
-        borderTop: '1px solid #E5E7EB', 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+        padding: '24px 56px',
+        borderTop: '1px solid #E5E7EB',
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
         background: '#fff'
       }}>
@@ -190,6 +183,63 @@ const LandingPage = ({ onStudentLogin, onTeacherLogin, onSignup }) => {
           Thura Aung · Phathompol Siripichaiprom · Natavee Pecharat
         </div>
       </footer>
+      {showRoleModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 999
+        }}>
+          <div style={{
+            background: '#fff',
+            padding: 32,
+            borderRadius: 16,
+            width: 320,
+            textAlign: 'center'
+          }}>
+            <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 20 }}>
+              Choose your role
+            </h2>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <Button
+                onClick={() => {
+                  setShowRoleModal(false);
+                  onSignup('student'); 
+                }}
+              >
+                Student
+              </Button>
+
+              <Button
+                onClick={() => {
+                  setShowRoleModal(false);
+                  onSignup('teacher');
+                }}
+                style={{ background: '#5BA3F5', color: '#fff' }}
+              >
+                Teacher
+              </Button>
+            </div>
+
+            <button
+              onClick={() => setShowRoleModal(false)}
+              style={{
+                marginTop: 16,
+                background: 'none',
+                border: 'none',
+                color: '#6B7280',
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

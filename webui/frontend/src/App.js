@@ -92,10 +92,10 @@ export default function App() {
     return ['login', 'signup', 'dashboard'].includes(seg) ? seg : 'landing';
   });
 
-  // FIX 1: Restore user from sessionStorage so reloads don't blank the page
   const [user, setUser] = useState(() => loadSession().user);
   const [userRole, setUserRole] = useState(() => loadSession().userRole);
   const screenRef = React.useRef(screen);
+  const [authMode, setAuthMode] = useState('login');
 
   // Modal
   const [modal, setModal] = useState(null);
@@ -253,7 +253,6 @@ export default function App() {
     return () => window.removeEventListener('popstate', handler);
   }, []);
 
-  // ── FIX 2: If URL is /dashboard but no session, redirect to login ─────────
   useEffect(() => {
     const seg = window.location.pathname.split('/').filter(Boolean)[0] || '';
     if (seg === 'dashboard' && !user) {
@@ -303,6 +302,26 @@ export default function App() {
     }, 350);
     return () => clearTimeout(parseTimer.current);
   }, [code]);
+
+  const RoleSelect = () => (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', gap: 20 }}>
+      <button onClick={() => {
+        setUserRole('student');
+        setAuthMode('signup');
+        setScreen('signup');
+      }}>
+        I'm a Student
+      </button>
+
+      <button onClick={() => {
+        setUserRole('teacher');
+        setAuthMode('signup');
+        setScreen('signup');
+      }}>
+        I'm a Teacher
+      </button>
+    </div>
+  );
 
   const onNodeDragEnd = useCallback((positions) => {
     const posMap = Object.fromEntries(positions.map(p => [p.id, { x: p.x, y: p.y }]));
@@ -519,7 +538,7 @@ export default function App() {
   // ── Shared login handler ──────────────────────────────────────────────────
   const handleLogin = useCallback((userData, role) => {
     const u = { ...userData, role };
-    saveSession(u, role);  // FIX 1: persist to sessionStorage
+    saveSession(u, role);
     setUser(u);
     setUserRole(role);
     fetchOptions(u);
@@ -528,7 +547,7 @@ export default function App() {
 
   // ── Logout handler ────────────────────────────────────────────────────────
   const handleLogout = useCallback(() => {
-    clearSession();  // FIX 1: clear sessionStorage
+    clearSession();
     setUser(null);
     setUserRole(null);
     fetchOptions(null);
@@ -930,13 +949,15 @@ export default function App() {
     </div>
   );
 
-  // ── FIX 2: Shared LoginPage props so it works from both landing and /dashboard reload ──
   const loginPageProps = {
-    defaultRole: userRole,
-    defaultIsRegistering: screen === 'signup',
+    defaultRole: userRole || 'student',
+    defaultIsRegistering: authMode === 'signup',
     onLogin: handleLogin,
     onBack: () => setScreen('landing'),
-    onSwitchMode: (mode) => setScreen(mode),
+    onSwitchMode: (mode) => {
+      setAuthMode(mode);
+      setScreen(mode === 'signup' ? 'signup' : 'login');
+    },
   };
 
   return (
@@ -944,28 +965,40 @@ export default function App() {
       <GlobalStyle />
       {screen === 'landing' && (
         <LandingPage
-          onStudentLogin={() => { setUserRole('student'); setScreen('login'); }}
-          onTeacherLogin={() => { setUserRole('teacher'); setScreen('login'); }}
-          onSignup={() => setScreen('signup')}
+          onStudentLogin={() => {
+            setUserRole('student');
+            setAuthMode('login');
+            setScreen('login');
+          }}
+          onTeacherLogin={() => {
+            setUserRole('teacher');
+            setAuthMode('login');
+            setScreen('login');
+          }}
+          onSignup={(role) => {
+            setUserRole(role);
+            setAuthMode('signup');
+            setScreen('signup');
+          }}
         />
       )}
       {(screen === 'login' || screen === 'signup') && (
         <LoginPage {...loginPageProps} />
       )}
       {screen === 'dashboard' && (
-        // FIX 2: Show login instead of blank page when session missing
         user
           ? <Dashboard
-              user={user}
-              role={user.role}
-              onLogout={handleLogout}
-              onUserUpdate={handleUserUpdate}
-              sidebarCollapsed={sidebarCollapsed}
-              onSidebarChange={setSidebarCollapsed}
-              mainContent={PrologCheckerUI()}
-            />
+            user={user}
+            role={user.role}
+            onLogout={handleLogout}
+            onUserUpdate={handleUserUpdate}
+            sidebarCollapsed={sidebarCollapsed}
+            onSidebarChange={setSidebarCollapsed}
+            mainContent={PrologCheckerUI()}
+          />
           : <LoginPage {...loginPageProps} />
       )}
+      {screen === 'role-select' && <RoleSelect />}
     </>
   );
 }
@@ -978,9 +1011,9 @@ export function TestCaseReviewBody({
   addReviewTc,
 }) {
   const sourceBadge = {
-    llm:    { label: 'AI',     cls: 'bg-accent-blue/10 border-accent-blue/30 text-[#85B7EB]' },
+    llm: { label: 'AI', cls: 'bg-accent-blue/10 border-accent-blue/30 text-[#85B7EB]' },
     manual: { label: 'Manual', cls: 'bg-green-900/20 border-green-700/40 text-green-300' },
-    given:  { label: 'Given',  cls: 'bg-bg-elevated border-border-accent text-txt-tertiary' },
+    given: { label: 'Given', cls: 'bg-bg-elevated border-border-accent text-txt-tertiary' },
   };
 
   return (
@@ -999,11 +1032,10 @@ export function TestCaseReviewBody({
               className="flex items-center gap-2 px-3 py-2 rounded-md border border-border-subtle bg-bg-elevated text-[11px]">
               <span className="text-txt-tertiary w-5 flex-shrink-0">#{i + 1}</span>
               <span className="font-mono text-txt-secondary flex-1 min-w-0 truncate">{tc.input}</span>
-              <span className={`flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded border ${
-                tc.expected_output === 'true'
-                  ? 'bg-green-900/20 border-green-700/40 text-green-300'
-                  : 'bg-red-900/20 border-red-700/40 text-red-300'
-              }`}>
+              <span className={`flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded border ${tc.expected_output === 'true'
+                ? 'bg-green-900/20 border-green-700/40 text-green-300'
+                : 'bg-red-900/20 border-red-700/40 text-red-300'
+                }`}>
                 {tc.expected_output}
               </span>
               <span className={`flex-shrink-0 text-[10px] font-medium px-2 py-0.5 rounded border ${badge.cls}`}>
