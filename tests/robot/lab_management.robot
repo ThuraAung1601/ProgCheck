@@ -47,7 +47,7 @@ TC-LAB-001 Teacher Creates Classroom
     ${body}=    Create Dictionary
     ...    class_name=Prolog 101    teacher_id=${T_ID}
     ${resp}=    POST On Session    progcheck
-    ...    /api/classrooms/create?teacher_id=${T_ID}
+    ...    url=/api/classrooms/create?teacher_id=${T_ID}
     ...    json=${body}    expected_status=200
     Dictionary Should Contain Key    ${resp.json()}    class_id
     ${CLASS_ID}=    Get From Dictionary    ${resp.json()}    class_id
@@ -64,7 +64,7 @@ TC-LAB-002 Non-Owner Teacher Cannot Create Lab In Foreign Classroom
     POST On Session    progcheck    /api/auth/register    json=${body2}    expected_status=200
     ${lbody}=    Create Dictionary    title=Intruder Lab    classroom_id=${CLASS_ID}
     ${resp}=    POST On Session    progcheck
-    ...    /api/labs/create?teacher_id=OTH_${uid2}
+    ...    url=/api/labs/create?teacher_id=OTH_${uid2}
     ...    json=${lbody}    expected_status=any
     Should Be Equal As Integers    ${resp.status_code}    403
 
@@ -77,7 +77,7 @@ TC-LAB-003 Teacher Creates Inactive Lab
     [Tags]    lab    creation    positive
     ${body}=    Create Dictionary    title=Inactive Lab    classroom_id=${CLASS_ID}
     ${resp}=    POST On Session    progcheck
-    ...    /api/labs/create?teacher_id=${T_ID}
+    ...    url=/api/labs/create?teacher_id=${T_ID}
     ...    json=${body}    expected_status=200
     Should Be Equal    ${resp.json()["status"]}    inactive
     Set Suite Variable    ${INACTIVE_LAB_ID}    ${resp.json()["lab_id"]}
@@ -92,7 +92,7 @@ TC-LAB-004 Teacher Creates Active Lab
     ...    title=Active Lab    classroom_id=${CLASS_ID}
     ...    active_time=${past}    complete_time=${future}
     ${resp}=    POST On Session    progcheck
-    ...    /api/labs/create?teacher_id=${T_ID}
+    ...    url=/api/labs/create?teacher_id=${T_ID}
     ...    json=${body}    expected_status=200
     Should Be Equal    ${resp.json()["status"]}    active
     Set Suite Variable    ${ACTIVE_LAB_ID}    ${resp.json()["lab_id"]}
@@ -107,7 +107,7 @@ TC-LAB-005 Lab With Complete Before Active Rejected
     ...    title=Bad Lab    classroom_id=${CLASS_ID}
     ...    active_time=${future}    complete_time=${past}
     ${resp}=    POST On Session    progcheck
-    ...    /api/labs/create?teacher_id=${T_ID}
+    ...    url=/api/labs/create?teacher_id=${T_ID}
     ...    json=${body}    expected_status=any
     Should Be Equal As Integers    ${resp.status_code}    422
 
@@ -121,7 +121,7 @@ TC-LAB-006 Teacher Adds Question To Inactive Lab
     ${body}=    Create Dictionary
     ...    title=append/3    problem=Write the append predicate. append([],Y,Y) should be true.
     ${resp}=    POST On Session    progcheck
-    ...    /api/labs/${INACTIVE_LAB_ID}/questions?teacher_id=${T_ID}
+    ...    url=/api/labs/${INACTIVE_LAB_ID}/questions?teacher_id=${T_ID}
     ...    json=${body}    expected_status=200
     Dictionary Should Contain Key    ${resp.json()}    question_id
     Set Suite Variable    ${QUESTION_ID}    ${resp.json()["question_id"]}
@@ -132,7 +132,7 @@ TC-LAB-007 Adding Question To Active Lab Is Forbidden
     [Tags]    lab    question    negative
     ${body}=    Create Dictionary    title=Late Q    problem=...
     ${resp}=    POST On Session    progcheck
-    ...    /api/labs/${ACTIVE_LAB_ID}/questions?teacher_id=${T_ID}
+    ...    url=/api/labs/${ACTIVE_LAB_ID}/questions?teacher_id=${T_ID}
     ...    json=${body}    expected_status=any
     Should Be Equal As Integers    ${resp.status_code}    403
 
@@ -150,7 +150,7 @@ TC-LAB-009 Teacher Adds Test Case To Question
     ${body}=    Create Dictionary
     ...    input=append([],[],[])    expected_output=true
     ${resp}=    POST On Session    progcheck
-    ...    /api/labs/${INACTIVE_LAB_ID}/questions/${QUESTION_ID}/testcases?teacher_id=${T_ID}
+    ...    url=/api/labs/${INACTIVE_LAB_ID}/questions/${QUESTION_ID}/testcases?teacher_id=${T_ID}
     ...    json=${body}    expected_status=200
     Should Be Equal    ${resp.json()["input"]}    append([],[],[])
 
@@ -171,11 +171,11 @@ TC-LAB-010 Student Submits To Active Lab
     # (we can't add questions once active, so create a fresh inactive one)
     ${nbody}=    Create Dictionary    title=Submit Lab    classroom_id=${CLASS_ID}
     ${nresp}=    POST On Session    progcheck
-    ...    /api/labs/create?teacher_id=${T_ID}    json=${nbody}    expected_status=200
+    ...    url=/api/labs/create?teacher_id=${T_ID}    json=${nbody}    expected_status=200
     ${new_lab_id}=    Get From Dictionary    ${nresp.json()}    lab_id
     ${qbody}=    Create Dictionary    title=Q    problem=Write something.
     ${qresp}=    POST On Session    progcheck
-    ...    /api/labs/${new_lab_id}/questions?teacher_id=${T_ID}
+    ...    url=/api/labs/${new_lab_id}/questions?teacher_id=${T_ID}
     ...    json=${qbody}    expected_status=200
     ${new_qid}=    Get From Dictionary    ${qresp.json()}    question_id
     # The lab is still inactive — activate it by recreating with times

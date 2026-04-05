@@ -32,19 +32,19 @@ Setup Prolog Suite
     # Classroom
     ${cbody}=    Create Dictionary    class_name=Prolog Lab    teacher_id=${PL_TEACHER}
     ${cresp}=    POST On Session    progcheck
-    ...    /api/classrooms/create?teacher_id=${PL_TEACHER}    json=${cbody}    expected_status=200
+    ...    url=/api/classrooms/create?teacher_id=${PL_TEACHER}    json=${cbody}    expected_status=200
     Set Suite Variable    ${PL_CLASS}    ${cresp.json()["class_id"]}
     # Inactive lab — add question first, then we won't activate in this suite
     ${lbody}=    Create Dictionary    title=Prolog Suite Lab    classroom_id=${PL_CLASS}
     ${lresp}=    POST On Session    progcheck
-    ...    /api/labs/create?teacher_id=${PL_TEACHER}    json=${lbody}    expected_status=200
+    ...    url=/api/labs/create?teacher_id=${PL_TEACHER}    json=${lbody}    expected_status=200
     Set Suite Variable    ${PL_LAB}    ${lresp.json()["lab_id"]}
     # Question
     ${problem_text}=    Set Variable
     ...    Write the append/3 predicate.\nappend([],Y,Y) should be true.\nappend([a],[b],[a,b]) should be true.
     ${qbody}=    Create Dictionary    title=append/3    problem=${problem_text}
     ${qresp}=    POST On Session    progcheck
-    ...    /api/labs/${PL_LAB}/questions?teacher_id=${PL_TEACHER}
+    ...    url=/api/labs/${PL_LAB}/questions?teacher_id=${PL_TEACHER}
     ...    json=${qbody}    expected_status=200
     Set Suite Variable    ${PL_QUESTION}    ${qresp.json()["question_id"]}
 

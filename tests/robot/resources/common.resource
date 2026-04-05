@@ -78,7 +78,7 @@ Create Classroom
     [Documentation]    Teacher creates a classroom; returns class_id.
     [Arguments]    ${teacher_id}    ${class_name}=Prolog 101
     ${body}=    Create Dictionary    class_name=${class_name}    teacher_id=${teacher_id}
-    ${resp}=    POST On Session    progcheck    /api/classrooms/create?teacher_id=${teacher_id}
+    ${resp}=    POST On Session    progcheck    url=/api/classrooms/create?teacher_id=${teacher_id}
     ...    json=${body}    expected_status=200
     ${class_id}=    Get From Dictionary    ${resp.json()}    class_id
     RETURN    ${class_id}
@@ -93,7 +93,7 @@ Create Lab
     Run Keyword If    '${complete_time}' != ''
     ...    Set To Dictionary    ${body}    complete_time=${complete_time}
     ${resp}=    POST On Session    progcheck
-    ...    /api/labs/create?teacher_id=${teacher_id}
+    ...    url=/api/labs/create?teacher_id=${teacher_id}
     ...    json=${body}    expected_status=200
     ${lab_id}=    Get From Dictionary    ${resp.json()}    lab_id
     RETURN    ${lab_id}
@@ -102,7 +102,7 @@ Add Lab Question
     [Arguments]    ${teacher_id}    ${lab_id}    ${title}    ${problem}
     ${body}=    Create Dictionary    title=${title}    problem=${problem}
     ${resp}=    POST On Session    progcheck
-    ...    /api/labs/${lab_id}/questions?teacher_id=${teacher_id}
+    ...    url=/api/labs/${lab_id}/questions?teacher_id=${teacher_id}
     ...    json=${body}    expected_status=200
     ${qid}=    Get From Dictionary    ${resp.json()}    question_id
     RETURN    ${qid}

@@ -75,10 +75,11 @@ def tmp_files(tmp_path):
     )
 
     files["syntax_err"] = tmp_path / "syntax_err.pl"
-    # Unmatched parenthesis — SWI-Prolog rejects this reliably
+    # Missing period after first clause — SWI-Prolog cannot parse the file
+    # (same content as data/student_codes/syntax_missing_period.pl)
     files["syntax_err"].write_text(
-        "factorial(0, 1).\n"
-        "factorial(N, F :- N > 0, N1 is N-1, factorial(N1, F1), F is N*F1.\n"
+        "factorial(0, 1)\n"
+        "factorial(N, F) :- N > 0, N1 is N-1, factorial(N1, F1), F is N*F1.\n"
     )
 
     files["factorial"] = tmp_path / "factorial_problem.pl"

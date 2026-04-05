@@ -113,8 +113,8 @@ test(correct_code_passes_all_tests) :-
         test(append_ok([],[],[]),     [append_ok([],[],[])]),
         test(append_ok([a],[b],[a,b]), [append_ok([a],[b],[a,b])])
     ],
-    meta_interpreter:validate_with_tests(Tests, 0, Failures),
-    Failures =:= 0.
+    meta_interpreter:validate_with_tests(append_ok(_,_,_), Tests, Errors),
+    Errors == [].
 
 test(wrong_code_has_failures) :-
     % append_bad([],[],X) unifies X=[] because base is append_bad([],_Y,[])
@@ -124,8 +124,8 @@ test(wrong_code_has_failures) :-
     Tests = [
         test(append_bad([],[a],[a]), [append_bad([],[a],[a])])
     ],
-    meta_interpreter:validate_with_tests(Tests, 0, Failures),
-    Failures > 0.
+    meta_interpreter:validate_with_tests(append_bad(_,_,_), Tests, Errors),
+    Errors \= [].
 
 :- end_tests(validate_with_tests).
 
@@ -199,9 +199,11 @@ test(incomplete_call_does_not_throw) :-
 :- begin_tests(determinism).
 
 test(same_goal_same_trace_length, [nondet]) :-
+    % solve_with_trace returns a proof(Goal,Body,SubTree) compound, not a list.
+    % Determinism is verified by checking that both calls produce identical trees.
     meta_interpreter:solve_with_trace(append_ok([a],[b],[a,b]), T1),
     meta_interpreter:solve_with_trace(append_ok([a],[b],[a,b]), T2),
-    length(T1, L), length(T2, L).
+    T1 == T2.
 
 test(factorial_deterministic, [nondet]) :-
     factorial_ok(5, F1),
