@@ -1,310 +1,1781 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<robot generator="Robot 7.4.1 (Python 3.12.2 on win32)" generated="2026-04-05T22:38:51.995716" rpa="false" schemaversion="5">
+<robot generator="Robot 7.4.1 (Python 3.12.2 on win32)" generated="2026-04-05T23:07:57.528456" rpa="false" schemaversion="5">
 <suite id="s1" name="Robot" source="C:\n\year3\sem2\team_pj\progcheck\tests\robot">
 <suite id="s1-s1" name="Auth" source="C:\n\year3\sem2\team_pj\progcheck\tests\robot\auth.robot">
 <kw name="Create Session" owner="common" type="SETUP">
-<kw name="Create Session" owner="common">
-<msg time="2026-04-05T22:38:52.079234" level="FAIL">Keyword 'common.Create Session' expected 0 arguments, got 3.</msg>
+<kw name="Create Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:07:57.714444" level="INFO">Creating Session using : alias=progcheck, url=http://localhost:8000, headers={},                     cookies={}, auth=None, timeout=None, proxies=None, verify=False,                     debug=0 </msg>
 <arg>progcheck</arg>
 <arg>${BASE_URL}</arg>
 <arg>verify=False</arg>
-<doc>Open a requests session to the ProgCheck API server.</doc>
-<status status="FAIL" start="2026-04-05T22:38:52.079234" elapsed="0.000000">Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<doc>Create Session: create a HTTP session to a server</doc>
+<status status="PASS" start="2026-04-05T23:07:57.713424" elapsed="0.001020"/>
 </kw>
 <doc>Open a requests session to the ProgCheck API server.</doc>
-<status status="FAIL" start="2026-04-05T22:38:52.078229" elapsed="0.001005">Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="PASS" start="2026-04-05T23:07:57.713424" elapsed="0.001020"/>
 </kw>
 <test id="s1-s1-t1" name="TC-AUTH-001 Student Registration Returns Token" line="21">
+<kw name="Generate Random String" owner="String">
+<msg time="2026-04-05T23:07:57.715459" level="INFO">${uid} = 34749376</msg>
+<var>${uid}</var>
+<arg>8</arg>
+<arg>[NUMBERS]</arg>
+<doc>Generates a string with a desired ``length`` from the given ``chars``.</doc>
+<status status="PASS" start="2026-04-05T23:07:57.715459" elapsed="0.000000"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:07:57.716454" level="INFO">${body} = {'username': 'student_34749376', 'password': 'Pass123', 'role': 'student', 'student_id': 'TST_34749376'}</msg>
+<var>${body}</var>
+<arg>username=student_${uid}</arg>
+<arg>password=Pass123</arg>
+<arg>role=student</arg>
+<arg>student_id=TST_${uid}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:07:57.715459" elapsed="0.000995"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:07:59.976728" level="INFO">POST Request : url=http://localhost:8000/api/auth/register 
+ path_url=/api/auth/register 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '104', 'Content-Type': 'application/json'} 
+ body=b'{"username": "student_34749376", "password": "Pass123", "role": "student", "student_id": "TST_34749376"}' 
+ </msg>
+<msg time="2026-04-05T23:07:59.976728" level="INFO">POST Response : url=http://localhost:8000/api/auth/register 
+ status=200, reason=OK 
+ headers={'date': 'Sun, 05 Apr 2026 16:07:58 GMT', 'server': 'uvicorn', 'content-length': '171', 'content-type': 'application/json'} 
+ body={"user":{"id":"TST_34749376","username":"student_34749376","role":"student","email":null,"display_name":"student_34749376"},"token":"7bb3597a-8565-4bf6-93cd-2d256969816d"} 
+ </msg>
+<msg time="2026-04-05T23:07:59.977722" level="INFO">${resp} = &lt;Response [200]&gt;</msg>
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/auth/register</arg>
+<arg>json=${body}</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:07:57.716454" elapsed="2.261268"/>
+</kw>
+<kw name="Status Should Be" owner="RequestsLibrary">
+<arg>200</arg>
+<arg>${resp}</arg>
+<doc>Fails if response status code is different than the expected.</doc>
+<status status="PASS" start="2026-04-05T23:07:59.977722" elapsed="0.000000"/>
+</kw>
+<kw name="Dictionary Should Contain Key" owner="Collections">
+<arg>${resp.json()}</arg>
+<arg>token</arg>
+<doc>Fails if ``key`` is not found from ``dictionary``.</doc>
+<status status="PASS" start="2026-04-05T23:07:59.978721" elapsed="0.000000"/>
+</kw>
+<kw name="Get From Dictionary" owner="Collections">
+<msg time="2026-04-05T23:07:59.979722" level="INFO">${token} = 7bb3597a-8565-4bf6-93cd-2d256969816d</msg>
+<var>${token}</var>
+<arg>${resp.json()}</arg>
+<arg>token</arg>
+<doc>Returns a value from the given ``dictionary`` based on the given ``key``.</doc>
+<status status="PASS" start="2026-04-05T23:07:59.978721" elapsed="0.001001"/>
+</kw>
+<kw name="Should Not Be Empty" owner="BuiltIn">
+<msg time="2026-04-05T23:07:59.979722" level="INFO">Length is 36.</msg>
+<arg>${token}</arg>
+<doc>Verifies that the given item is not empty.</doc>
+<status status="PASS" start="2026-04-05T23:07:59.979722" elapsed="0.000000"/>
+</kw>
+<kw name="Should Be Equal" owner="BuiltIn">
+<arg>${resp.json()["user"]["role"]}</arg>
+<arg>student</arg>
+<doc>Fails if the given objects are unequal.</doc>
+<status status="PASS" start="2026-04-05T23:07:59.980723" elapsed="0.000000"/>
+</kw>
 <doc>UFR-1: A new student can register and receives a non-empty auth token.</doc>
 <tag>auth</tag>
 <tag>functional</tag>
 <tag>positive</tag>
 <tag>registration</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.079234" elapsed="0.000995">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="PASS" start="2026-04-05T23:07:57.714444" elapsed="2.266279"/>
 </test>
 <test id="s1-s1-t2" name="TC-AUTH-002 Teacher Registration Returns Token" line="35">
+<kw name="Generate Random String" owner="String">
+<msg time="2026-04-05T23:07:59.981722" level="INFO">${uid} = 15042258</msg>
+<var>${uid}</var>
+<arg>8</arg>
+<arg>[NUMBERS]</arg>
+<doc>Generates a string with a desired ``length`` from the given ``chars``.</doc>
+<status status="PASS" start="2026-04-05T23:07:59.981722" elapsed="0.001002"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:07:59.982724" level="INFO">${body} = {'username': 'teacher_15042258', 'password': 'TPass456', 'role': 'teacher', 'teacher_id': 'TTCH_15042258'}</msg>
+<var>${body}</var>
+<arg>username=teacher_${uid}</arg>
+<arg>password=TPass456</arg>
+<arg>role=teacher</arg>
+<arg>teacher_id=TTCH_${uid}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:07:59.982724" elapsed="0.000000"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:00.194838" level="INFO">POST Request : url=http://localhost:8000/api/auth/register 
+ path_url=/api/auth/register 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '106', 'Content-Type': 'application/json'} 
+ body=b'{"username": "teacher_15042258", "password": "TPass456", "role": "teacher", "teacher_id": "TTCH_15042258"}' 
+ </msg>
+<msg time="2026-04-05T23:08:00.194838" level="INFO">POST Response : url=http://localhost:8000/api/auth/register 
+ status=200, reason=OK 
+ headers={'date': 'Sun, 05 Apr 2026 16:07:59 GMT', 'server': 'uvicorn', 'content-length': '172', 'content-type': 'application/json'} 
+ body={"user":{"id":"TTCH_15042258","username":"teacher_15042258","role":"teacher","email":null,"display_name":"teacher_15042258"},"token":"a50a5a62-54fb-4d92-8265-e765a172c4e1"} 
+ </msg>
+<msg time="2026-04-05T23:08:00.194838" level="INFO">${resp} = &lt;Response [200]&gt;</msg>
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/auth/register</arg>
+<arg>json=${body}</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:07:59.982724" elapsed="0.212114"/>
+</kw>
+<kw name="Status Should Be" owner="RequestsLibrary">
+<arg>200</arg>
+<arg>${resp}</arg>
+<doc>Fails if response status code is different than the expected.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.195825" elapsed="0.000000"/>
+</kw>
+<kw name="Should Be Equal" owner="BuiltIn">
+<arg>${resp.json()["user"]["role"]}</arg>
+<arg>teacher</arg>
+<doc>Fails if the given objects are unequal.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.195825" elapsed="0.001011"/>
+</kw>
 <doc>UFR-1: A new teacher can register and receives a valid token.</doc>
 <tag>auth</tag>
 <tag>functional</tag>
 <tag>positive</tag>
 <tag>registration</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.080229" elapsed="0.001003">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="PASS" start="2026-04-05T23:07:59.981722" elapsed="0.215114"/>
 </test>
 <test id="s1-s1-t3" name="TC-AUTH-003 Duplicate Student Registration Rejected" line="46">
+<kw name="Generate Random String" owner="String">
+<msg time="2026-04-05T23:08:00.197827" level="INFO">${uid} = 94357354</msg>
+<var>${uid}</var>
+<arg>8</arg>
+<arg>[NUMBERS]</arg>
+<doc>Generates a string with a desired ``length`` from the given ``chars``.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.197827" elapsed="0.000000"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:00.198848" level="INFO">${body} = {'username': 'dup_94357354', 'password': 'Pass123', 'role': 'student', 'student_id': 'DUP_94357354'}</msg>
+<var>${body}</var>
+<arg>username=dup_${uid}</arg>
+<arg>password=Pass123</arg>
+<arg>role=student</arg>
+<arg>student_id=DUP_${uid}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.198848" elapsed="0.000000"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:00.407651" level="INFO">POST Request : url=http://localhost:8000/api/auth/register 
+ path_url=/api/auth/register 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '100', 'Content-Type': 'application/json'} 
+ body=b'{"username": "dup_94357354", "password": "Pass123", "role": "student", "student_id": "DUP_94357354"}' 
+ </msg>
+<msg time="2026-04-05T23:08:00.407651" level="INFO">POST Response : url=http://localhost:8000/api/auth/register 
+ status=200, reason=OK 
+ headers={'date': 'Sun, 05 Apr 2026 16:07:59 GMT', 'server': 'uvicorn', 'content-length': '163', 'content-type': 'application/json'} 
+ body={"user":{"id":"DUP_94357354","username":"dup_94357354","role":"student","email":null,"display_name":"dup_94357354"},"token":"a30512bb-8970-453c-8133-b8105a1ffc73"} 
+ </msg>
+<arg>progcheck</arg>
+<arg>/api/auth/register</arg>
+<arg>json=${body}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.198848" elapsed="0.208803"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:00.419648" level="INFO">POST Request : url=http://localhost:8000/api/auth/register 
+ path_url=/api/auth/register 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '100', 'Content-Type': 'application/json'} 
+ body=b'{"username": "dup_94357354", "password": "Pass123", "role": "student", "student_id": "DUP_94357354"}' 
+ </msg>
+<msg time="2026-04-05T23:08:00.419648" level="INFO">POST Response : url=http://localhost:8000/api/auth/register 
+ status=409, reason=Conflict 
+ headers={'date': 'Sun, 05 Apr 2026 16:07:59 GMT', 'server': 'uvicorn', 'content-length': '39', 'content-type': 'application/json'} 
+ body={"detail":"Student already registered"} 
+ </msg>
+<msg time="2026-04-05T23:08:00.419648" level="INFO">${resp2} = &lt;Response [409]&gt;</msg>
+<var>${resp2}</var>
+<arg>progcheck</arg>
+<arg>/api/auth/register</arg>
+<arg>json=${body}</arg>
+<arg>expected_status=any</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.407651" elapsed="0.011997"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-04-05T23:08:00.420642" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${resp2.status_code}</arg>
+<arg>409</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.420642" elapsed="0.000000"/>
+</kw>
 <doc>SFR-1: Registering the same student_id twice returns 409 Conflict.</doc>
 <tag>auth</tag>
 <tag>functional</tag>
 <tag>negative</tag>
 <tag>registration</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.081232" elapsed="0.000999">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="PASS" start="2026-04-05T23:08:00.197827" elapsed="0.223818"/>
 </test>
 <test id="s1-s1-t4" name="TC-AUTH-004 Missing Student ID Rejected" line="58">
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:00.422644" level="INFO">${body} = {'username': 'noid', 'password': 'pass', 'role': 'student'}</msg>
+<var>${body}</var>
+<arg>username=noid</arg>
+<arg>password=pass</arg>
+<arg>role=student</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.422644" elapsed="0.000000"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:00.425645" level="INFO">POST Request : url=http://localhost:8000/api/auth/register 
+ path_url=/api/auth/register 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '59', 'Content-Type': 'application/json'} 
+ body=b'{"username": "noid", "password": "pass", "role": "student"}' 
+ </msg>
+<msg time="2026-04-05T23:08:00.426653" level="INFO">POST Response : url=http://localhost:8000/api/auth/register 
+ status=400, reason=Bad Request 
+ headers={'date': 'Sun, 05 Apr 2026 16:07:59 GMT', 'server': 'uvicorn', 'content-length': '57', 'content-type': 'application/json'} 
+ body={"detail":"student_id required for student registration"} 
+ </msg>
+<msg time="2026-04-05T23:08:00.426653" level="INFO">${resp} = &lt;Response [400]&gt;</msg>
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/auth/register</arg>
+<arg>json=${body}</arg>
+<arg>expected_status=any</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.422644" elapsed="0.004009"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-04-05T23:08:00.427649" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${resp.status_code}</arg>
+<arg>400</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.426653" elapsed="0.000996"/>
+</kw>
 <doc>SFR-1: student_id is mandatory; omitting it returns 400.</doc>
 <tag>auth</tag>
 <tag>functional</tag>
 <tag>negative</tag>
 <tag>registration</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.083227" elapsed="0.000000">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="PASS" start="2026-04-05T23:08:00.421645" elapsed="0.006004"/>
 </test>
 <test id="s1-s1-t5" name="TC-AUTH-005 Invalid Role Rejected" line="67">
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:00.428646" level="INFO">${body} = {'username': 'hacker', 'password': 'pw', 'role': 'admin'}</msg>
+<var>${body}</var>
+<arg>username=hacker</arg>
+<arg>password=pw</arg>
+<arg>role=admin</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.428646" elapsed="0.000000"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:00.432644" level="INFO">POST Request : url=http://localhost:8000/api/auth/register 
+ path_url=/api/auth/register 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '57', 'Content-Type': 'application/json'} 
+ body=b'{"username": "hacker", "password": "pw", "role": "admin"}' 
+ </msg>
+<msg time="2026-04-05T23:08:00.432644" level="INFO">POST Response : url=http://localhost:8000/api/auth/register 
+ status=400, reason=Bad Request 
+ headers={'date': 'Sun, 05 Apr 2026 16:07:59 GMT', 'server': 'uvicorn', 'content-length': '48', 'content-type': 'application/json'} 
+ body={"detail":"role must be 'student' or 'teacher'"} 
+ </msg>
+<msg time="2026-04-05T23:08:00.432644" level="INFO">${resp} = &lt;Response [400]&gt;</msg>
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/auth/register</arg>
+<arg>json=${body}</arg>
+<arg>expected_status=any</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.428646" elapsed="0.003998"/>
+</kw>
+<kw name="Should Be True" owner="BuiltIn">
+<arg>${resp.status_code} &gt;= 400</arg>
+<doc>Fails if the given condition is not true.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.433644" elapsed="0.000000"/>
+</kw>
 <doc>SFR-2, SNFR-4: Roles other than student/teacher are rejected.</doc>
 <tag>auth</tag>
 <tag>functional</tag>
 <tag>negative</tag>
 <tag>registration</tag>
 <tag>security</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.084222" elapsed="0.000000">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="PASS" start="2026-04-05T23:08:00.427649" elapsed="0.006993"/>
 </test>
 <test id="s1-s1-t6" name="TC-AUTH-006 Response Does Not Expose Password Hash" line="76">
+<kw name="Generate Random String" owner="String">
+<msg time="2026-04-05T23:08:00.435648" level="INFO">${uid} = 65940077</msg>
+<var>${uid}</var>
+<arg>8</arg>
+<arg>[NUMBERS]</arg>
+<doc>Generates a string with a desired ``length`` from the given ``chars``.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.435648" elapsed="0.000000"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:00.436646" level="INFO">${body} = {'username': 'sec_65940077', 'password': 'mysecret', 'role': 'student', 'student_id': 'SEC_65940077'}</msg>
+<var>${body}</var>
+<arg>username=sec_${uid}</arg>
+<arg>password=mysecret</arg>
+<arg>role=student</arg>
+<arg>student_id=SEC_${uid}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.435648" elapsed="0.000998"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:00.792380" level="INFO">POST Request : url=http://localhost:8000/api/auth/register 
+ path_url=/api/auth/register 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '101', 'Content-Type': 'application/json'} 
+ body=b'{"username": "sec_65940077", "password": "mysecret", "role": "student", "student_id": "SEC_65940077"}' 
+ </msg>
+<msg time="2026-04-05T23:08:00.792380" level="INFO">POST Response : url=http://localhost:8000/api/auth/register 
+ status=200, reason=OK 
+ headers={'date': 'Sun, 05 Apr 2026 16:07:59 GMT', 'server': 'uvicorn', 'content-length': '163', 'content-type': 'application/json'} 
+ body={"user":{"id":"SEC_65940077","username":"sec_65940077","role":"student","email":null,"display_name":"sec_65940077"},"token":"c0489dc8-de16-47b7-b9f7-8adbaf28ed2a"} 
+ </msg>
+<msg time="2026-04-05T23:08:00.792380" level="INFO">${resp} = &lt;Response [200]&gt;</msg>
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/auth/register</arg>
+<arg>json=${body}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.436646" elapsed="0.355734"/>
+</kw>
+<kw name="Should Not Contain" owner="BuiltIn">
+<arg>${resp.text}</arg>
+<arg>mysecret</arg>
+<doc>Fails if ``container`` contains ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.793374" elapsed="0.000000"/>
+</kw>
+<kw name="Should Not Contain" owner="BuiltIn">
+<arg>${resp.text}</arg>
+<arg>$2b$</arg>
+<doc>Fails if ``container`` contains ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.794378" elapsed="0.000000"/>
+</kw>
 <doc>SNFR-11: bcrypt hash must not appear in the registration response.</doc>
 <tag>auth</tag>
 <tag>functional</tag>
 <tag>security</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.085234" elapsed="0.000000">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="PASS" start="2026-04-05T23:08:00.434642" elapsed="0.359736"/>
 </test>
 <test id="s1-s1-t7" name="TC-AUTH-007 Student Login With Valid Credentials" line="91">
+<kw name="Generate Random String" owner="String">
+<msg time="2026-04-05T23:08:00.795374" level="INFO">${uid} = 68961098</msg>
+<var>${uid}</var>
+<arg>8</arg>
+<arg>[NUMBERS]</arg>
+<doc>Generates a string with a desired ``length`` from the given ``chars``.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.795374" elapsed="0.001004"/>
+</kw>
+<kw name="Set Variable" owner="BuiltIn">
+<msg time="2026-04-05T23:08:00.796378" level="INFO">${name} = stu_68961098</msg>
+<var>${name}</var>
+<arg>stu_${uid}</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.796378" elapsed="0.000000"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:00.796378" level="INFO">${body} = {'username': 'stu_68961098', 'password': 'Pass123', 'role': 'student', 'student_id': 'LOG_68961098'}</msg>
+<var>${body}</var>
+<arg>username=${name}</arg>
+<arg>password=Pass123</arg>
+<arg>role=student</arg>
+<arg>student_id=LOG_${uid}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.796378" elapsed="0.000999"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:01.006043" level="INFO">POST Request : url=http://localhost:8000/api/auth/register 
+ path_url=/api/auth/register 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '100', 'Content-Type': 'application/json'} 
+ body=b'{"username": "stu_68961098", "password": "Pass123", "role": "student", "student_id": "LOG_68961098"}' 
+ </msg>
+<msg time="2026-04-05T23:08:01.006043" level="INFO">POST Response : url=http://localhost:8000/api/auth/register 
+ status=200, reason=OK 
+ headers={'date': 'Sun, 05 Apr 2026 16:07:59 GMT', 'server': 'uvicorn', 'content-length': '163', 'content-type': 'application/json'} 
+ body={"user":{"id":"LOG_68961098","username":"stu_68961098","role":"student","email":null,"display_name":"stu_68961098"},"token":"98db86fc-e4d6-4232-98a2-26c916db63be"} 
+ </msg>
+<arg>progcheck</arg>
+<arg>/api/auth/register</arg>
+<arg>json=${body}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:00.797377" elapsed="0.208666"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:01.007046" level="INFO">${login} = {'username': 'stu_68961098', 'password': 'Pass123'}</msg>
+<var>${login}</var>
+<arg>username=${name}</arg>
+<arg>password=Pass123</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.007046" elapsed="0.000000"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:01.212257" level="INFO">POST Request : url=http://localhost:8000/api/auth/login/student 
+ path_url=/api/auth/login/student 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '51', 'Content-Type': 'application/json'} 
+ body=b'{"username": "stu_68961098", "password": "Pass123"}' 
+ </msg>
+<msg time="2026-04-05T23:08:01.212257" level="INFO">POST Response : url=http://localhost:8000/api/auth/login/student 
+ status=200, reason=OK 
+ headers={'date': 'Sun, 05 Apr 2026 16:08:01 GMT', 'server': 'uvicorn', 'content-length': '163', 'content-type': 'application/json'} 
+ body={"user":{"id":"LOG_68961098","username":"stu_68961098","role":"student","email":null,"display_name":"stu_68961098"},"token":"bc4c5c7e-9a39-4187-a97a-40807465d121"} 
+ </msg>
+<msg time="2026-04-05T23:08:01.212257" level="INFO">${resp} = &lt;Response [200]&gt;</msg>
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/auth/login/student</arg>
+<arg>json=${login}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.007046" elapsed="0.205211"/>
+</kw>
+<kw name="Dictionary Should Contain Key" owner="Collections">
+<arg>${resp.json()}</arg>
+<arg>token</arg>
+<doc>Fails if ``key`` is not found from ``dictionary``.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.213298" elapsed="0.000000"/>
+</kw>
 <doc>UFR-1: registered student can log in and receives a token.</doc>
 <tag>auth</tag>
 <tag>functional</tag>
 <tag>login</tag>
 <tag>positive</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.086231" elapsed="0.001010">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="PASS" start="2026-04-05T23:08:00.795374" elapsed="0.418941"/>
 </test>
 <test id="s1-s1-t8" name="TC-AUTH-008 Login With Wrong Password Returns 401" line="105">
+<kw name="Generate Random String" owner="String">
+<msg time="2026-04-05T23:08:01.215317" level="INFO">${uid} = 87701758</msg>
+<var>${uid}</var>
+<arg>8</arg>
+<arg>[NUMBERS]</arg>
+<doc>Generates a string with a desired ``length`` from the given ``chars``.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.215317" elapsed="0.000000"/>
+</kw>
+<kw name="Set Variable" owner="BuiltIn">
+<msg time="2026-04-05T23:08:01.216313" level="INFO">${name} = wrongpw_87701758</msg>
+<var>${name}</var>
+<arg>wrongpw_${uid}</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.216313" elapsed="0.000000"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:01.216313" level="INFO">${body} = {'username': 'wrongpw_87701758', 'password': 'correctpw', 'role': 'student', 'student_id': 'WPWT_87701758'}</msg>
+<var>${body}</var>
+<arg>username=${name}</arg>
+<arg>password=correctpw</arg>
+<arg>role=student</arg>
+<arg>student_id=WPWT_${uid}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.216313" elapsed="0.000000"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:01.429318" level="INFO">POST Request : url=http://localhost:8000/api/auth/register 
+ path_url=/api/auth/register 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '107', 'Content-Type': 'application/json'} 
+ body=b'{"username": "wrongpw_87701758", "password": "correctpw", "role": "student", "student_id": "WPWT_87701758"}' 
+ </msg>
+<msg time="2026-04-05T23:08:01.429318" level="INFO">POST Response : url=http://localhost:8000/api/auth/register 
+ status=200, reason=OK 
+ headers={'date': 'Sun, 05 Apr 2026 16:08:01 GMT', 'server': 'uvicorn', 'content-length': '172', 'content-type': 'application/json'} 
+ body={"user":{"id":"WPWT_87701758","username":"wrongpw_87701758","role":"student","email":null,"display_name":"wrongpw_87701758"},"token":"bc17caa0-3f06-48bb-af1d-c08871f65dc1"} 
+ </msg>
+<arg>progcheck</arg>
+<arg>/api/auth/register</arg>
+<arg>json=${body}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.216313" elapsed="0.213995"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:01.431316" level="INFO">${login} = {'username': 'wrongpw_87701758', 'password': 'wrongpw'}</msg>
+<var>${login}</var>
+<arg>username=${name}</arg>
+<arg>password=wrongpw</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.430308" elapsed="0.001008"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:01.639394" level="INFO">POST Request : url=http://localhost:8000/api/auth/login/student 
+ path_url=/api/auth/login/student 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '55', 'Content-Type': 'application/json'} 
+ body=b'{"username": "wrongpw_87701758", "password": "wrongpw"}' 
+ </msg>
+<msg time="2026-04-05T23:08:01.639394" level="INFO">POST Response : url=http://localhost:8000/api/auth/login/student 
+ status=401, reason=Unauthorized 
+ headers={'date': 'Sun, 05 Apr 2026 16:08:01 GMT', 'server': 'uvicorn', 'content-length': '41', 'content-type': 'application/json'} 
+ body={"detail":"Invalid username or password"} 
+ </msg>
+<msg time="2026-04-05T23:08:01.639394" level="INFO">${resp} = &lt;Response [401]&gt;</msg>
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/auth/login/student</arg>
+<arg>json=${login}</arg>
+<arg>expected_status=any</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.431316" elapsed="0.208078"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-04-05T23:08:01.640396" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${resp.status_code}</arg>
+<arg>401</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.639394" elapsed="0.001002"/>
+</kw>
 <doc>UFR-1: incorrect password must be rejected with 401.</doc>
 <tag>auth</tag>
 <tag>functional</tag>
 <tag>login</tag>
 <tag>negative</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.087241" elapsed="0.000995">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="PASS" start="2026-04-05T23:08:01.215317" elapsed="0.426077"/>
 </test>
 <test id="s1-s1-t9" name="TC-AUTH-009 Student Cannot Login On Teacher Endpoint" line="119">
+<kw name="Generate Random String" owner="String">
+<msg time="2026-04-05T23:08:01.642396" level="INFO">${uid} = 72093219</msg>
+<var>${uid}</var>
+<arg>8</arg>
+<arg>[NUMBERS]</arg>
+<doc>Generates a string with a desired ``length`` from the given ``chars``.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.642396" elapsed="0.000000"/>
+</kw>
+<kw name="Set Variable" owner="BuiltIn">
+<msg time="2026-04-05T23:08:01.643395" level="INFO">${name} = cross_72093219</msg>
+<var>${name}</var>
+<arg>cross_${uid}</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.642396" elapsed="0.000999"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:01.643395" level="INFO">${body} = {'username': 'cross_72093219', 'password': 'Pass123', 'role': 'student', 'student_id': 'CRSS_72093219'}</msg>
+<var>${body}</var>
+<arg>username=${name}</arg>
+<arg>password=Pass123</arg>
+<arg>role=student</arg>
+<arg>student_id=CRSS_${uid}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.643395" elapsed="0.000000"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:01.853668" level="INFO">POST Request : url=http://localhost:8000/api/auth/register 
+ path_url=/api/auth/register 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '103', 'Content-Type': 'application/json'} 
+ body=b'{"username": "cross_72093219", "password": "Pass123", "role": "student", "student_id": "CRSS_72093219"}' 
+ </msg>
+<msg time="2026-04-05T23:08:01.853668" level="INFO">POST Response : url=http://localhost:8000/api/auth/register 
+ status=200, reason=OK 
+ headers={'date': 'Sun, 05 Apr 2026 16:08:01 GMT', 'server': 'uvicorn', 'content-length': '168', 'content-type': 'application/json'} 
+ body={"user":{"id":"CRSS_72093219","username":"cross_72093219","role":"student","email":null,"display_name":"cross_72093219"},"token":"a0bb0faf-7e18-4c21-bf7e-0ce7f42c9b0c"} 
+ </msg>
+<arg>progcheck</arg>
+<arg>/api/auth/register</arg>
+<arg>json=${body}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.644394" elapsed="0.209274"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:01.854664" level="INFO">${login} = {'username': 'cross_72093219', 'password': 'Pass123'}</msg>
+<var>${login}</var>
+<arg>username=${name}</arg>
+<arg>password=Pass123</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.854664" elapsed="0.000000"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:01.859670" level="INFO">POST Request : url=http://localhost:8000/api/auth/login/teacher 
+ path_url=/api/auth/login/teacher 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '53', 'Content-Type': 'application/json'} 
+ body=b'{"username": "cross_72093219", "password": "Pass123"}' 
+ </msg>
+<msg time="2026-04-05T23:08:01.860667" level="INFO">POST Response : url=http://localhost:8000/api/auth/login/teacher 
+ status=401, reason=Unauthorized 
+ headers={'date': 'Sun, 05 Apr 2026 16:08:01 GMT', 'server': 'uvicorn', 'content-length': '41', 'content-type': 'application/json'} 
+ body={"detail":"Invalid username or password"} 
+ </msg>
+<msg time="2026-04-05T23:08:01.860667" level="INFO">${resp} = &lt;Response [401]&gt;</msg>
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/auth/login/teacher</arg>
+<arg>json=${login}</arg>
+<arg>expected_status=any</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.854664" elapsed="0.006003"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-04-05T23:08:01.861666" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${resp.status_code}</arg>
+<arg>401</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.860667" elapsed="0.000999"/>
+</kw>
 <doc>SFR-2: student credentials must fail on the teacher login endpoint.</doc>
 <tag>auth</tag>
 <tag>functional</tag>
 <tag>login</tag>
 <tag>negative</tag>
 <tag>role</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.088236" elapsed="0.000993">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="PASS" start="2026-04-05T23:08:01.641394" elapsed="0.220272"/>
 </test>
 <test id="s1-s1-t10" name="TC-AUTH-010 Login Response Structure Is Correct" line="133">
+<kw name="Generate Random String" owner="String">
+<msg time="2026-04-05T23:08:01.862666" level="INFO">${uid} = 13954308</msg>
+<var>${uid}</var>
+<arg>8</arg>
+<arg>[NUMBERS]</arg>
+<doc>Generates a string with a desired ``length`` from the given ``chars``.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.862666" elapsed="0.000000"/>
+</kw>
+<kw name="Set Variable" owner="BuiltIn">
+<msg time="2026-04-05T23:08:01.863661" level="INFO">${name} = struct_13954308</msg>
+<var>${name}</var>
+<arg>struct_${uid}</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.862666" elapsed="0.000995"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:01.863661" level="INFO">${body} = {'username': 'struct_13954308', 'password': 'Pass123', 'role': 'student', 'student_id': 'STCT_13954308'}</msg>
+<var>${body}</var>
+<arg>username=${name}</arg>
+<arg>password=Pass123</arg>
+<arg>role=student</arg>
+<arg>student_id=STCT_${uid}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.863661" elapsed="0.000000"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:02.075244" level="INFO">POST Request : url=http://localhost:8000/api/auth/register 
+ path_url=/api/auth/register 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '104', 'Content-Type': 'application/json'} 
+ body=b'{"username": "struct_13954308", "password": "Pass123", "role": "student", "student_id": "STCT_13954308"}' 
+ </msg>
+<msg time="2026-04-05T23:08:02.075244" level="INFO">POST Response : url=http://localhost:8000/api/auth/register 
+ status=200, reason=OK 
+ headers={'date': 'Sun, 05 Apr 2026 16:08:01 GMT', 'server': 'uvicorn', 'content-length': '170', 'content-type': 'application/json'} 
+ body={"user":{"id":"STCT_13954308","username":"struct_13954308","role":"student","email":null,"display_name":"struct_13954308"},"token":"926cdad1-76bb-4fc7-8877-6888911da604"} 
+ </msg>
+<arg>progcheck</arg>
+<arg>/api/auth/register</arg>
+<arg>json=${body}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:01.863661" elapsed="0.211583"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:02.077251" level="INFO">${login} = {'username': 'struct_13954308', 'password': 'Pass123'}</msg>
+<var>${login}</var>
+<arg>username=${name}</arg>
+<arg>password=Pass123</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.076246" elapsed="0.001005"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:02.284383" level="INFO">POST Request : url=http://localhost:8000/api/auth/login/student 
+ path_url=/api/auth/login/student 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '54', 'Content-Type': 'application/json'} 
+ body=b'{"username": "struct_13954308", "password": "Pass123"}' 
+ </msg>
+<msg time="2026-04-05T23:08:02.284383" level="INFO">POST Response : url=http://localhost:8000/api/auth/login/student 
+ status=200, reason=OK 
+ headers={'date': 'Sun, 05 Apr 2026 16:08:02 GMT', 'server': 'uvicorn', 'content-length': '170', 'content-type': 'application/json'} 
+ body={"user":{"id":"STCT_13954308","username":"struct_13954308","role":"student","email":null,"display_name":"struct_13954308"},"token":"b46bb975-06cf-4482-952e-67367ea5a96b"} 
+ </msg>
+<msg time="2026-04-05T23:08:02.284383" level="INFO">${resp} = &lt;Response [200]&gt;</msg>
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/auth/login/student</arg>
+<arg>json=${login}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.077251" elapsed="0.207132"/>
+</kw>
+<kw name="Set Variable" owner="BuiltIn">
+<msg time="2026-04-05T23:08:02.286388" level="INFO">${j} = {'user': {'id': 'STCT_13954308', 'username': 'struct_13954308', 'role': 'student', 'email': None, 'display_name': 'struct_13954308'}, 'token': 'b46bb975-06cf-4482-952e-67367ea5a96b'}</msg>
+<var>${j}</var>
+<arg>${resp.json()}</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.285384" elapsed="0.001004"/>
+</kw>
+<kw name="Dictionary Should Contain Key" owner="Collections">
+<arg>${j}</arg>
+<arg>token</arg>
+<doc>Fails if ``key`` is not found from ``dictionary``.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.286388" elapsed="0.000991"/>
+</kw>
+<kw name="Dictionary Should Contain Key" owner="Collections">
+<arg>${j}</arg>
+<arg>user</arg>
+<doc>Fails if ``key`` is not found from ``dictionary``.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.287379" elapsed="0.000000"/>
+</kw>
+<kw name="Dictionary Should Contain Key" owner="Collections">
+<arg>${j["user"]}</arg>
+<arg>id</arg>
+<doc>Fails if ``key`` is not found from ``dictionary``.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.288304" elapsed="0.000000"/>
+</kw>
+<kw name="Dictionary Should Contain Key" owner="Collections">
+<arg>${j["user"]}</arg>
+<arg>username</arg>
+<doc>Fails if ``key`` is not found from ``dictionary``.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.288304" elapsed="0.001007"/>
+</kw>
+<kw name="Dictionary Should Contain Key" owner="Collections">
+<arg>${j["user"]}</arg>
+<arg>role</arg>
+<doc>Fails if ``key`` is not found from ``dictionary``.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.289311" elapsed="0.000000"/>
+</kw>
 <doc>SFR-1: login response must include user.id, user.username, user.role, token.</doc>
 <tag>auth</tag>
 <tag>contract</tag>
 <tag>functional</tag>
 <tag>login</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.089229" elapsed="0.001003">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="PASS" start="2026-04-05T23:08:01.861666" elapsed="0.427645"/>
 </test>
 <test id="s1-s1-t11" name="TC-AUTH-011 Login Responds Within 5 Seconds" line="156">
+<kw name="Generate Random String" owner="String">
+<msg time="2026-04-05T23:08:02.290310" level="INFO">${uid} = 49600014</msg>
+<var>${uid}</var>
+<arg>8</arg>
+<arg>[NUMBERS]</arg>
+<doc>Generates a string with a desired ``length`` from the given ``chars``.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.290310" elapsed="0.001001"/>
+</kw>
+<kw name="Set Variable" owner="BuiltIn">
+<msg time="2026-04-05T23:08:02.291311" level="INFO">${name} = perf_49600014</msg>
+<var>${name}</var>
+<arg>perf_${uid}</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.291311" elapsed="0.000000"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:02.292312" level="INFO">${body} = {'username': 'perf_49600014', 'password': 'Pass123', 'role': 'student', 'student_id': 'PERF_49600014'}</msg>
+<var>${body}</var>
+<arg>username=${name}</arg>
+<arg>password=Pass123</arg>
+<arg>role=student</arg>
+<arg>student_id=PERF_${uid}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.291311" elapsed="0.001001"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:02.499609" level="INFO">POST Request : url=http://localhost:8000/api/auth/register 
+ path_url=/api/auth/register 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '102', 'Content-Type': 'application/json'} 
+ body=b'{"username": "perf_49600014", "password": "Pass123", "role": "student", "student_id": "PERF_49600014"}' 
+ </msg>
+<msg time="2026-04-05T23:08:02.499609" level="INFO">POST Response : url=http://localhost:8000/api/auth/register 
+ status=200, reason=OK 
+ headers={'date': 'Sun, 05 Apr 2026 16:08:02 GMT', 'server': 'uvicorn', 'content-length': '166', 'content-type': 'application/json'} 
+ body={"user":{"id":"PERF_49600014","username":"perf_49600014","role":"student","email":null,"display_name":"perf_49600014"},"token":"c3b78d99-fd8c-4da2-ac9c-0a6a1a92e639"} 
+ </msg>
+<arg>progcheck</arg>
+<arg>/api/auth/register</arg>
+<arg>json=${body}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.292312" elapsed="0.207297"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:02.500017" level="INFO">${login} = {'username': 'perf_49600014', 'password': 'Pass123'}</msg>
+<var>${login}</var>
+<arg>username=${name}</arg>
+<arg>password=Pass123</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.500017" elapsed="0.000000"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:02.707905" level="INFO">POST Request : url=http://localhost:8000/api/auth/login/student 
+ path_url=/api/auth/login/student 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '52', 'Content-Type': 'application/json'} 
+ body=b'{"username": "perf_49600014", "password": "Pass123"}' 
+ </msg>
+<msg time="2026-04-05T23:08:02.707905" level="INFO">POST Response : url=http://localhost:8000/api/auth/login/student 
+ status=200, reason=OK 
+ headers={'date': 'Sun, 05 Apr 2026 16:08:02 GMT', 'server': 'uvicorn', 'content-length': '166', 'content-type': 'application/json'} 
+ body={"user":{"id":"PERF_49600014","username":"perf_49600014","role":"student","email":null,"display_name":"perf_49600014"},"token":"3d5109ed-64c5-440b-99b8-f8f9fc212893"} 
+ </msg>
+<msg time="2026-04-05T23:08:02.707905" level="INFO">${resp} = &lt;Response [200]&gt;</msg>
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/auth/login/student</arg>
+<arg>json=${login}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.501166" elapsed="0.206739"/>
+</kw>
+<kw name="Response Time Is Under" owner="common">
+<kw name="Evaluate" owner="BuiltIn">
+<msg time="2026-04-05T23:08:02.709928" level="INFO">${elapsed_ms} = 206.234</msg>
+<var>${elapsed_ms}</var>
+<arg>${resp.elapsed.total_seconds()} * 1000</arg>
+<doc>Evaluates the given expression in Python and returns the result.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.708927" elapsed="0.001001"/>
+</kw>
+<kw name="Should Be True" owner="BuiltIn">
+<arg>${elapsed_ms} &lt; ${max_ms}</arg>
+<arg>Response took ${elapsed_ms}ms, expected &lt; ${max_ms}ms</arg>
+<doc>Fails if the given condition is not true.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.709928" elapsed="0.000991"/>
+</kw>
+<arg>${resp}</arg>
+<arg>5000</arg>
+<doc>Fail if the last HTTP response took longer than threshold (ms).</doc>
+<status status="PASS" start="2026-04-05T23:08:02.708927" elapsed="0.001992"/>
+</kw>
 <doc>SNFR-1: login must respond within the 5-second budget.</doc>
 <tag>auth</tag>
 <tag>functional</tag>
 <tag>performance</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.090232" elapsed="0.000996">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="PASS" start="2026-04-05T23:08:02.290310" elapsed="0.421615"/>
 </test>
 <doc>Acceptance tests for user authentication (UFR-1, UFR-2, SFR-1, SFR-2).
 
 Requires the ProgCheck server running at http://localhost:8000.
 Run with: robot tests/robot/auth.robot</doc>
-<status status="FAIL" start="2026-04-05T22:38:52.034679" elapsed="0.056549">Suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="PASS" start="2026-04-05T23:07:57.555465" elapsed="5.157452"/>
 </suite>
 <suite id="s1-s2" name="Lab Management" source="C:\n\year3\sem2\team_pj\progcheck\tests\robot\lab_management.robot">
 <kw name="Run Keywords" owner="BuiltIn" type="SETUP">
 <kw name="Create Session" owner="common">
-<kw name="Create Session" owner="common">
-<msg time="2026-04-05T22:38:52.102516" level="FAIL">Keyword 'common.Create Session' expected 0 arguments, got 3.</msg>
+<kw name="Create Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:02.721915" level="INFO">Creating Session using : alias=progcheck, url=http://localhost:8000, headers={},                     cookies={}, auth=None, timeout=None, proxies=None, verify=False,                     debug=0 </msg>
 <arg>progcheck</arg>
 <arg>${BASE_URL}</arg>
 <arg>verify=False</arg>
-<doc>Open a requests session to the ProgCheck API server.</doc>
-<status status="FAIL" start="2026-04-05T22:38:52.102516" elapsed="0.000000">Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<doc>Create Session: create a HTTP session to a server</doc>
+<status status="PASS" start="2026-04-05T23:08:02.721915" elapsed="0.001003"/>
 </kw>
 <doc>Open a requests session to the ProgCheck API server.</doc>
-<status status="FAIL" start="2026-04-05T22:38:52.102516" elapsed="0.000993">Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="PASS" start="2026-04-05T23:08:02.721915" elapsed="0.001003"/>
+</kw>
+<kw name="Setup Suite Users">
+<kw name="Generate Random String" owner="String">
+<msg time="2026-04-05T23:08:02.722918" level="INFO">${uid} = 472031</msg>
+<var>${uid}</var>
+<arg>6</arg>
+<arg>[NUMBERS]</arg>
+<doc>Generates a string with a desired ``length`` from the given ``chars``.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.722918" elapsed="0.000000"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-04-05T23:08:02.722918" level="INFO">${T_ID} = LMTCH_472031</msg>
+<arg>${T_ID}</arg>
+<arg>LMTCH_${uid}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.722918" elapsed="0.000000"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-04-05T23:08:02.723913" level="INFO">${S_ID} = LMSTU_472031</msg>
+<arg>${S_ID}</arg>
+<arg>LMSTU_${uid}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.723913" elapsed="0.000000"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-04-05T23:08:02.723913" level="INFO">${T_NAME} = lmTeacher_472031</msg>
+<arg>${T_NAME}</arg>
+<arg>lmTeacher_${uid}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.723913" elapsed="0.000000"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-04-05T23:08:02.723913" level="INFO">${S_NAME} = lmStudent_472031</msg>
+<arg>${S_NAME}</arg>
+<arg>lmStudent_${uid}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.723913" elapsed="0.000000"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:02.724915" level="INFO">${tbody} = {'username': 'lmTeacher_472031', 'password': 'TeacherPass', 'role': 'teacher', 'teacher_id': 'LMTCH_472031'}</msg>
+<var>${tbody}</var>
+<arg>username=${T_NAME}</arg>
+<arg>password=${T_PASS}</arg>
+<arg>role=teacher</arg>
+<arg>teacher_id=${T_ID}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.724915" elapsed="0.000000"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:04.965136" level="INFO">POST Request : url=http://localhost:8000/api/auth/register 
+ path_url=/api/auth/register 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '108', 'Content-Type': 'application/json'} 
+ body=b'{"username": "lmTeacher_472031", "password": "TeacherPass", "role": "teacher", "teacher_id": "LMTCH_472031"}' 
+ </msg>
+<msg time="2026-04-05T23:08:04.965136" level="INFO">POST Response : url=http://localhost:8000/api/auth/register 
+ status=200, reason=OK 
+ headers={'date': 'Sun, 05 Apr 2026 16:08:04 GMT', 'server': 'uvicorn', 'content-length': '171', 'content-type': 'application/json'} 
+ body={"user":{"id":"LMTCH_472031","username":"lmTeacher_472031","role":"teacher","email":null,"display_name":"lmTeacher_472031"},"token":"1b2d1b79-1389-4566-ac3f-25441484d432"} 
+ </msg>
+<arg>progcheck</arg>
+<arg>/api/auth/register</arg>
+<arg>json=${tbody}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:02.724915" elapsed="2.241216"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:04.966131" level="INFO">${sbody} = {'username': 'lmStudent_472031', 'password': 'StudentPass', 'role': 'student', 'student_id': 'LMSTU_472031'}</msg>
+<var>${sbody}</var>
+<arg>username=${S_NAME}</arg>
+<arg>password=${S_PASS}</arg>
+<arg>role=student</arg>
+<arg>student_id=${S_ID}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:04.966131" elapsed="0.000000"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:05.176336" level="INFO">POST Request : url=http://localhost:8000/api/auth/register 
+ path_url=/api/auth/register 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '108', 'Content-Type': 'application/json'} 
+ body=b'{"username": "lmStudent_472031", "password": "StudentPass", "role": "student", "student_id": "LMSTU_472031"}' 
+ </msg>
+<msg time="2026-04-05T23:08:05.176336" level="INFO">POST Response : url=http://localhost:8000/api/auth/register 
+ status=200, reason=OK 
+ headers={'date': 'Sun, 05 Apr 2026 16:08:04 GMT', 'server': 'uvicorn', 'content-length': '171', 'content-type': 'application/json'} 
+ body={"user":{"id":"LMSTU_472031","username":"lmStudent_472031","role":"student","email":null,"display_name":"lmStudent_472031"},"token":"584f2934-3ee9-48fd-ae2a-3695321c43c5"} 
+ </msg>
+<arg>progcheck</arg>
+<arg>/api/auth/register</arg>
+<arg>json=${sbody}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:04.966131" elapsed="0.211222"/>
+</kw>
+<status status="PASS" start="2026-04-05T23:08:02.722918" elapsed="2.454435"/>
 </kw>
 <arg>Create Session</arg>
 <arg>AND</arg>
 <arg>Setup Suite Users</arg>
 <doc>Executes all the given keywords in a sequence.</doc>
-<status status="FAIL" start="2026-04-05T22:38:52.102516" elapsed="0.000993">Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="PASS" start="2026-04-05T23:08:02.721915" elapsed="2.455438"/>
 </kw>
 <test id="s1-s2-t1" name="TC-LAB-001 Teacher Creates Classroom" line="44">
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:05.179341" level="INFO">${body} = {'class_name': 'Prolog 101', 'teacher_id': 'LMTCH_472031'}</msg>
+<var>${body}</var>
+<arg>class_name=Prolog 101</arg>
+<arg>teacher_id=${T_ID}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.178344" elapsed="0.000997"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:05.179341" level="WARN">You might have an = symbol in url. You better place 'url=' before, example: 'url=/your-url/foo?param=a' or use '/your-url/foo  params=param=a' or escape it</msg>
+<msg time="2026-04-05T23:08:05.180353" level="FAIL">TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</msg>
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/classrooms/create?teacher_id=${T_ID}</arg>
+<arg>json=${body}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="FAIL" start="2026-04-05T23:08:05.179341" elapsed="0.001012">TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</status>
+</kw>
+<kw name="Dictionary Should Contain Key" owner="Collections">
+<arg>${resp.json()}</arg>
+<arg>class_id</arg>
+<doc>Fails if ``key`` is not found from ``dictionary``.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.180353" elapsed="0.000000"/>
+</kw>
+<kw name="Get From Dictionary" owner="Collections">
+<var>${CLASS_ID}</var>
+<arg>${resp.json()}</arg>
+<arg>class_id</arg>
+<doc>Returns a value from the given ``dictionary`` based on the given ``key``.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.181334" elapsed="0.000000"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<arg>${CLASS_ID}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.181334" elapsed="0.000000"/>
+</kw>
 <doc>UFR-12: Instructor can create a classroom.</doc>
 <tag>classroom</tag>
 <tag>functional</tag>
 <tag>instructor</tag>
 <tag>lab</tag>
 <tag>positive</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.103509" elapsed="0.000000">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:05.177353" elapsed="0.003981">TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</status>
 </test>
 <test id="s1-s2-t2" name="TC-LAB-002 Non-Owner Teacher Cannot Create Lab In Foreign Classroom" line="56">
+<kw name="Generate Random String" owner="String">
+<msg time="2026-04-05T23:08:05.182335" level="INFO">${uid2} = 323640</msg>
+<var>${uid2}</var>
+<arg>6</arg>
+<arg>[NUMBERS]</arg>
+<doc>Generates a string with a desired ``length`` from the given ``chars``.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.182335" elapsed="0.000000"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:05.183343" level="INFO">${body2} = {'username': 'other_323640', 'password': 'OtherPass', 'role': 'teacher', 'teacher_id': 'OTH_323640'}</msg>
+<var>${body2}</var>
+<arg>username=other_${uid2}</arg>
+<arg>password=OtherPass</arg>
+<arg>role=teacher</arg>
+<arg>teacher_id=OTH_${uid2}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.182335" elapsed="0.001008"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:05.394057" level="INFO">POST Request : url=http://localhost:8000/api/auth/register 
+ path_url=/api/auth/register 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '100', 'Content-Type': 'application/json'} 
+ body=b'{"username": "other_323640", "password": "OtherPass", "role": "teacher", "teacher_id": "OTH_323640"}' 
+ </msg>
+<msg time="2026-04-05T23:08:05.394057" level="INFO">POST Response : url=http://localhost:8000/api/auth/register 
+ status=200, reason=OK 
+ headers={'date': 'Sun, 05 Apr 2026 16:08:04 GMT', 'server': 'uvicorn', 'content-length': '161', 'content-type': 'application/json'} 
+ body={"user":{"id":"OTH_323640","username":"other_323640","role":"teacher","email":null,"display_name":"other_323640"},"token":"8c4bcfa6-e6bc-4e2d-a7d2-c39ec46fa432"} 
+ </msg>
+<arg>progcheck</arg>
+<arg>/api/auth/register</arg>
+<arg>json=${body2}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.183343" elapsed="0.210714"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:05.396060" level="FAIL">Variable '${CLASS_ID}' not found.</msg>
+<var>${lbody}</var>
+<arg>title=Intruder Lab</arg>
+<arg>classroom_id=${CLASS_ID}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="FAIL" start="2026-04-05T23:08:05.395057" elapsed="0.001003">Variable '${CLASS_ID}' not found.</status>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/labs/create?teacher_id=OTH_${uid2}</arg>
+<arg>json=${lbody}</arg>
+<arg>expected_status=any</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.396060" elapsed="0.000000"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<arg>${resp.status_code}</arg>
+<arg>403</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.396060" elapsed="0.001000"/>
+</kw>
 <doc>SFR-2: unauthorized teacher gets 403 when creating lab in another's classroom.</doc>
 <tag>functional</tag>
 <tag>instructor</tag>
 <tag>lab</tag>
 <tag>negative</tag>
 <tag>security</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.103509" elapsed="0.001006">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:05.182335" elapsed="0.214725">Variable '${CLASS_ID}' not found.</status>
 </test>
 <test id="s1-s2-t3" name="TC-LAB-003 Teacher Creates Inactive Lab" line="75">
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:05.399060" level="FAIL">Variable '${CLASS_ID}' not found.</msg>
+<var>${body}</var>
+<arg>title=Inactive Lab</arg>
+<arg>classroom_id=${CLASS_ID}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="FAIL" start="2026-04-05T23:08:05.398063" elapsed="0.000997">Variable '${CLASS_ID}' not found.</status>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/labs/create?teacher_id=${T_ID}</arg>
+<arg>json=${body}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.399060" elapsed="0.000000"/>
+</kw>
+<kw name="Should Be Equal" owner="BuiltIn">
+<arg>${resp.json()["status"]}</arg>
+<arg>inactive</arg>
+<doc>Fails if the given objects are unequal.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.399060" elapsed="0.000000"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<arg>${INACTIVE_LAB_ID}</arg>
+<arg>${resp.json()["lab_id"]}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.400062" elapsed="0.000000"/>
+</kw>
 <doc>SFR-4: new lab with no time window is inactive.</doc>
 <tag>creation</tag>
 <tag>functional</tag>
 <tag>instructor</tag>
 <tag>lab</tag>
 <tag>positive</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.104515" elapsed="0.000999">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:05.397060" elapsed="0.003002">Variable '${CLASS_ID}' not found.</status>
 </test>
 <test id="s1-s2-t4" name="TC-LAB-004 Teacher Creates Active Lab" line="85">
+<kw name="Get Current Date" owner="DateTime">
+<msg time="2026-04-05T23:08:05.402070" level="INFO">${now} = 2026-04-05T23:08</msg>
+<var>${now}</var>
+<arg>result_format=%Y-%m-%dT%H:%M</arg>
+<doc>Returns current local or UTC time with an optional increment.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.402070" elapsed="0.000000"/>
+</kw>
+<kw name="Subtract Time From Date" owner="DateTime">
+<msg time="2026-04-05T23:08:05.405060" level="INFO">${past} = 2026-04-05T22:08</msg>
+<var>${past}</var>
+<arg>${now}</arg>
+<arg>1 hour</arg>
+<arg>result_format=%Y-%m-%dT%H:%M</arg>
+<doc>Subtracts time from date and returns the resulting date.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.402070" elapsed="0.002990"/>
+</kw>
+<kw name="Add Time To Date" owner="DateTime">
+<msg time="2026-04-05T23:08:05.406060" level="INFO">${future} = 2026-04-06T04:08</msg>
+<var>${future}</var>
+<arg>${now}</arg>
+<arg>5 hours</arg>
+<arg>result_format=%Y-%m-%dT%H:%M</arg>
+<doc>Adds time to date and returns the resulting date.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.405060" elapsed="0.001000"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:05.407063" level="FAIL">Variable '${CLASS_ID}' not found.</msg>
+<var>${body}</var>
+<arg>title=Active Lab</arg>
+<arg>classroom_id=${CLASS_ID}</arg>
+<arg>active_time=${past}</arg>
+<arg>complete_time=${future}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="FAIL" start="2026-04-05T23:08:05.406060" elapsed="0.001003">Variable '${CLASS_ID}' not found.</status>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/labs/create?teacher_id=${T_ID}</arg>
+<arg>json=${body}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.407063" elapsed="0.000000"/>
+</kw>
+<kw name="Should Be Equal" owner="BuiltIn">
+<arg>${resp.json()["status"]}</arg>
+<arg>active</arg>
+<doc>Fails if the given objects are unequal.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.407063" elapsed="0.000000"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<arg>${ACTIVE_LAB_ID}</arg>
+<arg>${resp.json()["lab_id"]}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.407063" elapsed="0.000000"/>
+</kw>
 <doc>SFR-4: lab with past start and future end is active.</doc>
 <tag>creation</tag>
 <tag>functional</tag>
 <tag>instructor</tag>
 <tag>lab</tag>
 <tag>positive</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.105514" elapsed="0.001002">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:05.401066" elapsed="0.007003">Variable '${CLASS_ID}' not found.</status>
 </test>
 <test id="s1-s2-t5" name="TC-LAB-005 Lab With Complete Before Active Rejected" line="100">
+<kw name="Get Current Date" owner="DateTime">
+<msg time="2026-04-05T23:08:05.409060" level="INFO">${now} = 2026-04-05T23:08</msg>
+<var>${now}</var>
+<arg>result_format=%Y-%m-%dT%H:%M</arg>
+<doc>Returns current local or UTC time with an optional increment.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.409060" elapsed="0.000000"/>
+</kw>
+<kw name="Add Time To Date" owner="DateTime">
+<msg time="2026-04-05T23:08:05.409060" level="INFO">${future} = 2026-04-06T04:08</msg>
+<var>${future}</var>
+<arg>${now}</arg>
+<arg>5 hours</arg>
+<arg>result_format=%Y-%m-%dT%H:%M</arg>
+<doc>Adds time to date and returns the resulting date.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.409060" elapsed="0.000000"/>
+</kw>
+<kw name="Subtract Time From Date" owner="DateTime">
+<msg time="2026-04-05T23:08:05.410062" level="INFO">${past} = 2026-04-05T22:08</msg>
+<var>${past}</var>
+<arg>${now}</arg>
+<arg>1 hour</arg>
+<arg>result_format=%Y-%m-%dT%H:%M</arg>
+<doc>Subtracts time from date and returns the resulting date.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.410062" elapsed="0.000000"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:05.410566" level="FAIL">Variable '${CLASS_ID}' not found.</msg>
+<var>${body}</var>
+<arg>title=Bad Lab</arg>
+<arg>classroom_id=${CLASS_ID}</arg>
+<arg>active_time=${future}</arg>
+<arg>complete_time=${past}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="FAIL" start="2026-04-05T23:08:05.410566" elapsed="0.000000">Variable '${CLASS_ID}' not found.</status>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/labs/create?teacher_id=${T_ID}</arg>
+<arg>json=${body}</arg>
+<arg>expected_status=any</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.411570" elapsed="0.000000"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<arg>${resp.status_code}</arg>
+<arg>422</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.411570" elapsed="0.000000"/>
+</kw>
 <doc>SFR-4: invalid time window returns 422.</doc>
 <tag>creation</tag>
 <tag>functional</tag>
 <tag>instructor</tag>
 <tag>lab</tag>
 <tag>negative</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.107520" elapsed="0.000000">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:05.408069" elapsed="0.003501">Variable '${CLASS_ID}' not found.</status>
 </test>
 <test id="s1-s2-t6" name="TC-LAB-006 Teacher Adds Question To Inactive Lab" line="118">
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:05.412573" level="INFO">${body} = {'title': 'append/3', 'problem': 'Write the append predicate. append([],Y,Y) should be true.'}</msg>
+<var>${body}</var>
+<arg>title=append/3</arg>
+<arg>problem=Write the append predicate. append([],Y,Y) should be true.</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.412573" elapsed="0.000000"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:05.413572" level="FAIL">Variable '${INACTIVE_LAB_ID}' not found.</msg>
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/labs/${INACTIVE_LAB_ID}/questions?teacher_id=${T_ID}</arg>
+<arg>json=${body}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="FAIL" start="2026-04-05T23:08:05.413572" elapsed="0.000000">Variable '${INACTIVE_LAB_ID}' not found.</status>
+</kw>
+<kw name="Dictionary Should Contain Key" owner="Collections">
+<arg>${resp.json()}</arg>
+<arg>question_id</arg>
+<doc>Fails if ``key`` is not found from ``dictionary``.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.413572" elapsed="0.000000"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<arg>${QUESTION_ID}</arg>
+<arg>${resp.json()["question_id"]}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.414570" elapsed="0.000000"/>
+</kw>
+<kw name="Should Be Equal" owner="BuiltIn">
+<arg>${resp.json()["title"]}</arg>
+<arg>append/3</arg>
+<doc>Fails if the given objects are unequal.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.414570" elapsed="0.000000"/>
+</kw>
 <doc>UFR-13: instructor adds a question with problem text.</doc>
 <tag>functional</tag>
 <tag>instructor</tag>
 <tag>lab</tag>
 <tag>positive</tag>
 <tag>question</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.108516" elapsed="0.000997">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:05.412573" elapsed="0.001997">Variable '${INACTIVE_LAB_ID}' not found.</status>
 </test>
 <test id="s1-s2-t7" name="TC-LAB-007 Adding Question To Active Lab Is Forbidden" line="130">
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:05.415573" level="INFO">${body} = {'title': 'Late Q', 'problem': '...'}</msg>
+<var>${body}</var>
+<arg>title=Late Q</arg>
+<arg>problem=...</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.415573" elapsed="0.000000"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:05.416583" level="FAIL">Variable '${ACTIVE_LAB_ID}' not found.</msg>
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/labs/${ACTIVE_LAB_ID}/questions?teacher_id=${T_ID}</arg>
+<arg>json=${body}</arg>
+<arg>expected_status=any</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="FAIL" start="2026-04-05T23:08:05.416583" elapsed="0.000000">Variable '${ACTIVE_LAB_ID}' not found.</status>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<arg>${resp.status_code}</arg>
+<arg>403</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.417575" elapsed="0.000000"/>
+</kw>
 <doc>SFR-4: question editing is locked once lab goes active.</doc>
 <tag>functional</tag>
 <tag>instructor</tag>
 <tag>lab</tag>
 <tag>negative</tag>
 <tag>question</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.109513" elapsed="0.000000">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:05.414570" elapsed="0.003005">Variable '${ACTIVE_LAB_ID}' not found.</status>
 </test>
 <test id="s1-s2-t8" name="TC-LAB-008 Teacher Retrieves Lab Questions" line="139">
+<kw name="GET On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:05.419572" level="FAIL">Variable '${INACTIVE_LAB_ID}' not found.</msg>
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/labs/${INACTIVE_LAB_ID}/questions</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a GET request on a previously created HTTP Session.</doc>
+<status status="FAIL" start="2026-04-05T23:08:05.418581" elapsed="0.000991">Variable '${INACTIVE_LAB_ID}' not found.</status>
+</kw>
+<kw name="Set Variable" owner="BuiltIn">
+<var>${qs}</var>
+<arg>${resp.json()}</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.420570" elapsed="0.000000"/>
+</kw>
+<kw name="Should Be True" owner="BuiltIn">
+<arg>len($qs) &gt;= 1</arg>
+<doc>Fails if the given condition is not true.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.420570" elapsed="0.000000"/>
+</kw>
 <doc>UFR-4: questions are retrievable per lab.</doc>
 <tag>functional</tag>
 <tag>instructor</tag>
 <tag>lab</tag>
 <tag>positive</tag>
 <tag>question</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.110374" elapsed="0.000000">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:05.418581" elapsed="0.001989">Variable '${INACTIVE_LAB_ID}' not found.</status>
 </test>
 <test id="s1-s2-t9" name="TC-LAB-009 Teacher Adds Test Case To Question" line="147">
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:05.422591" level="INFO">${body} = {'input': 'append([],[],[])', 'expected_output': 'true'}</msg>
+<var>${body}</var>
+<arg>input=append([],[],[])</arg>
+<arg>expected_output=true</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.421585" elapsed="0.001006"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:05.423582" level="FAIL">Variable '${INACTIVE_LAB_ID}' not found.</msg>
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/labs/${INACTIVE_LAB_ID}/questions/${QUESTION_ID}/testcases?teacher_id=${T_ID}</arg>
+<arg>json=${body}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="FAIL" start="2026-04-05T23:08:05.422591" elapsed="0.000991">Variable '${INACTIVE_LAB_ID}' not found.</status>
+</kw>
+<kw name="Should Be Equal" owner="BuiltIn">
+<arg>${resp.json()["input"]}</arg>
+<arg>append([],[],[])</arg>
+<doc>Fails if the given objects are unequal.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.423582" elapsed="0.000000"/>
+</kw>
 <doc>SFR-4: instructor can attach a test case to a question.</doc>
 <tag>functional</tag>
 <tag>instructor</tag>
 <tag>lab</tag>
 <tag>positive</tag>
 <tag>testcase</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.111383" elapsed="0.000000">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:05.421585" elapsed="0.001997">Variable '${INACTIVE_LAB_ID}' not found.</status>
 </test>
 <test id="s1-s2-t10" name="TC-LAB-010 Student Submits To Active Lab" line="161">
+<kw name="Get Current Date" owner="DateTime">
+<msg time="2026-04-05T23:08:05.424579" level="INFO">${now} = 2026-04-05T23:08</msg>
+<var>${now}</var>
+<arg>result_format=%Y-%m-%dT%H:%M</arg>
+<doc>Returns current local or UTC time with an optional increment.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.424579" elapsed="0.000000"/>
+</kw>
+<kw name="Subtract Time From Date" owner="DateTime">
+<msg time="2026-04-05T23:08:05.425575" level="INFO">${past} = 2026-04-05T22:08</msg>
+<var>${past}</var>
+<arg>${now}</arg>
+<arg>1 hour</arg>
+<arg>result_format=%Y-%m-%dT%H:%M</arg>
+<doc>Subtracts time from date and returns the resulting date.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.425575" elapsed="0.000000"/>
+</kw>
+<kw name="Add Time To Date" owner="DateTime">
+<msg time="2026-04-05T23:08:05.425575" level="INFO">${future} = 2026-04-06T05:08</msg>
+<var>${future}</var>
+<arg>${now}</arg>
+<arg>6 hours</arg>
+<arg>result_format=%Y-%m-%dT%H:%M</arg>
+<doc>Adds time to date and returns the resulting date.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.425575" elapsed="0.000000"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:05.426571" level="FAIL">Variable '${CLASS_ID}' not found.</msg>
+<var>${nbody}</var>
+<arg>title=Submit Lab</arg>
+<arg>classroom_id=${CLASS_ID}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="FAIL" start="2026-04-05T23:08:05.426571" elapsed="0.000000">Variable '${CLASS_ID}' not found.</status>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<var>${nresp}</var>
+<arg>progcheck</arg>
+<arg>/api/labs/create?teacher_id=${T_ID}</arg>
+<arg>json=${nbody}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.427570" elapsed="0.000000"/>
+</kw>
+<kw name="Get From Dictionary" owner="Collections">
+<var>${new_lab_id}</var>
+<arg>${nresp.json()}</arg>
+<arg>lab_id</arg>
+<doc>Returns a value from the given ``dictionary`` based on the given ``key``.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.427570" elapsed="0.000000"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<var>${qbody}</var>
+<arg>title=Q</arg>
+<arg>problem=Write something.</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.427570" elapsed="0.000000"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<var>${qresp}</var>
+<arg>progcheck</arg>
+<arg>/api/labs/${new_lab_id}/questions?teacher_id=${T_ID}</arg>
+<arg>json=${qbody}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.427570" elapsed="0.000000"/>
+</kw>
+<kw name="Get From Dictionary" owner="Collections">
+<var>${new_qid}</var>
+<arg>${qresp.json()}</arg>
+<arg>question_id</arg>
+<doc>Returns a value from the given ``dictionary`` based on the given ``key``.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.427570" elapsed="0.000000"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<var>${sbody}</var>
+<arg>student_id=${S_ID}</arg>
+<arg>question_id=${new_qid}</arg>
+<arg>code_file=foo(a).</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.427570" elapsed="0.000000"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<var>${sresp}</var>
+<arg>progcheck</arg>
+<arg>/api/labs/submit</arg>
+<arg>json=${sbody}</arg>
+<arg>expected_status=any</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.428570" elapsed="0.000000"/>
+</kw>
+<kw name="Should Be True" owner="BuiltIn">
+<arg>${sresp.status_code} in [200, 403]</arg>
+<doc>Fails if the given condition is not true.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.428570" elapsed="0.000000"/>
+</kw>
 <doc>UFR-5: student can submit code while lab is active.</doc>
 <tag>functional</tag>
 <tag>instructor</tag>
 <tag>lab</tag>
 <tag>positive</tag>
 <tag>submission</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.112382" elapsed="0.000000">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:05.424579" elapsed="0.003991">Variable '${CLASS_ID}' not found.</status>
 </test>
 <test id="s1-s2-t11" name="TC-LAB-011 Submission To Inactive Lab Rejected" line="193">
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:05.429590" level="FAIL">Variable '${QUESTION_ID}' not found.</msg>
+<var>${sbody}</var>
+<arg>student_id=${S_ID}</arg>
+<arg>question_id=${QUESTION_ID}</arg>
+<arg>code_file=code.</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="FAIL" start="2026-04-05T23:08:05.429590" elapsed="0.000000">Variable '${QUESTION_ID}' not found.</status>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/labs/submit</arg>
+<arg>json=${sbody}</arg>
+<arg>expected_status=any</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.430578" elapsed="0.000000"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<arg>${resp.status_code}</arg>
+<arg>403</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.430578" elapsed="0.000000"/>
+</kw>
 <doc>SFR-5: submitting before lab opens returns 403.</doc>
 <tag>functional</tag>
 <tag>instructor</tag>
 <tag>lab</tag>
 <tag>negative</tag>
 <tag>submission</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.113386" elapsed="0.000000">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:05.428570" elapsed="0.002008">Variable '${QUESTION_ID}' not found.</status>
 </test>
 <test id="s1-s2-t12" name="TC-LAB-012 Instructor Views Student Results" line="202">
+<kw name="GET On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:05.432574" level="FAIL">Variable '${QUESTION_ID}' not found.</msg>
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/labs/results/question/${QUESTION_ID}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a GET request on a previously created HTTP Session.</doc>
+<status status="FAIL" start="2026-04-05T23:08:05.431582" elapsed="0.000992">Variable '${QUESTION_ID}' not found.</status>
+</kw>
+<kw name="Should Be True" owner="BuiltIn">
+<arg>isinstance($resp.json(), list)</arg>
+<doc>Fails if the given condition is not true.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.432574" elapsed="0.000000"/>
+</kw>
 <doc>UFR-14: teacher retrieves all submissions for a question.</doc>
 <tag>functional</tag>
 <tag>instructor</tag>
 <tag>lab</tag>
 <tag>submission</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.114391" elapsed="0.000991">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:05.431582" elapsed="0.000992">Variable '${QUESTION_ID}' not found.</status>
 </test>
 <test id="s1-s2-t13" name="TC-LAB-013 Student Views Own Submission History" line="209">
+<kw name="GET On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:05.435576" level="INFO">GET Request : url=http://localhost:8000/api/labs/results/student/LMSTU_472031 
+ path_url=/api/labs/results/student/LMSTU_472031 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive'} 
+ body=None 
+ </msg>
+<msg time="2026-04-05T23:08:05.436586" level="INFO">GET Response : url=http://localhost:8000/api/labs/results/student/LMSTU_472031 
+ status=200, reason=OK 
+ headers={'date': 'Sun, 05 Apr 2026 16:08:05 GMT', 'server': 'uvicorn', 'content-length': '2', 'content-type': 'application/json'} 
+ body=[] 
+ </msg>
+<msg time="2026-04-05T23:08:05.436586" level="INFO">${resp} = &lt;Response [200]&gt;</msg>
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/labs/results/student/${S_ID}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a GET request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.433572" elapsed="0.003014"/>
+</kw>
+<kw name="Should Be True" owner="BuiltIn">
+<arg>isinstance($resp.json(), list)</arg>
+<doc>Fails if the given condition is not true.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.436586" elapsed="0.000000"/>
+</kw>
 <doc>UFR-11: student retrieves their own submission list.</doc>
 <tag>functional</tag>
 <tag>instructor</tag>
 <tag>lab</tag>
 <tag>student</tag>
 <tag>submission</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.115382" elapsed="0.001000">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="PASS" start="2026-04-05T23:08:05.433572" elapsed="0.004008"/>
 </test>
 <test id="s1-s2-t14" name="TC-LAB-014 Lab List Responds Within 5 Seconds" line="220">
+<kw name="GET On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:05.439573" level="FAIL">Variable '${CLASS_ID}' not found.</msg>
+<var>${resp}</var>
+<arg>progcheck</arg>
+<arg>/api/labs/classroom/${CLASS_ID}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a GET request on a previously created HTTP Session.</doc>
+<status status="FAIL" start="2026-04-05T23:08:05.438580" elapsed="0.000993">Variable '${CLASS_ID}' not found.</status>
+</kw>
+<kw name="Response Time Is Under" owner="common">
+<arg>${resp}</arg>
+<arg>5000</arg>
+<doc>Fail if the last HTTP response took longer than threshold (ms).</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:05.439573" elapsed="0.000000"/>
+</kw>
 <doc>SNFR-1: fetching classroom labs must be fast.</doc>
 <tag>functional</tag>
 <tag>instructor</tag>
 <tag>lab</tag>
 <tag>performance</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.116382" elapsed="0.001004">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:05.437580" elapsed="0.002736">Variable '${CLASS_ID}' not found.</status>
 </test>
 <doc>Acceptance tests for instructor classroom and lab management
 (UFR-12, UFR-13, UFR-14, SFR-3, SFR-4, SFR-5).
 
 Requires the ProgCheck server running at http://localhost:8000.
 Run with: robot tests/robot/lab_management.robot</doc>
-<status status="FAIL" start="2026-04-05T22:38:52.092230" elapsed="0.026160">Suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:02.713922" elapsed="2.726394"/>
 </suite>
 <suite id="s1-s3" name="Prolog Submission" source="C:\n\year3\sem2\team_pj\progcheck\tests\robot\prolog_submission.robot">
 <kw name="Run Keywords" owner="BuiltIn" type="SETUP">
 <kw name="Create Session" owner="common">
-<kw name="Create Session" owner="common">
-<msg time="2026-04-05T22:38:52.129381" level="FAIL">Keyword 'common.Create Session' expected 0 arguments, got 3.</msg>
+<kw name="Create Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:05.446336" level="INFO">Creating Session using : alias=progcheck, url=http://localhost:8000, headers={},                     cookies={}, auth=None, timeout=None, proxies=None, verify=False,                     debug=0 </msg>
 <arg>progcheck</arg>
 <arg>${BASE_URL}</arg>
 <arg>verify=False</arg>
-<doc>Open a requests session to the ProgCheck API server.</doc>
-<status status="FAIL" start="2026-04-05T22:38:52.129381" elapsed="0.000000">Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<doc>Create Session: create a HTTP session to a server</doc>
+<status status="PASS" start="2026-04-05T23:08:05.446336" elapsed="0.001004"/>
 </kw>
 <doc>Open a requests session to the ProgCheck API server.</doc>
-<status status="FAIL" start="2026-04-05T22:38:52.128385" elapsed="0.000996">Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="PASS" start="2026-04-05T23:08:05.446336" elapsed="0.001004"/>
+</kw>
+<kw name="Setup Prolog Suite">
+<kw name="Generate Random String" owner="String">
+<msg time="2026-04-05T23:08:05.447340" level="INFO">${uid} = 446290</msg>
+<var>${uid}</var>
+<arg>6</arg>
+<arg>[NUMBERS]</arg>
+<doc>Generates a string with a desired ``length`` from the given ``chars``.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.447340" elapsed="0.000000"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:05.448336" level="INFO">${tbody} = {'username': 'pl_tch_446290', 'password': 'TPass', 'role': 'teacher', 'teacher_id': 'PLTCH_446290'}</msg>
+<var>${tbody}</var>
+<arg>username=pl_tch_${uid}</arg>
+<arg>password=TPass</arg>
+<arg>role=teacher</arg>
+<arg>teacher_id=PLTCH_${uid}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.447340" elapsed="0.000996"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:07.708512" level="INFO">POST Request : url=http://localhost:8000/api/auth/register 
+ path_url=/api/auth/register 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '99', 'Content-Type': 'application/json'} 
+ body=b'{"username": "pl_tch_446290", "password": "TPass", "role": "teacher", "teacher_id": "PLTCH_446290"}' 
+ </msg>
+<msg time="2026-04-05T23:08:07.708512" level="INFO">POST Response : url=http://localhost:8000/api/auth/register 
+ status=200, reason=OK 
+ headers={'date': 'Sun, 05 Apr 2026 16:08:07 GMT', 'server': 'uvicorn', 'content-length': '165', 'content-type': 'application/json'} 
+ body={"user":{"id":"PLTCH_446290","username":"pl_tch_446290","role":"teacher","email":null,"display_name":"pl_tch_446290"},"token":"54d0bfb6-8a3d-4fb0-a508-736c67b85485"} 
+ </msg>
+<arg>progcheck</arg>
+<arg>/api/auth/register</arg>
+<arg>json=${tbody}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:05.448336" elapsed="2.260176"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-04-05T23:08:07.709512" level="INFO">${PL_TEACHER} = PLTCH_446290</msg>
+<arg>${PL_TEACHER}</arg>
+<arg>PLTCH_${uid}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-04-05T23:08:07.708512" elapsed="0.001000"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:07.709512" level="INFO">${sbody} = {'username': 'pl_stu_446290', 'password': 'SPass', 'role': 'student', 'student_id': 'PLSTU_446290'}</msg>
+<var>${sbody}</var>
+<arg>username=pl_stu_${uid}</arg>
+<arg>password=SPass</arg>
+<arg>role=student</arg>
+<arg>student_id=PLSTU_${uid}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:07.709512" elapsed="0.000000"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:07.922486" level="INFO">POST Request : url=http://localhost:8000/api/auth/register 
+ path_url=/api/auth/register 
+ headers={'User-Agent': 'python-requests/2.31.0', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '99', 'Content-Type': 'application/json'} 
+ body=b'{"username": "pl_stu_446290", "password": "SPass", "role": "student", "student_id": "PLSTU_446290"}' 
+ </msg>
+<msg time="2026-04-05T23:08:07.922486" level="INFO">POST Response : url=http://localhost:8000/api/auth/register 
+ status=200, reason=OK 
+ headers={'date': 'Sun, 05 Apr 2026 16:08:07 GMT', 'server': 'uvicorn', 'content-length': '165', 'content-type': 'application/json'} 
+ body={"user":{"id":"PLSTU_446290","username":"pl_stu_446290","role":"student","email":null,"display_name":"pl_stu_446290"},"token":"fddc64fc-cee7-429d-b866-68b39bda5b02"} 
+ </msg>
+<arg>progcheck</arg>
+<arg>/api/auth/register</arg>
+<arg>json=${sbody}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="PASS" start="2026-04-05T23:08:07.710510" elapsed="0.211976"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-04-05T23:08:07.923481" level="INFO">${PL_STUDENT} = PLSTU_446290</msg>
+<arg>${PL_STUDENT}</arg>
+<arg>PLSTU_${uid}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-04-05T23:08:07.922486" elapsed="0.000995"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-04-05T23:08:07.923481" level="INFO">${cbody} = {'class_name': 'Prolog Lab', 'teacher_id': 'PLTCH_446290'}</msg>
+<var>${cbody}</var>
+<arg>class_name=Prolog Lab</arg>
+<arg>teacher_id=${PL_TEACHER}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-04-05T23:08:07.923481" elapsed="0.000000"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<msg time="2026-04-05T23:08:07.923481" level="WARN">You might have an = symbol in url. You better place 'url=' before, example: 'url=/your-url/foo?param=a' or use '/your-url/foo  params=param=a' or escape it</msg>
+<msg time="2026-04-05T23:08:07.924477" level="FAIL">TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</msg>
+<var>${cresp}</var>
+<arg>progcheck</arg>
+<arg>/api/classrooms/create?teacher_id=${PL_TEACHER}</arg>
+<arg>json=${cbody}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="FAIL" start="2026-04-05T23:08:07.923481" elapsed="0.000996">TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</status>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<arg>${PL_CLASS}</arg>
+<arg>${cresp.json()["class_id"]}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:07.925503" elapsed="0.000000"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<var>${lbody}</var>
+<arg>title=Prolog Suite Lab</arg>
+<arg>classroom_id=${PL_CLASS}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:07.925503" elapsed="0.000000"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<var>${lresp}</var>
+<arg>progcheck</arg>
+<arg>/api/labs/create?teacher_id=${PL_TEACHER}</arg>
+<arg>json=${lbody}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:07.925503" elapsed="0.000000"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<arg>${PL_LAB}</arg>
+<arg>${lresp.json()["lab_id"]}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:07.925503" elapsed="0.000000"/>
+</kw>
+<kw name="Set Variable" owner="BuiltIn">
+<var>${problem_text}</var>
+<arg>Write the append/3 predicate.\nappend([],Y,Y) should be true.\nappend([a],[b],[a,b]) should be true.</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:07.925503" elapsed="0.000000"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<var>${qbody}</var>
+<arg>title=append/3</arg>
+<arg>problem=${problem_text}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:07.925503" elapsed="0.000000"/>
+</kw>
+<kw name="POST On Session" owner="RequestsLibrary">
+<var>${qresp}</var>
+<arg>progcheck</arg>
+<arg>/api/labs/${PL_LAB}/questions?teacher_id=${PL_TEACHER}</arg>
+<arg>json=${qbody}</arg>
+<arg>expected_status=200</arg>
+<doc>Sends a POST request on a previously created HTTP Session.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:07.925503" elapsed="0.000000"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<arg>${PL_QUESTION}</arg>
+<arg>${qresp.json()["question_id"]}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="NOT RUN" start="2026-04-05T23:08:07.925503" elapsed="0.000000"/>
+</kw>
+<doc>Register a teacher + student, create classroom + active lab + question.</doc>
+<status status="FAIL" start="2026-04-05T23:08:05.447340" elapsed="2.478163">TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</status>
 </kw>
 <arg>Create Session</arg>
 <arg>AND</arg>
 <arg>Setup Prolog Suite</arg>
 <doc>Executes all the given keywords in a sequence.</doc>
-<status status="FAIL" start="2026-04-05T22:38:52.128385" elapsed="0.000996">Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:05.446336" elapsed="2.479167">TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</status>
 </kw>
 <test id="s1-s3-t1" name="TC-PRL-001 Syntax Check Passes For Correct Code" line="57">
 <doc>SFR-6: syntactically valid Prolog returns ok=true.</doc>
@@ -313,8 +1784,8 @@ Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
 <tag>prolog</tag>
 <tag>submission</tag>
 <tag>syntax</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.129381" elapsed="0.000000">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:07.926503" elapsed="0.000000">Parent suite setup failed:
+TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</status>
 </test>
 <test id="s1-s3-t2" name="TC-PRL-002 Syntax Check Fails For Invalid Code" line="66">
 <doc>SFR-6, UFR-8: file with syntax error returns ok=false and non-empty error.</doc>
@@ -323,8 +1794,8 @@ Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
 <tag>prolog</tag>
 <tag>submission</tag>
 <tag>syntax</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.130381" elapsed="0.001001">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:07.927494" elapsed="0.000000">Parent suite setup failed:
+TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</status>
 </test>
 <test id="s1-s3-t3" name="TC-PRL-003 Syntax Error Message Is Human-Readable" line="77">
 <doc>UFR-8: syntax_error must not be a raw Prolog exception term.</doc>
@@ -333,8 +1804,8 @@ Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
 <tag>quality</tag>
 <tag>submission</tag>
 <tag>syntax</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.132385" elapsed="0.000000">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:07.928495" elapsed="0.000000">Parent suite setup failed:
+TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</status>
 </test>
 <test id="s1-s3-t4" name="TC-PRL-004 Syntax Check Responds Within 5 Seconds" line="87">
 <doc>SNFR-1: syntax check must be fast.</doc>
@@ -343,8 +1814,8 @@ Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
 <tag>prolog</tag>
 <tag>submission</tag>
 <tag>syntax</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.133393" elapsed="0.000999">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:07.929476" elapsed="0.000997">Parent suite setup failed:
+TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</status>
 </test>
 <test id="s1-s3-t5" name="TC-PRL-005 Query Run Returns Proof Tree And Trace" line="99">
 <doc>SFR-11, UFR-9: correct code returns proof_tree and trace strings.</doc>
@@ -353,8 +1824,8 @@ Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
 <tag>prolog</tag>
 <tag>query</tag>
 <tag>submission</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.135396" elapsed="0.000999">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:07.930473" elapsed="0.001018">Parent suite setup failed:
+TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</status>
 </test>
 <test id="s1-s3-t6" name="TC-PRL-006 Query Run Detects Logic Error" line="113">
 <doc>UFR-10: wrong code returns has_logic_error information.</doc>
@@ -363,8 +1834,8 @@ Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
 <tag>prolog</tag>
 <tag>query</tag>
 <tag>submission</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.136395" elapsed="0.000997">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:07.932496" elapsed="0.000000">Parent suite setup failed:
+TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</status>
 </test>
 <test id="s1-s3-t7" name="TC-PRL-007 Query Run Responds Within 5 Seconds" line="128">
 <doc>SNFR-1: query execution must respect response budget.</doc>
@@ -373,8 +1844,8 @@ Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
 <tag>prolog</tag>
 <tag>query</tag>
 <tag>submission</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.137392" elapsed="0.000000">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:07.933489" elapsed="0.000000">Parent suite setup failed:
+TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</status>
 </test>
 <test id="s1-s3-t8" name="TC-PRL-008 Full Diagnosis On Correct Code Shows No Failures" line="141">
 <doc>SFR-10, UFR-7: correct code should produce no failure entries in the log.</doc>
@@ -383,8 +1854,8 @@ Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
 <tag>positive</tag>
 <tag>prolog</tag>
 <tag>submission</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.138393" elapsed="0.000000">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:07.933489" elapsed="0.001516">Parent suite setup failed:
+TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</status>
 </test>
 <test id="s1-s3-t9" name="TC-PRL-009 Full Diagnosis On Wrong Code Reports Failure" line="153">
 <doc>UFR-7, UFR-10: wrong base case causes test failure in log.</doc>
@@ -393,8 +1864,8 @@ Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
 <tag>negative</tag>
 <tag>prolog</tag>
 <tag>submission</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.139395" elapsed="0.000000">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:07.935005" elapsed="0.001019">Parent suite setup failed:
+TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</status>
 </test>
 <test id="s1-s3-t10" name="TC-PRL-010 Full Diagnosis Responds Within 5 Seconds" line="165">
 <doc>SNFR-1: full diagnosis must complete within the 5-second budget.</doc>
@@ -403,8 +1874,8 @@ Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
 <tag>performance</tag>
 <tag>prolog</tag>
 <tag>submission</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.140393" elapsed="0.000000">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:07.936024" elapsed="0.001000">Parent suite setup failed:
+TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</status>
 </test>
 <test id="s1-s3-t11" name="TC-PRL-011 Full Diagnosis With Custom Test Cases" line="173">
 <doc>SFR-9, UFR-5: teacher-supplied test cases are respected.</doc>
@@ -413,8 +1884,8 @@ Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
 <tag>prolog</tag>
 <tag>submission</tag>
 <tag>testcase</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.141398" elapsed="0.000000">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:07.937024" elapsed="0.000992">Parent suite setup failed:
+TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</status>
 </test>
 <test id="s1-s3-t12" name="TC-PRL-012 Generate Testcases Degrades Gracefully Without LLM" line="189">
 <doc>SNFR-10: endpoint returns ok=false and empty list when LLM unavailable.</doc>
@@ -423,8 +1894,8 @@ Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
 <tag>llm</tag>
 <tag>prolog</tag>
 <tag>submission</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.142394" elapsed="0.000000">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:07.938016" elapsed="0.000000">Parent suite setup failed:
+TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</status>
 </test>
 <test id="s1-s3-t13" name="TC-PRL-013 Diagnosis Log Does Not Expose API Keys" line="205">
 <doc>SNFR-8: GROQ_API_KEY must not appear in the diagnosis log.</doc>
@@ -432,8 +1903,8 @@ Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
 <tag>prolog</tag>
 <tag>security</tag>
 <tag>submission</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.143394" elapsed="0.000998">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:07.939014" elapsed="0.000000">Parent suite setup failed:
+TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</status>
 </test>
 <test id="s1-s3-t14" name="TC-PRL-014 Infinite Loop Code Does Not Hang Server" line="219">
 <doc>SNFR-4: non-terminating student code must be cut off by depth/time limit.</doc>
@@ -442,108 +1913,60 @@ Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
 <tag>prolog</tag>
 <tag>safety</tag>
 <tag>submission</tag>
-<status status="FAIL" start="2026-04-05T22:38:52.145398" elapsed="0.000000">Parent suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:07.940031" elapsed="0.000000">Parent suite setup failed:
+TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</status>
 </test>
 <doc>Acceptance tests for Prolog code submission and diagnosis pipeline
 (UFR-5..UFR-10, SFR-6..SFR-13, SNFR-1, SNFR-4, SNFR-10).
 
 Requires the ProgCheck server running at http://localhost:8000.
 Run with: robot tests/robot/prolog_submission.robot</doc>
-<status status="FAIL" start="2026-04-05T22:38:52.119389" elapsed="0.027008">Suite setup failed:
-Keyword 'common.Create Session' expected 0 arguments, got 3.</status>
+<status status="FAIL" start="2026-04-05T23:08:05.441324" elapsed="2.499715">Suite setup failed:
+TypeError: RequestsOnSessionKeywords.post_on_session() missing 1 required positional argument: 'url'</status>
 </suite>
-<status status="FAIL" start="2026-04-05T22:38:51.996718" elapsed="0.151193"/>
+<status status="FAIL" start="2026-04-05T23:07:57.530466" elapsed="10.410573"/>
 </suite>
 <statistics>
 <total>
-<stat pass="0" fail="39" skip="0">All Tests</stat>
+<stat pass="12" fail="27" skip="0">All Tests</stat>
 </total>
 <tag>
-<stat pass="0" fail="11" skip="0">auth</stat>
+<stat pass="11" fail="0" skip="0">auth</stat>
 <stat pass="0" fail="1" skip="0">classroom</stat>
-<stat pass="0" fail="1" skip="0">contract</stat>
+<stat pass="1" fail="0" skip="0">contract</stat>
 <stat pass="0" fail="3" skip="0">creation</stat>
 <stat pass="0" fail="1" skip="0">degradation</stat>
 <stat pass="0" fail="4" skip="0">diagnosis</stat>
-<stat pass="0" fail="39" skip="0">functional</stat>
-<stat pass="0" fail="14" skip="0">instructor</stat>
-<stat pass="0" fail="14" skip="0">lab</stat>
+<stat pass="12" fail="27" skip="0">functional</stat>
+<stat pass="1" fail="13" skip="0">instructor</stat>
+<stat pass="1" fail="13" skip="0">lab</stat>
 <stat pass="0" fail="1" skip="0">llm</stat>
-<stat pass="0" fail="4" skip="0">login</stat>
-<stat pass="0" fail="12" skip="0">negative</stat>
-<stat pass="0" fail="6" skip="0">performance</stat>
-<stat pass="0" fail="13" skip="0">positive</stat>
+<stat pass="4" fail="0" skip="0">login</stat>
+<stat pass="5" fail="7" skip="0">negative</stat>
+<stat pass="1" fail="5" skip="0">performance</stat>
+<stat pass="3" fail="10" skip="0">positive</stat>
 <stat pass="0" fail="14" skip="0">prolog</stat>
 <stat pass="0" fail="1" skip="0">quality</stat>
 <stat pass="0" fail="3" skip="0">query</stat>
 <stat pass="0" fail="3" skip="0">question</stat>
-<stat pass="0" fail="5" skip="0">registration</stat>
-<stat pass="0" fail="1" skip="0">role</stat>
+<stat pass="5" fail="0" skip="0">registration</stat>
+<stat pass="1" fail="0" skip="0">role</stat>
 <stat pass="0" fail="1" skip="0">safety</stat>
-<stat pass="0" fail="4" skip="0">security</stat>
-<stat pass="0" fail="1" skip="0">student</stat>
-<stat pass="0" fail="18" skip="0">submission</stat>
+<stat pass="2" fail="2" skip="0">security</stat>
+<stat pass="1" fail="0" skip="0">student</stat>
+<stat pass="1" fail="17" skip="0">submission</stat>
 <stat pass="0" fail="4" skip="0">syntax</stat>
 <stat pass="0" fail="2" skip="0">testcase</stat>
 </tag>
 <suite>
-<stat name="Robot" id="s1" pass="0" fail="39" skip="0">Robot</stat>
-<stat name="Auth" id="s1-s1" pass="0" fail="11" skip="0">Robot.Auth</stat>
-<stat name="Lab Management" id="s1-s2" pass="0" fail="14" skip="0">Robot.Lab Management</stat>
+<stat name="Robot" id="s1" pass="12" fail="27" skip="0">Robot</stat>
+<stat name="Auth" id="s1-s1" pass="11" fail="0" skip="0">Robot.Auth</stat>
+<stat name="Lab Management" id="s1-s2" pass="1" fail="13" skip="0">Robot.Lab Management</stat>
 <stat name="Prolog Submission" id="s1-s3" pass="0" fail="14" skip="0">Robot.Prolog Submission</stat>
 </suite>
 </statistics>
 <errors>
-<msg time="2026-04-05T22:38:52.039670" level="WARN">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 50: The '[Return]' setting is deprecated. Use the 'RETURN' statement instead.</msg>
-<msg time="2026-04-05T22:38:52.039670" level="WARN">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 61: The '[Return]' setting is deprecated. Use the 'RETURN' statement instead.</msg>
-<msg time="2026-04-05T22:38:52.039670" level="WARN">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 68: The '[Return]' setting is deprecated. Use the 'RETURN' statement instead.</msg>
-<msg time="2026-04-05T22:38:52.040680" level="WARN">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 75: The '[Return]' setting is deprecated. Use the 'RETURN' statement instead.</msg>
-<msg time="2026-04-05T22:38:52.040680" level="WARN">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 84: The '[Return]' setting is deprecated. Use the 'RETURN' statement instead.</msg>
-<msg time="2026-04-05T22:38:52.041679" level="WARN">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 99: The '[Return]' setting is deprecated. Use the 'RETURN' statement instead.</msg>
-<msg time="2026-04-05T22:38:52.041679" level="WARN">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 108: The '[Return]' setting is deprecated. Use the 'RETURN' statement instead.</msg>
-<msg time="2026-04-05T22:38:52.041679" level="WARN">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 116: The '[Return]' setting is deprecated. Use the 'RETURN' statement instead.</msg>
-<msg time="2026-04-05T22:38:52.045696" level="ERROR">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 3: Importing library 'RequestsLibrary' failed: ModuleNotFoundError: No module named 'RequestsLibrary'
-Traceback (most recent call last):
-  None
-PYTHONPATH:
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Scripts\robot.exe
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\python312.zip
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\DLLs
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312
-  C:\Users\pawns\AppData\Roaming\Python\Python312\site-packages
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages\win32
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages\win32\lib
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages\Pythonwin</msg>
-<msg time="2026-04-05T22:38:52.097225" level="ERROR">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 3: Importing library 'RequestsLibrary' failed: ModuleNotFoundError: No module named 'RequestsLibrary'
-Traceback (most recent call last):
-  None
-PYTHONPATH:
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Scripts\robot.exe
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\python312.zip
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\DLLs
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312
-  C:\Users\pawns\AppData\Roaming\Python\Python312\site-packages
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages\win32
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages\win32\lib
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages\Pythonwin</msg>
-<msg time="2026-04-05T22:38:52.124383" level="ERROR">Error in file 'C:\n\year3\sem2\team_pj\progcheck\tests\robot\resources\common.resource' on line 3: Importing library 'RequestsLibrary' failed: ModuleNotFoundError: No module named 'RequestsLibrary'
-Traceback (most recent call last):
-  None
-PYTHONPATH:
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Scripts\robot.exe
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\python312.zip
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\DLLs
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312
-  C:\Users\pawns\AppData\Roaming\Python\Python312\site-packages
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages\win32
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages\win32\lib
-  C:\Users\pawns\AppData\Local\Programs\Python\Python312\Lib\site-packages\Pythonwin</msg>
+<msg time="2026-04-05T23:08:05.179341" level="WARN">You might have an = symbol in url. You better place 'url=' before, example: 'url=/your-url/foo?param=a' or use '/your-url/foo  params=param=a' or escape it</msg>
+<msg time="2026-04-05T23:08:07.923481" level="WARN">You might have an = symbol in url. You better place 'url=' before, example: 'url=/your-url/foo?param=a' or use '/your-url/foo  params=param=a' or escape it</msg>
 </errors>
 </robot>

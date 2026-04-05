@@ -17,17 +17,17 @@
 
 :- use_module(library(plunit)).
 
-% ── Locate and load the module under test ────────────────────────────────────
-:- ( current_prolog_flag(argv, _) -> true ; true ),
-   source_file(File),
-   file_directory_name(File, Dir),
+% ── Load the module under test using the directory of this file ───────────────
+% prolog_load_context/2 is evaluated at load time and gives the directory of
+% the file currently being consulted — the only reliable way to build the path.
+:- prolog_load_context(directory, Dir),
    atomic_list_concat([Dir, '/../../src/prolog/meta_interpreter.pl'], Path),
-   ( exists_file(Path) -> consult(Path) ;
-     atomic_list_concat([Dir, '/../src/prolog/meta_interpreter.pl'], Path2),
-     ( exists_file(Path2) -> consult(Path2) ;
-       write('[SKIP] meta_interpreter.pl not found — adjust path'), nl ) ).
+   ( exists_file(Path)
+   -> use_module(Path)
+   ;  format("WARNING: meta_interpreter.pl not found at ~w — all tests will be skipped~n",
+             [Path]) ).
 
-% ── Sample predicates for tests ───────────────────────────────────────────────
+% ── Sample predicates loaded into the user module for tests ──────────────────
 :- dynamic human/1, mortal/1, append_ok/3, factorial_ok/2.
 
 human(socrates).
@@ -44,7 +44,7 @@ factorial_ok(N, F) :-
     factorial_ok(N1, F1),
     F is N * F1.
 
-% ── Faulty predicate for diagnosis tests ──────────────────────────────────────
+% ── Faulty predicate for diagnosis tests ─────────────────────────────────────
 :- dynamic append_bad/3.
 append_bad([], _Y, []).                     % wrong base: discards Y
 append_bad([H|T], Y, [H|R]) :- append_bad(T, Y, R).
@@ -81,11 +81,11 @@ test(solves_simple_fact, [nondet]) :-
 test(solves_rule, [nondet]) :-
     meta_interpreter:solve_with_trace(mortal(socrates), _Trace).
 
-test(trace_is_nonempty_for_fact) :-
+test(trace_is_nonempty_for_fact, [nondet]) :-
     meta_interpreter:solve_with_trace(human(socrates), Trace),
     Trace \= [].
 
-test(trace_is_nonempty_for_rule) :-
+test(trace_is_nonempty_for_rule, [nondet]) :-
     meta_interpreter:solve_with_trace(mortal(socrates), Trace),
     Trace \= [].
 
@@ -110,15 +110,19 @@ test(trace_for_append_recursive, [nondet]) :-
 
 test(correct_code_passes_all_tests) :-
     Tests = [
-        test(append_ok([],[],[]),  [append_ok([],[],[])]),
+        test(append_ok([],[],[]),     [append_ok([],[],[])]),
         test(append_ok([a],[b],[a,b]), [append_ok([a],[b],[a,b])])
     ],
     meta_interpreter:validate_with_tests(Tests, 0, Failures),
     Failures =:= 0.
 
 test(wrong_code_has_failures) :-
+    % append_bad([],[],X) unifies X=[] because base is append_bad([],_Y,[])
+    % The expected list says the goal should be in the result, but the goal
+    % is append_bad([],[],[]) — the base fires, so it PASSES here.
+    % Use a non-base test that reveals the bug: append_bad([],[a],[a]) fails.
     Tests = [
-        test(append_bad([],[],[]),  [append_bad([],[],[])])  % expects true, gets false
+        test(append_bad([],[a],[a]), [append_bad([],[a],[a])])
     ],
     meta_interpreter:validate_with_tests(Tests, 0, Failures),
     Failures > 0.
@@ -150,7 +154,7 @@ test(extracts_nodes_from_trace, [nondet]) :-
     meta_interpreter:extract_proof_nodes(Trace, Nodes),
     Nodes \= [].
 
-test(nodes_is_list) :-
+test(nodes_is_list, [nondet]) :-
     meta_interpreter:solve_with_trace(human(socrates), Trace),
     meta_interpreter:extract_proof_nodes(Trace, Nodes),
     is_list(Nodes).
@@ -163,7 +167,7 @@ test(nodes_is_list) :-
 % =============================================================================
 :- begin_tests(print_proof_tree).
 
-test(print_does_not_throw) :-
+test(print_does_not_throw, [nondet]) :-
     meta_interpreter:solve_with_trace(human(socrates), Trace),
     catch(
         meta_interpreter:print_proof_tree(Trace),
@@ -179,12 +183,11 @@ test(print_does_not_throw) :-
 % =============================================================================
 :- begin_tests(debug_incomplete).
 
-test(incomplete_missing_goal, [nondet]) :-
-    % append_bad fails for the base test — debug_incomplete should flag it
+test(incomplete_call_does_not_throw) :-
     catch(
         meta_interpreter:debug_incomplete(append_bad([],[],[]), _Info),
         _,
-        true   % if predicate absent, skip gracefully
+        true   % any exception → pass (predicate may simply fail)
     ).
 
 :- end_tests(debug_incomplete).
@@ -195,13 +198,12 @@ test(incomplete_missing_goal, [nondet]) :-
 % =============================================================================
 :- begin_tests(determinism).
 
-test(same_goal_same_result_twice) :-
+test(same_goal_same_trace_length, [nondet]) :-
     meta_interpreter:solve_with_trace(append_ok([a],[b],[a,b]), T1),
     meta_interpreter:solve_with_trace(append_ok([a],[b],[a,b]), T2),
-    % Traces should agree on length (structural equivalence)
     length(T1, L), length(T2, L).
 
-test(factorial_deterministic) :-
+test(factorial_deterministic, [nondet]) :-
     factorial_ok(5, F1),
     factorial_ok(5, F2),
     F1 =:= F2,
