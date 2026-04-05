@@ -258,7 +258,7 @@ export default function App() {
     if (seg === 'dashboard' && !user) {
       setScreen('login');
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchOptions = useCallback(async (currentUser) => {
     const u = currentUser !== undefined ? currentUser : null;
@@ -383,14 +383,27 @@ export default function App() {
   const saveCode = useCallback(() => withLoading(async () => {
     const doSave = async (filename) => {
       if (user) {
-        await apiFetch('/api/user-file/save', { user_id: user.id, role: user.role, filename, code });
+        const saved = await apiFetch('/api/user-file/save', {
+          user_id: user.id, role: user.role, filename, code
+        });
+        // Use the server-normalized filename (e.g. it appends .pl)
+        filename = saved.filename;
       } else {
-        await apiFetch('/api/apply-fix', { student_file: filename, corrected_code: code, accept: true });
+        await apiFetch('/api/apply-fix', {
+          student_file: filename, corrected_code: code, accept: true
+        });
       }
-      await fetchOptions(user);
+
+      // Update dropdown immediately with the confirmed filename
+      setMyFiles(prev =>
+        prev.includes(filename) ? prev : [...prev, filename]
+      );
       setCurrentFilename(filename);
       setIsNewFile(false);
       setMsg('Saved', 'ok');
+
+      // Then sync with server in background (no timeout race)
+      fetchOptions(user);
     };
     if (isNewFile || !currentFilename) {
       setModal({

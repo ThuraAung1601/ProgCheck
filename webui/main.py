@@ -616,6 +616,7 @@ def load_user_file(payload: UserFileLoadPayload) -> dict[str, Any]:
 
 @app.post("/api/user-file/save")
 def save_user_file(payload: UserFileSavePayload) -> dict[str, Any]:
+    import transaction                          # ← add this import
     data, conn = get_root()
     try:
         user = _get_user(data, payload.user_id, payload.role)
@@ -626,10 +627,16 @@ def save_user_file(payload: UserFileSavePayload) -> dict[str, Any]:
         if not filename.endswith('.pl'):
             filename += '.pl'
         user.code_files[filename] = payload.code
-        commit_changes()
+        transaction.commit()                    # ← replaces undefined commit_changes()
         return {"ok": True, "filename": filename}
+    except HTTPException:
+        transaction.abort()
+        raise
+    except Exception as e:
+        transaction.abort()
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
-        conn.close()
+        conn.close()                            # ← now safe: commit/abort happened first
 
 @app.get("/health")
 def health() -> dict[str, str]:
