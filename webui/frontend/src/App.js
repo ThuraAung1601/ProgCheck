@@ -60,11 +60,42 @@ function SaveInput({ value, onChange, onSubmit }) {
   );
 }
 
+// ── Session helpers ───────────────────────────────────────────────────────────
+function loadSession() {
+  try {
+    const user = JSON.parse(sessionStorage.getItem('user')) || null;
+    const userRole = sessionStorage.getItem('userRole') || null;
+    return { user, userRole };
+  } catch {
+    return { user: null, userRole: null };
+  }
+}
+
+function saveSession(user, role) {
+  try {
+    sessionStorage.setItem('user', JSON.stringify(user));
+    sessionStorage.setItem('userRole', role);
+  } catch { /* ignore */ }
+}
+
+function clearSession() {
+  try {
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('userRole');
+  } catch { /* ignore */ }
+}
+
 export default function App() {
-  // Auth & routing
-  const [screen, setScreen] = useState('landing');
-  const [user, setUser] = useState(null);
-  const [userRole, setUserRole] = useState(null);
+  // ── Auth & routing ────────────────────────────────────────────────────────
+  const [screen, setScreen] = useState(() => {
+    const seg = window.location.pathname.split('/').filter(Boolean)[0] || '';
+    return ['login', 'signup', 'dashboard'].includes(seg) ? seg : 'landing';
+  });
+
+  // FIX 1: Restore user from sessionStorage so reloads don't blank the page
+  const [user, setUser] = useState(() => loadSession().user);
+  const [userRole, setUserRole] = useState(() => loadSession().userRole);
+  const screenRef = React.useRef(screen);
 
   // Modal
   const [modal, setModal] = useState(null);
@@ -96,12 +127,11 @@ export default function App() {
   const obsRef = useRef(null);
   const resizeTimerRef = useRef(null);
 
-  // ── Test-case review modal state (for diagnosis) ─────────────────────
+  // ── Test-case review modal state ──────────────────────────────────────────
   const [reviewTcs, setReviewTcs] = useState([]);
   const [newTcInput, setNewTcInput] = useState('');
   const [newTcExpected, setNewTcExpected] = useState('true');
 
-  // Sync reviewTcs when modal opens
   useEffect(() => {
     if (modal?.type === 'testcase-review') {
       setReviewTcs(modal.testCases || []);
@@ -123,11 +153,11 @@ export default function App() {
     setNewTcExpected('true');
   };
 
-  // ── Teacher: add new problem to lab 9999 ─────────────────────────────
+  // ── Teacher: add new problem ──────────────────────────────────────────────
   const [showAddProblem, setShowAddProblem] = useState(false);
   const [newProbTitle, setNewProbTitle] = useState('');
   const [newProbText, setNewProbText] = useState('');
-  const [newProbTcs, setNewProbTcs] = useState([]);       // [{input, expected_output}]
+  const [newProbTcs, setNewProbTcs] = useState([]);
   const [newProbTcInput, setNewProbTcInput] = useState('');
   const [newProbTcExpected, setNewProbTcExpected] = useState('true');
   const [savingProblem, setSavingProblem] = useState(false);
@@ -146,25 +176,20 @@ export default function App() {
     setSavingProblem(true);
     setProbError('');
     try {
-      // 1. Create question in lab 9999
       const q = await apiFetch('/api/labs/9999/questions', {
         title: newProbTitle.trim(),
         problem: newProbText.trim(),
       });
-      // 2. Add each test case
       for (const tc of newProbTcs) {
         await apiFetch(`/api/labs/9999/questions/${q.question_id}/testcases`, {
           input: tc.input,
           expected_output: tc.expected_output,
         });
       }
-      // 3. Refresh problems list
       const updated = await apiFetch('/api/labs/9999/questions');
       setProblems(Array.isArray(updated) ? updated : []);
-      // 4. Auto-select the new problem
       setSelProblemPreset(String(q.question_id));
       setProblemDraft(q.problem);
-      // 5. Reset form
       setNewProbTitle(''); setNewProbText(''); setNewProbTcs([]);
       setNewProbTcInput(''); setNewProbTcExpected('true');
       setShowAddProblem(false);
@@ -202,14 +227,56 @@ export default function App() {
   const [traceData, setTraceData] = useState(null);
 
   const setMsg = useCallback((msg, kind = 'idle') => setStatus({ msg, kind }), []);
-  const handleUserUpdate = useCallback((updatedUser) => setUser(updatedUser), []);
+  const handleUserUpdate = useCallback((updatedUser) => {
+    setUser(updatedUser);
+    // Keep session in sync if user profile changes
+    if (updatedUser) saveSession(updatedUser, updatedUser.role);
+  }, []);
 
-  const fetchOptions = useCallback(async () => {
-    try {
-      const d = await apiFetch('/api/options');
-      setMyFiles(d.students || []);
-    } catch (e) {
-      setMsg(`Options load failed: ${e.message}`, 'error');
+  // ── Routing ───────────────────────────────────────────────────────────────
+  useEffect(() => { screenRef.current = screen; }, [screen]);
+
+  useEffect(() => {
+    const currentSeg = window.location.pathname.split('/').filter(Boolean)[0] || '';
+    if (currentSeg !== screen) {
+      window.history.pushState({ screen }, '', `/${screen === 'landing' ? '' : screen}`);
+    }
+  }, [screen]);
+
+  useEffect(() => {
+    const handler = () => {
+      const seg = window.location.pathname.split('/').filter(Boolean)[0] || '';
+      const next = ['login', 'signup', 'dashboard'].includes(seg) ? seg : 'landing';
+      if (next !== screenRef.current) setScreen(next);
+    };
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  }, []);
+
+  // ── FIX 2: If URL is /dashboard but no session, redirect to login ─────────
+  useEffect(() => {
+    const seg = window.location.pathname.split('/').filter(Boolean)[0] || '';
+    if (seg === 'dashboard' && !user) {
+      setScreen('login');
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchOptions = useCallback(async (currentUser) => {
+    const u = currentUser !== undefined ? currentUser : null;
+    if (u) {
+      try {
+        const d = await apiFetch(`/api/user-files?user_id=${encodeURIComponent(u.id)}&role=${encodeURIComponent(u.role)}`);
+        setMyFiles(d.files || []);
+      } catch (e) {
+        setMsg(`Files load failed: ${e.message}`, 'error');
+      }
+    } else {
+      try {
+        const d = await apiFetch('/api/options');
+        setMyFiles(d.students || []);
+      } catch (e) {
+        setMsg(`Options load failed: ${e.message}`, 'error');
+      }
     }
     try {
       const questions = await apiFetch('/api/labs/9999/questions');
@@ -219,7 +286,7 @@ export default function App() {
     }
   }, [setMsg]);
 
-  useEffect(() => { fetchOptions(); }, [fetchOptions]);
+  useEffect(() => { fetchOptions(user); }, [fetchOptions, user]);
 
   useEffect(() => {
     clearTimeout(parseTimer.current);
@@ -276,7 +343,12 @@ export default function App() {
 
   const loadFile = useCallback((filename) => withLoading(async () => {
     if (!filename) return;
-    const d = await apiFetch('/api/load', { problem_id: 0, student_file: filename, student_code: '' });
+    let d;
+    if (user) {
+      d = await apiFetch('/api/user-file/load', { user_id: user.id, role: user.role, filename });
+    } else {
+      d = await apiFetch('/api/load', { problem_id: 0, student_file: filename, student_code: '' });
+    }
     setCode(d.student_code || '');
     setCurrentFilename(filename);
     setIsNewFile(false);
@@ -287,12 +359,16 @@ export default function App() {
     setSelNode(null);
     setHlLines([]);
     setMsg(`Loaded ${filename.split('/').pop()}`, 'ok');
-  }), [withLoading, setMsg]);
+  }), [withLoading, setMsg, user]);
 
   const saveCode = useCallback(() => withLoading(async () => {
     const doSave = async (filename) => {
-      await apiFetch('/api/apply-fix', { student_file: filename, corrected_code: code, accept: true });
-      await fetchOptions();
+      if (user) {
+        await apiFetch('/api/user-file/save', { user_id: user.id, role: user.role, filename, code });
+      } else {
+        await apiFetch('/api/apply-fix', { student_file: filename, corrected_code: code, accept: true });
+      }
+      await fetchOptions(user);
       setCurrentFilename(filename);
       setIsNewFile(false);
       setMsg('Saved', 'ok');
@@ -309,7 +385,7 @@ export default function App() {
       return;
     }
     await doSave(currentFilename);
-  }), [currentFilename, code, isNewFile, withLoading, fetchOptions, setMsg]);
+  }), [currentFilename, code, isNewFile, withLoading, fetchOptions, setMsg, user]);
 
   const createNewFile = useCallback(() => {
     setCurrentFilename('');
@@ -339,9 +415,10 @@ export default function App() {
     if (!q) { setMsg('Enter a query first', 'error'); return; }
     const r = await apiFetch('/api/query-run', { ...buildPayload(), query: q });
     setLastResult(r);
-    setCanVisualize(!!r.ok && !r.has_logic_error);
+    setCanVisualize(!!r.ok && !r.has_logic_error && r.query_result !== 'false');
     if (!r.ok) { setFeedback(r.feedback || 'Query failed.'); setRightTab('feedback'); return; }
-    const verdict = r.has_logic_error ? (r.shapiro_mode || 'unknown') : 'correct';
+    const verdict = r.query_result === 'false' ? 'false'
+      : r.has_logic_error ? (r.shapiro_mode || 'unknown') : 'correct';
     setFeedback([
       `Query: ${r.query}`, `Status: ${verdict}`, '',
       'Execution Trace:', r.trace || '', '',
@@ -367,11 +444,8 @@ export default function App() {
     setMsg('LLM feedback ready', 'ok');
   });
 
-  // ── runDiagnosis: same 2-step flow as AssignmentPage ─────────────────
   const runDiagnosis = () => withLoading(async () => {
     setMsg('Generating test cases…', 'idle');
-
-    // Step 1: ask LLM to generate test cases
     let llmTcs = [];
     try {
       const gen = await apiFetch('/api/generate-diagnosis-testcases', {
@@ -381,7 +455,6 @@ export default function App() {
       if (gen.ok) llmTcs = gen.test_cases || [];
     } catch { /* non-fatal */ }
 
-    // Merge with preset test cases (de-dup by input)
     const selectedProblem = problems.find(p => String(p.question_id) === String(selProblemPreset));
     const givenTcs = (selectedProblem?.test_cases || []).map(tc => ({ ...tc, _source: 'given' }));
     const seenInputs = new Set(givenTcs.map(tc => tc.input));
@@ -392,7 +465,6 @@ export default function App() {
         .map(tc => ({ ...tc, _source: 'llm' })),
     ];
 
-    // Step 2: show review modal — user can add/remove before running
     setModal({
       type: 'testcase-review',
       testCases: merged,
@@ -443,6 +515,25 @@ export default function App() {
       setMsg(`Visualize error: ${e.message}`, 'error');
     }
   }, [code, query, setMsg]);
+
+  // ── Shared login handler ──────────────────────────────────────────────────
+  const handleLogin = useCallback((userData, role) => {
+    const u = { ...userData, role };
+    saveSession(u, role);  // FIX 1: persist to sessionStorage
+    setUser(u);
+    setUserRole(role);
+    fetchOptions(u);
+    setScreen('dashboard');
+  }, [fetchOptions]);
+
+  // ── Logout handler ────────────────────────────────────────────────────────
+  const handleLogout = useCallback(() => {
+    clearSession();  // FIX 1: clear sessionStorage
+    setUser(null);
+    setUserRole(null);
+    fetchOptions(null);
+    setScreen('landing');
+  }, [fetchOptions]);
 
   const statusColor = status.kind === 'error' ? 'text-red-400'
     : status.kind === 'ok' ? 'text-green-400'
@@ -559,8 +650,6 @@ export default function App() {
 
           {rightTab === 'problem' && (
             <div className="flex-1 overflow-auto min-h-0 flex flex-col">
-
-              {/* ── Preset selector bar ── */}
               <div className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border-b border-border-subtle flex-shrink-0">
                 <span className="text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary flex-shrink-0">Problem</span>
                 <select
@@ -591,7 +680,6 @@ export default function App() {
                     ✕
                   </button>
                 )}
-                {/* Teacher: add new problem */}
                 {userRole === 'teacher' && (
                   <button
                     onClick={() => { setShowAddProblem(v => !v); setSelProblemPreset(''); setProblemDraft(''); setProbError(''); }}
@@ -605,14 +693,11 @@ export default function App() {
                 )}
               </div>
 
-              {/* ── Teacher: add-problem form ── */}
               {userRole === 'teacher' && showAddProblem && (
                 <div className="flex-shrink-0 border-b border-border-subtle bg-bg-secondary p-3 flex flex-col gap-2">
                   <div className="text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary mb-1">
                     New Problem → Lab 9999
                   </div>
-
-                  {/* Title */}
                   <input
                     autoFocus
                     value={newProbTitle}
@@ -620,8 +705,6 @@ export default function App() {
                     placeholder="Title…"
                     className="bg-bg-elevated border border-border-accent text-txt-primary text-[11px] rounded px-2 py-1 focus:outline-none focus:border-accent-blue w-full"
                   />
-
-                  {/* Problem text */}
                   <textarea
                     value={newProbText}
                     onChange={e => setNewProbText(e.target.value)}
@@ -629,8 +712,6 @@ export default function App() {
                     rows={4}
                     className="bg-bg-elevated border border-border-accent text-txt-primary text-[11px] font-mono rounded px-2 py-1 focus:outline-none focus:border-accent-blue w-full resize-y"
                   />
-
-                  {/* Test cases */}
                   <div className="flex flex-col gap-1">
                     <span className="text-[10px] text-txt-tertiary font-semibold">Test Cases</span>
                     {newProbTcs.length > 0 && (
@@ -652,7 +733,6 @@ export default function App() {
                         ))}
                       </div>
                     )}
-                    {/* Add test case row */}
                     <div className="flex gap-1.5 items-center">
                       <input
                         value={newProbTcInput}
@@ -676,11 +756,9 @@ export default function App() {
                       >+ TC</button>
                     </div>
                   </div>
-
                   {probError && (
                     <div className="text-[11px] text-red-400 bg-red-900/15 border border-red-700/40 rounded px-2 py-1">{probError}</div>
                   )}
-
                   <div className="flex gap-2 pt-1">
                     <button
                       onClick={handleSaveProblem}
@@ -697,14 +775,12 @@ export default function App() {
                 </div>
               )}
 
-              {/* ── Problem content ── */}
               {!showAddProblem && (
                 <div className="flex-1 min-h-0 overflow-auto bg-bg-primary p-4">
                   {selProblemPreset ? (() => {
                     const prob = problems.find(p => String(p.question_id) === selProblemPreset);
                     return (
                       <>
-                        {/* Problem description */}
                         <div className="mb-5">
                           <div className="text-[11px] font-semibold tracking-widest uppercase text-txt-tertiary mb-3">
                             Problem Description
@@ -713,8 +789,6 @@ export default function App() {
                             {problemDraft}
                           </pre>
                         </div>
-
-                        {/* Test cases */}
                         {prob?.test_cases && prob.test_cases.length > 0 && (
                           <div>
                             <div className="text-[11px] font-semibold tracking-widest uppercase text-txt-tertiary mb-3">
@@ -856,6 +930,15 @@ export default function App() {
     </div>
   );
 
+  // ── FIX 2: Shared LoginPage props so it works from both landing and /dashboard reload ──
+  const loginPageProps = {
+    defaultRole: userRole,
+    defaultIsRegistering: screen === 'signup',
+    onLogin: handleLogin,
+    onBack: () => setScreen('landing'),
+    onSwitchMode: (mode) => setScreen(mode),
+  };
+
   return (
     <>
       <GlobalStyle />
@@ -863,31 +946,31 @@ export default function App() {
         <LandingPage
           onStudentLogin={() => { setUserRole('student'); setScreen('login'); }}
           onTeacherLogin={() => { setUserRole('teacher'); setScreen('login'); }}
+          onSignup={() => setScreen('signup')}
         />
       )}
-      {screen === 'login' && (
-        <LoginPage
-          defaultRole={userRole}
-          onLogin={(userData, role) => { setUser({ ...userData, role }); setScreen('dashboard'); }}
-          onBack={() => setScreen('landing')}
-        />
+      {(screen === 'login' || screen === 'signup') && (
+        <LoginPage {...loginPageProps} />
       )}
-      {screen === 'dashboard' && user && (
-        <Dashboard
-          user={user}
-          role={user.role}
-          onLogout={() => { setUser(null); setUserRole(null); setScreen('landing'); }}
-          onUserUpdate={handleUserUpdate}
-          sidebarCollapsed={sidebarCollapsed}
-          onSidebarChange={setSidebarCollapsed}
-          mainContent={PrologCheckerUI()}
-        />
+      {screen === 'dashboard' && (
+        // FIX 2: Show login instead of blank page when session missing
+        user
+          ? <Dashboard
+              user={user}
+              role={user.role}
+              onLogout={handleLogout}
+              onUserUpdate={handleUserUpdate}
+              sidebarCollapsed={sidebarCollapsed}
+              onSidebarChange={setSidebarCollapsed}
+              mainContent={PrologCheckerUI()}
+            />
+          : <LoginPage {...loginPageProps} />
       )}
     </>
   );
 }
 
-// ── Shared test-case review body (used in both App and AssignmentPage) ──
+// ── Shared test-case review body ──────────────────────────────────────────────
 export function TestCaseReviewBody({
   reviewTcs, setReviewTcs,
   newTcInput, setNewTcInput,
@@ -905,8 +988,6 @@ export function TestCaseReviewBody({
       <p className="text-[11px] text-txt-tertiary">
         LLM will use these test cases. Remove any you don't want, or add your own.
       </p>
-
-      {/* Test case list */}
       <div className="flex flex-col gap-1.5 max-h-72 overflow-y-auto pr-1">
         {reviewTcs.length === 0 && (
           <p className="text-[11px] text-txt-tertiary py-2 text-center">No test cases — add some below.</p>
@@ -917,9 +998,7 @@ export function TestCaseReviewBody({
             <div key={tc.testcase_id}
               className="flex items-center gap-2 px-3 py-2 rounded-md border border-border-subtle bg-bg-elevated text-[11px]">
               <span className="text-txt-tertiary w-5 flex-shrink-0">#{i + 1}</span>
-              <span className="font-mono text-txt-secondary flex-1 min-w-0 truncate">
-                {tc.input}
-              </span>
+              <span className="font-mono text-txt-secondary flex-1 min-w-0 truncate">{tc.input}</span>
               <span className={`flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded border ${
                 tc.expected_output === 'true'
                   ? 'bg-green-900/20 border-green-700/40 text-green-300'
@@ -939,8 +1018,6 @@ export function TestCaseReviewBody({
           );
         })}
       </div>
-
-      {/* Add new test case */}
       <div className="flex gap-2 items-center pt-2 border-t border-border-subtle">
         <input
           value={newTcInput}

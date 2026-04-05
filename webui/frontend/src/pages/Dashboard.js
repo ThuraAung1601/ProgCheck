@@ -1,14 +1,49 @@
-import React, { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../components/Sidebar.js';
 import ClassroomPage from './ClassroomPage.js';
 import DashboardPageContent from './DashboardPageContent.js';
 import SettingsPage from './SettingsPage.js';
 import AssignmentPage from './AssignmentPage.js';
 
+const VALID_PAGES = ['classroom', 'dashboard', 'code', 'settings'];
+
+function pageFromPath() {
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  // path is /dashboard/<page>
+  if (parts[0] === 'dashboard' && parts[1] && VALID_PAGES.includes(parts[1])) {
+    return parts[1];
+  }
+  return 'classroom';
+}
+
 const Dashboard = ({ user, role, onLogout, onUserUpdate, mainContent, sidebarCollapsed, onSidebarChange }) => {
-  const [activePage, setActivePage] = useState('classroom');
+  const [activePage, setActivePage] = useState(pageFromPath);
   const [assignmentData, setAssignmentData] = useState(null);
   const sidebarWidth = sidebarCollapsed ? '80px' : 'var(--sidebar-w)';
+  const activePageRef = useRef(activePage);
+  useEffect(() => { activePageRef.current = activePage; }, [activePage]);
+
+  // Sync activePage → URL hash
+  useEffect(() => {
+    const currentPath = window.location.pathname;
+    const expected = `/dashboard/${activePage}`;
+    if (currentPath !== expected) {
+      window.history.pushState({ page: activePage }, '', expected);
+    }
+  }, [activePage]);
+
+  // Sync URL hash → activePage (back / forward)
+  useEffect(() => {
+    const handler = () => {
+      const page = pageFromPath();
+      if (page !== activePageRef.current) {
+        setAssignmentData(null);
+        setActivePage(page);
+      }
+    };
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  }, []);
 
   const handleOpenAssignment = (data) => {
     setAssignmentData(data);

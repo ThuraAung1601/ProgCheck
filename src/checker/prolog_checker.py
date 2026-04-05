@@ -206,11 +206,25 @@ class PrologChecker:
     def prepare_tests(self, log):
         self._log(log, "Preparing test cases...")
         if self.test_cases_file:
-            self.test_case_goals = self._load_test_cases_file()
-            if self.test_case_goals:
+            raw = self.test_cases_file.read_text().strip()
+            if raw:
                 self._log(log, f"Loaded test cases: {self.test_cases_file}")
-                tests = "\n".join([f"test({g}, [{g}])." for g in self.test_case_goals])
-                return self._filter_ground_tests(tests)
+                # Detect if file already contains test(G,E). facts (from API conversion)
+                first_code_line = next(
+                    (l.strip() for l in raw.splitlines()
+                     if l.strip() and not l.strip().startswith('%')),
+                    ''
+                )
+                if first_code_line.startswith('test('):
+                    # Already properly formatted — use as-is, no re-wrapping
+                    self.test_case_goals = self._parse_tests_to_goals(raw)
+                    return raw
+                # Legacy format: plain goals → treat as positive tests
+                goals = self._load_test_cases_file()
+                if goals:
+                    self.test_case_goals = goals
+                    tests = "\n".join([f"test({g}, [{g}])." for g in goals])
+                    return self._filter_ground_tests(tests)
         extracted = self._extract_tests(log)
         if extracted:
             self._log(log, "Extracted from problem")
@@ -420,9 +434,6 @@ class PrologChecker:
                 filtered_lines.append(line)
                 continue
             goal = m.group(1).strip()
-            # Drop negative/empty-expected tests to avoid contradictory cases from LLM
-            if re.search(r",\s*\[\s*\]\s*\)\.?$", line.strip()):
-                continue
             if re.search(r"\b[A-Z_][A-Za-z0-9_]*\b", goal):
                 # Skip non-ground goal
                 continue

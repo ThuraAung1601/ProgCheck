@@ -63,6 +63,17 @@ class CutComparePayload(BaseModel):
     code_a: str
     code_b: str
 
+class UserFileLoadPayload(BaseModel):
+    user_id: str
+    role: str   # "student" or "teacher"
+    filename: str
+
+class UserFileSavePayload(BaseModel):
+    user_id: str
+    role: str   # "student" or "teacher"
+    filename: str
+    code: str
+
 # ── App setup ─────────────────────────────────────────────────────────────
 
 app = FastAPI(title="ProgCheck + Prolog Viz")
@@ -216,7 +227,9 @@ def _execute_query(problem_path: Path, student_code: str, query: str) -> dict[st
         nodes_text = (nodes_raw.decode("utf-8", errors="replace")
                       if isinstance(nodes_raw, bytes) else str(nodes_raw))
 
-        has_logic_error = mode not in ("ok", "incorrect", "")
+        # "incomplete" means the goal cleanly failed (no solutions) — show as "false", not an error
+        query_failed = (mode == "incomplete")
+        has_logic_error = not query_failed and mode not in ("ok", "incorrect", "")
         analysis = {
             "status":             "logic_error" if has_logic_error else "correct",
             "error":              nodes_text if has_logic_error else "",
@@ -230,6 +243,7 @@ def _execute_query(problem_path: Path, student_code: str, query: str) -> dict[st
         return {
             "ok":                 True,
             "query":              query,
+            "query_result":       "false" if query_failed else "true",
             "trace":              trace_text,
             "proof_tree":         proof_tree,
             "shapiro_mode":       mode,
@@ -558,6 +572,77 @@ def apply_fix(payload: ApplyFixPayload) -> dict[str, Any]:
         "student_file": str(path.relative_to(ROOT))
     }
 
+def _get_user(data, user_id: str, role: str):
+    """Return the user object from the database, or None."""
+    if role == "student":
+        return data.students.get(user_id)
+    elif role == "teacher":
+        return data.teachers.get(user_id)
+    return None
+
+def _ensure_code_files(user):
+    """Initialize code_files mapping if the user object predates the field."""
+    from persistent.mapping import PersistentMapping
+    if not hasattr(user, 'code_files') or user.code_files is None:
+        user.code_files = PersistentMapping()
+        user._p_changed = True
+
+@app.get("/api/user-files")
+def get_user_files(user_id: str, role: str) -> dict[str, Any]:
+    data, conn = get_root()
+    try:
+        user = _get_user(data, user_id, role)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        code_files = getattr(user, 'code_files', {}) or {}
+        return {"files": sorted(code_files.keys())}
+    finally:
+        conn.close()
+
+@app.post("/api/user-file/load")
+def load_user_file(payload: UserFileLoadPayload) -> dict[str, Any]:
+    data, conn = get_root()
+    try:
+        user = _get_user(data, payload.user_id, payload.role)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        code_files = getattr(user, 'code_files', {}) or {}
+        filename = Path(payload.filename).name
+        if filename not in code_files:
+            raise HTTPException(status_code=404, detail="File not found")
+        return {"student_code": code_files[filename]}
+    finally:
+        conn.close()
+
+@app.post("/api/user-file/save")
+def save_user_file(payload: UserFileSavePayload) -> dict[str, Any]:
+    data, conn = get_root()
+    try:
+        user = _get_user(data, payload.user_id, payload.role)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        _ensure_code_files(user)
+        filename = Path(payload.filename).name
+        if not filename.endswith('.pl'):
+            filename += '.pl'
+        user.code_files[filename] = payload.code
+        commit_changes()
+        return {"ok": True, "filename": filename}
+    finally:
+        conn.close()
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+# ── SPA catch-all — serves index.html for any non-API, non-static path ────────
+# This must be the LAST route so it doesn't shadow the routes above.
+@app.get("/{full_path:path}")
+def spa_fallback(full_path: str) -> FileResponse:
+    index = BUILD_DIR / "index.html"
+    if not index.exists():
+        raise HTTPException(
+            status_code=503,
+            detail="Frontend not built yet. Run: cd webui/frontend && npm run build"
+        )
+    return FileResponse(str(index))

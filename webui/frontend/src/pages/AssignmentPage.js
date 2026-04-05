@@ -119,6 +119,25 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
     };
   }, []);
 
+  // Student: pre-fill code with last submission if one exists
+  useEffect(() => {
+    if (role !== 'student' || !user?.id) return;
+    fetch(`${API_BASE}/api/labs/results/student/${encodeURIComponent(user.id)}`)
+      .then(r => r.ok ? r.json() : [])
+      .then(results => {
+        if (!Array.isArray(results)) return;
+        // Find the most recent submission for this question
+        const mine = results
+          .filter(r => String(r.question_id) === String(question.question_id) && r.code_file)
+          .sort((a, b) => new Date(b.submission_time) - new Date(a.submission_time));
+        if (mine.length > 0) {
+          setCode(mine[0].code_file.replace(/\.\s+([a-z%A-Z])/g, '.\n$1').trim());
+        }
+      })
+      .catch(() => { });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Teacher: fetch students + submissions
   useEffect(() => {
     if (role !== 'teacher') return;
@@ -164,11 +183,14 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
             }),
           });
           const r = res.ok ? await res.json() : { ok: false };
+          const actual = r.ok
+            ? (r.query_result || (r.has_logic_error ? 'error' : 'true'))
+            : 'failed';
           results.push({
             input: tc.input,
             expected: tc.expected_output,
-            passed: r.ok && !r.has_logic_error && tc.expected_output === 'true',
-            actual: r.ok ? (r.has_logic_error ? r.shapiro_mode : 'true') : 'failed',
+            passed: r.ok && actual === tc.expected_output,
+            actual,
           });
         } catch {
           results.push({ input: tc.input, expected: tc.expected_output, passed: false, actual: 'error' });
@@ -362,11 +384,15 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
       try {
         const q = tc.input.replace(/\.$/, '');
         const r = await apiFetch('/api/query-run', { ...buildPayload(), query: q });
+        // query_result is 'true'/'false'; fall back to inferring from has_logic_error for old responses
+        const actual = r.ok
+          ? (r.query_result || (r.has_logic_error ? 'error' : 'true'))
+          : 'failed';
         results.push({
           input: tc.input,
           expected: tc.expected_output,
-          passed: r.ok && !r.has_logic_error && tc.expected_output === 'true',
-          actual: r.ok ? (r.has_logic_error ? r.shapiro_mode : 'true') : 'failed',
+          passed: r.ok && actual === tc.expected_output,
+          actual,
         });
       } catch (e) {
         results.push({ input: tc.input, expected: tc.expected_output, passed: false, actual: 'error: ' + e.message });

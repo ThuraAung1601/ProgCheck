@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Icon from '../components/Icon.js';
 import Button from '../components/Button.js';
 
-const LandingPage = ({ onStudentLogin, onTeacherLogin }) => {
+const LandingPage = ({ onStudentLogin, onTeacherLogin, onSignup }) => {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -107,7 +107,7 @@ const LandingPage = ({ onStudentLogin, onTeacherLogin }) => {
             An intelligent coding assistant that combines symbolic reasoning with LLMs — giving students transparent, explainable feedback on their Prolog submissions.
           </p>
           
-          <div style={{ display: 'flex', gap: 14, justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Button onClick={onStudentLogin} size="lg" style={{
               background: 'linear-gradient(135deg, #4ECBA0, #2FA57E)',
               color: '#fff',
@@ -122,6 +122,16 @@ const LandingPage = ({ onStudentLogin, onTeacherLogin }) => {
             }}>
               Teacher Login
             </Button>
+            {onSignup && (
+              <Button onClick={onSignup} size="lg" style={{
+                background: '#fff',
+                color: '#374151',
+                border: '1.5px solid #D1D5DB',
+                boxShadow: '0 2px 8px rgba(0,0,0,.08)'
+              }}>
+                Sign Up
+              </Button>
+            )}
           </div>
         </div>
 

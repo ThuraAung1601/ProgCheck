@@ -41,6 +41,7 @@ class Student(Persistent):
         self.password = self._hash_password(password)  # password: string (hashed)
         self.academic_record = PersistentList()         # academicRecord: list[{lab_id, score}]
         self.settings = UserSettings()                  # extra: UI preferences
+        self.code_files = PersistentMapping()           # extra: filename -> code content
         self.created_at = datetime.now()
         self.updated_at = datetime.now()
 
@@ -75,6 +76,7 @@ class Teacher(Persistent):
         self.password = self._hash_password(password)  # password: string (hashed)
         self.courses_teach = PersistentList()           # coursesTeach: list of classroom_ids
         self.settings = UserSettings()                  # extra: UI preferences
+        self.code_files = PersistentMapping()           # extra: filename -> code content
         self.created_at = datetime.now()
         self.updated_at = datetime.now()
 

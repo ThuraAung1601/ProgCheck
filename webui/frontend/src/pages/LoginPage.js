@@ -3,12 +3,12 @@ import Icon from '../components/Icon.js';
 import InputField from '../components/InputField.js';
 import Button from '../components/Button.js';
 
-const LoginPage = ({ defaultRole = 'student', onLogin, onBack }) => {
+const LoginPage = ({ defaultRole = 'student', defaultIsRegistering = false, onLogin, onBack, onSwitchMode }) => {
   const [role, setRole] = useState(defaultRole);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [studentId, setStudentId] = useState('');
-  const [isRegistering, setIsRegistering] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(defaultIsRegistering);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
 
@@ -213,9 +213,17 @@ const LoginPage = ({ defaultRole = 'student', onLogin, onBack }) => {
             {loading ? (isRegistering ? 'Creating Account...' : 'Signing In...') : (isRegistering ? 'Create Account' : 'Sign In')}
           </Button>
 
-          <button 
+          <button
             type="button"
-            onClick={() => { setIsRegistering(!isRegistering); setErr(''); }}
+            onClick={() => {
+              const next = isRegistering ? 'login' : 'signup';
+              setErr('');
+              if (onSwitchMode) {
+                onSwitchMode(next);
+              } else {
+                setIsRegistering(!isRegistering);
+              }
+            }}
             style={{
               marginTop: 12,
               background: 'none',

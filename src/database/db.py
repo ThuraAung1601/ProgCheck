@@ -73,6 +73,7 @@ class MockStudent:
         self.password = self._hash_password(password)
         self.academic_record = []       # list of {lab_id, score} dicts
         self.settings = MockUserSettings()
+        self.code_files = {}            # filename -> code content
         self.created_at = datetime.now()
         self.updated_at = datetime.now()
 
@@ -100,6 +101,7 @@ class MockTeacher:
         self.password = self._hash_password(password)
         self.courses_teach = []         # list of classroom_ids
         self.settings = MockUserSettings()
+        self.code_files = {}            # filename -> code content
         self.created_at = datetime.now()
         self.updated_at = datetime.now()
 
