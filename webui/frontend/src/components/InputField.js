@@ -56,7 +56,7 @@ const InputField = ({
             padding: icon ? '10px 14px 10px 40px' : '10px 14px',
             borderRadius: 8, 
             border: `1.5px solid ${isFocused && !readOnly ? 'var(--mint)' : 'var(--border)'}`,
-            background: readOnly ? 'var(--surface)' : '#fff',
+            background: readOnly ? 'var(--surface)' : 'var(--white)',
             color: readOnly ? 'var(--muted)' : 'var(--ink)',
             fontSize: 14, 
             transition: 'border-color .15s'

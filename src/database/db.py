@@ -58,6 +58,7 @@ class MockUserSettings:
         self.theme = "light"
         self.auto_save = True
         self.email_alerts = True
+        self.tab_size = 2
         self.display_name = ""
         self.email = ""
         self.phone = ""

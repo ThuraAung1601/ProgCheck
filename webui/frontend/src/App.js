@@ -419,6 +419,19 @@ export default function App() {
     await doSave(currentFilename);
   }), [currentFilename, code, isNewFile, withLoading, fetchOptions, setMsg, user]);
 
+  // ── Auto-save when user preference is enabled ─────────────────────────────
+  const autoSaveTimer = useRef(null);
+  useEffect(() => {
+    if (!user?.auto_save || !user?.id || isNewFile || !currentFilename) return;
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      apiFetch('/api/user-file/save', {
+        user_id: user.id, role: user.role, filename: currentFilename, code,
+      }).catch(() => {});
+    }, 1500);
+    return () => clearTimeout(autoSaveTimer.current);
+  }, [code, user?.auto_save, user?.id, user?.role, currentFilename, isNewFile]);
+
   const createNewFile = useCallback(() => {
     setCurrentFilename('');
     setCode('% New Prolog file\n');
@@ -650,6 +663,7 @@ export default function App() {
             <CodeEditor
               value={code}
               onChange={setCode}
+              tabSize={user?.tab_size ?? 2}
               highlightLines={
                 rightTab === 'trace' ? hlLines
                   : selNode?.lineStart != null ? [selNode.lineStart] : []

@@ -20,7 +20,7 @@ const TOKEN_CSS = `
 .hl-active   { background: rgba(59,139,212,0.10); }
 `;
 
-export default function CodeEditor({ value, onChange, highlightLines = [] }) {
+export default function CodeEditor({ value, onChange, highlightLines = [], tabSize = 2 }) {
   const textareaRef = useRef(null);
   const highlightRef = useRef(null);
   const gutterRef = useRef(null);
@@ -39,6 +39,21 @@ export default function CodeEditor({ value, onChange, highlightLines = [] }) {
       gutterRef.current.scrollTop = ta.scrollTop;
     }
   }, []);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const ta = textareaRef.current;
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      const spaces = ' '.repeat(tabSize);
+      const newVal = value.substring(0, start) + spaces + value.substring(end);
+      onChange(newVal);
+      requestAnimationFrame(() => {
+        ta.selectionStart = ta.selectionEnd = start + tabSize;
+      });
+    }
+  };
 
   const lines = (value || '').split('\n');
 
@@ -119,6 +134,7 @@ export default function CodeEditor({ value, onChange, highlightLines = [] }) {
           value={value}
           onChange={e => onChange(e.target.value)}
           onScroll={syncScroll}
+          onKeyDown={handleKeyDown}
           spellCheck={false}
           autoComplete="off"
           autoCorrect="off"

@@ -17,7 +17,7 @@ const Sidebar = ({ role, activePage, onNavigate, user, onLogout, collapsed = fal
     <aside style={{
       width: collapsed ? '80px' : 'var(--sidebar-w)', 
       height: '100vh',
-      background: '#fff', 
+      background: 'var(--white)',
       borderRight: '1px solid var(--border)',
       display: 'flex', 
       flexDirection: 'column',
@@ -148,12 +148,12 @@ const Sidebar = ({ role, activePage, onNavigate, user, onLogout, collapsed = fal
         justifyContent: collapsed ? 'center' : 'flex-start',
         gap: 10
       }}>
-        <Avatar name={user.name} size={34} role={role} />
+        <Avatar name={user.display_name} size={34} role={role} />
         {!collapsed && (
           <>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {user.name}
+                {user.display_name}
               </div>
               <div style={{ fontSize: 11, color: 'var(--muted)' }}>{user.id}</div>
             </div>

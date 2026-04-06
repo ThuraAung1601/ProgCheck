@@ -15,6 +15,7 @@ class SettingsUpdateRequest(BaseModel):
     theme: Optional[str] = None  # "light" or "dark"
     auto_save: Optional[bool] = None
     email_alerts: Optional[bool] = None
+    tab_size: Optional[int] = None  # 2 or 4
     email: Optional[str] = None
     phone: Optional[str] = None
 
@@ -24,6 +25,7 @@ class SettingsResponse(BaseModel):
     theme: str
     auto_save: bool
     email_alerts: bool
+    tab_size: int
     email: Optional[str]
     phone: Optional[str]
 
@@ -54,6 +56,7 @@ def get_settings(user_id: str, role: str = "student"):
             theme=settings.theme,
             auto_save=settings.auto_save,
             email_alerts=settings.email_alerts,
+            tab_size=getattr(settings, 'tab_size', 2),
             email=settings.email,
             phone=settings.phone
         )
@@ -94,6 +97,13 @@ def update_settings(user_id: str, req: SettingsUpdateRequest, role: str = "stude
             settings.auto_save = req.auto_save
         if req.email_alerts is not None:
             settings.email_alerts = req.email_alerts
+        if req.tab_size is not None:
+            if req.tab_size not in [2, 4]:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="tab_size must be 2 or 4"
+                )
+            settings.tab_size = req.tab_size
         if req.email is not None:
             settings.email = req.email
         if req.phone is not None:
@@ -112,6 +122,7 @@ def update_settings(user_id: str, req: SettingsUpdateRequest, role: str = "stude
             theme=settings.theme,
             auto_save=settings.auto_save,
             email_alerts=settings.email_alerts,
+            tab_size=getattr(settings, 'tab_size', 2),
             email=settings.email,
             phone=settings.phone
         )

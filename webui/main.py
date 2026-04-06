@@ -32,6 +32,7 @@ for p in [str(ROOT), str(SRC)]:
 from src.checker import PrologChecker
 from src.database import init_database, close_database, get_root
 from src.routes import auth, settings, classrooms, labs
+from src.notification_scheduler import start_scheduler
 from llm_bridge import generate_simple_test_cases as _gen_simple_tc
 
 # ── Pydantic models ───────────────────────────────────────────────────────
@@ -97,6 +98,7 @@ async def startup():
         print(f"[WARNING] Database initialization failed: {e}")
         print("  Server will run without database (some features may be unavailable)")
         # Don't raise - let server continue without database
+    start_scheduler()
 
 @app.on_event("shutdown")
 async def shutdown():

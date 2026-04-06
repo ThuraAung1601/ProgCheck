@@ -18,6 +18,7 @@ class UserSettings(Persistent):
         self.theme = "light"        # "light" | "dark"
         self.auto_save = True
         self.email_alerts = True
+        self.tab_size = 2           # 2 | 4
         self.display_name = ""
         self.email = ""
         self.phone = ""

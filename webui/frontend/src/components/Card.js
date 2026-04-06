@@ -4,7 +4,7 @@ const Card = ({ children, style = {}, className = '' }) => (
   <div
     className={className}
     style={{
-      background: '#fff',
+      background: 'var(--white)',
       borderRadius: 16,
       border: '1px solid var(--border)',
       ...style

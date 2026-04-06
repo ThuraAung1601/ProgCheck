@@ -27,11 +27,11 @@ function TestCaseRow({ tc, index, canEdit, onDelete }) {
   return (
     <div style={{
       display: 'flex', gap: 12, padding: '8px 12px',
-      background: '#F9FAFB', borderRadius: 6, fontSize: 12,
+      background: 'var(--surface)', borderRadius: 6, fontSize: 12,
       fontFamily: 'monospace', alignItems: 'center',
     }}>
       <span style={{ color: 'var(--muted)', minWidth: 20 }}>#{index + 1}</span>
-      <span style={{ flex: 1, color: '#111827' }}><strong>Input:</strong> {tc.input}</span>
+      <span style={{ flex: 1, color: 'var(--ink)' }}><strong>Input:</strong> {tc.input}</span>
       <span style={{ color: '#065F46' }}><strong>Expected:</strong> {tc.expected_output}</span>
       {canEdit && (
         <button
@@ -409,7 +409,7 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
             </React.Fragment>
           ))}
         </div>
-        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-.03em', color: '#111827' }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-.03em', color: 'var(--ink)' }}>
           {selectedLab ? selectedLab.title : selectedRoom ? selectedRoom.class_name : 'Classroom'}
         </h1>
         <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>
@@ -471,7 +471,7 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
 
           {/* Add Question form */}
           {role === 'teacher' && showAddQuestion && canEditLab && (
-            <div style={{ padding: '18px 20px', marginBottom: 20, background: '#F9FAFB', border: '1px solid var(--border)', borderRadius: 10 }}>
+            <div style={{ padding: '18px 20px', marginBottom: 20, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
               <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 12 }}>New Question</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <input autoFocus value={newQTitle} onChange={e => setNewQTitle(e.target.value)} placeholder="Question title…" style={inputStyle} />
@@ -483,7 +483,7 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
                     {addingQuestion ? 'Adding…' : 'Add Question'}
                   </button>
                   <button onClick={() => { setShowAddQuestion(false); setNewQTitle(''); setNewQProblem(''); }}
-                    style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)', background: '#fff', fontSize: 13, cursor: 'pointer', color: 'var(--muted)' }}>
+                    style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--white)', fontSize: 13, cursor: 'pointer', color: 'var(--muted)' }}>
                     Cancel
                   </button>
                 </div>
@@ -539,7 +539,7 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
 
                   <div style={{ padding: '18px 24px' }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', marginBottom: 8 }}>Problem</div>
-                    <pre style={{ fontSize: 13, lineHeight: 1.6, color: '#111827', whiteSpace: 'pre-wrap', margin: 0, fontFamily: "'Google Sans', sans-serif" }}>
+                    <pre style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--ink)', whiteSpace: 'pre-wrap', margin: 0, fontFamily: "'Google Sans', sans-serif", background: 'transparent' }}>
                       {q.problem}
                     </pre>
                   </div>
@@ -566,7 +566,7 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
                           placeholder="e.g. max(3,5,X)"
                           style={{ flex: '1 1 180px', padding: '7px 10px', borderRadius: 6, border: '1px solid #6EE7B7', fontSize: 12, fontFamily: 'monospace', outline: 'none' }} />
                         <select value={newTcExpected} onChange={e => setNewTcExpected(e.target.value)}
-                          style={{ padding: '7px 8px', borderRadius: 6, border: '1px solid #6EE7B7', fontSize: 12, background: '#fff' }}>
+                          style={{ padding: '7px 8px', borderRadius: 6, border: '1px solid #6EE7B7', fontSize: 12, background: 'var(--white)' }}>
                           <option value="true">expected: true</option>
                           <option value="false">expected: false</option>
                         </select>
@@ -575,7 +575,7 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
                           {addingTc ? 'Adding…' : 'Add'}
                         </button>
                         <button onClick={() => { setExpandedQuestion(null); setNewTcInput(''); setNewTcExpected('true'); }}
-                          style={{ padding: '7px 12px', borderRadius: 6, border: '1px solid #6EE7B7', background: '#fff', fontSize: 12, cursor: 'pointer', color: '#065F46' }}>
+                          style={{ padding: '7px 12px', borderRadius: 6, border: '1px solid #6EE7B7', background: 'var(--white)', fontSize: 12, cursor: 'pointer', color: '#065F46' }}>
                           Done
                         </button>
                       </div>
@@ -652,7 +652,7 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
               <div style={{
                 padding: '14px 20px', borderBottom: '1px solid var(--border)',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                background: '#fff',
+                background: 'var(--white)',
               }}>
                 <div>
                   <span style={{ fontWeight: 700, fontSize: 14 }}>Student Roster</span>
@@ -715,13 +715,13 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
                           display: 'flex', alignItems: 'center', gap: 12,
                           padding: '10px 20px',
                           borderTop: i > 0 ? '1px solid var(--border)' : 'none',
-                          background: isKicking ? '#FEF2F2' : '#fff',
+                          background: isKicking ? '#FEF2F2' : 'var(--white)',
                           transition: 'background .15s',
                         }}
                       >
                         <InitialAvatar name={displayName} size={34} />
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 600, fontSize: 13, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {displayName}
                           </div>
                           <div style={{ fontSize: 11, color: 'var(--muted)' }}>{subLine}</div>
@@ -732,7 +732,7 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
                           title="Remove from classroom"
                           style={{
                             padding: '5px 12px', borderRadius: 6, border: '1px solid #FECACA',
-                            background: isKicking ? '#FEE2E2' : '#fff',
+                            background: isKicking ? '#FEE2E2' : 'var(--white)',
                             color: '#EF4444', fontSize: 12, fontWeight: 600,
                             cursor: isKicking ? 'not-allowed' : 'pointer',
                             opacity: isKicking ? 0.6 : 1, flexShrink: 0,
@@ -750,7 +750,7 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
 
           {/* Add Lab form */}
           {role === 'teacher' && showAddLab && (
-            <div style={{ padding: '18px 20px', marginBottom: 16, background: '#F9FAFB', border: '1px solid var(--border)', borderRadius: 10 }}>
+            <div style={{ padding: '18px 20px', marginBottom: 16, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <input autoFocus value={newLabTitle} onChange={e => setNewLabTitle(e.target.value)}
                   placeholder="Lab title…" style={inputStyle} />
@@ -775,7 +775,7 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
                     {addingLab ? 'Creating…' : 'Create Lab'}
                   </button>
                   <button onClick={() => { setShowAddLab(false); setNewLabTitle(''); setNewLabActiveTime(''); setNewLabCompleteTime(''); }}
-                    style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)', background: '#fff', fontSize: 13, cursor: 'pointer', color: 'var(--muted)' }}>
+                    style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--white)', fontSize: 13, cursor: 'pointer', color: 'var(--muted)' }}>
                     Cancel
                   </button>
                 </div>
@@ -807,7 +807,7 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
                     return (
                       <tr key={lab.lab_id} onClick={() => handleLabClick(lab)}
                         style={{ borderTop: '1px solid var(--surface)', cursor: canEnter ? 'pointer' : 'default', opacity: canEnter ? 1 : 0.6, transition: 'background .15s' }}
-                        onMouseEnter={e => { if (canEnter) e.currentTarget.style.background = '#F9FAFB'; }}
+                        onMouseEnter={e => { if (canEnter) e.currentTarget.style.background = 'var(--surface)'; }}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                         <td style={{ padding: '14px 24px', fontSize: 14, color: 'var(--muted)' }}>{i + 1}</td>
                         <td style={{ padding: '14px 24px', fontWeight: 600, fontSize: 14 }}>
@@ -858,11 +858,11 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
 
           {/* Create Classroom form */}
           {role === 'teacher' && showCreateRoom && (
-            <div style={{ padding: '20px', marginBottom: 20, background: '#F9FAFB', border: '1px solid var(--border)', borderRadius: 12 }}>
+            <div style={{ padding: '20px', marginBottom: 20, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12 }}>
               <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>New Classroom</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', marginBottom: 6 }}>Classroom Name *</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>Classroom Name *</div>
                   <input
                     autoFocus
                     value={newRoomName}
@@ -873,7 +873,7 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
                   />
                 </div>
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', marginBottom: 6 }}>Prerequisites <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(optional)</span></div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>Prerequisites <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(optional)</span></div>
                   <input
                     value={newRoomPrereqs}
                     onChange={e => setNewRoomPrereqs(e.target.value)}
@@ -896,7 +896,7 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
                   </button>
                   <button
                     onClick={() => { setShowCreateRoom(false); setNewRoomName(''); setNewRoomPrereqs(''); }}
-                    style={{ padding: '8px 14px', borderRadius: 7, border: '1px solid var(--border)', background: '#fff', fontSize: 13, cursor: 'pointer', color: 'var(--muted)' }}
+                    style={{ padding: '8px 14px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--white)', fontSize: 13, cursor: 'pointer', color: 'var(--muted)' }}
                   >
                     Cancel
                   </button>
@@ -918,7 +918,7 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
                   key={room.class_id}
                   onClick={() => handleRoomClick(room)}
                   style={{
-                    background: '#fff', borderRadius: 16,
+                    background: 'var(--white)', borderRadius: 16,
                     border: '1px solid var(--border)', padding: 22,
                     cursor: 'pointer', transition: 'all .2s',
                     borderTop: `4px solid ${room.lab_ids?.length > 0 ? accentHex : 'var(--border)'}`,

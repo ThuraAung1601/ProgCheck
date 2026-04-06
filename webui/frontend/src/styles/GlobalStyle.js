@@ -35,10 +35,29 @@ const GlobalStyle = () => (
       --header-h:   64px;
     }
 
-    body { 
-      font-family: var(--font); 
-      color: var(--ink); 
-      background: var(--surface); 
+    body {
+      font-family: var(--font);
+      color: var(--ink);
+      background: var(--surface);
+    }
+
+    [data-theme="dark"] {
+      --ink:        #F9FAFB;
+      --ink-2:      #E5E7EB;
+      --muted:      #9CA3AF;
+      --border:     #2D3748;
+      --surface:    #1A202C;
+      --white:      #2D3748;
+      --mint-light: rgba(78,203,160,0.14);
+      --sky-light:  rgba(91,163,245,0.14);
+      --shadow-sm:  0 1px 3px rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.2);
+      --shadow:     0 4px 16px rgba(0,0,0,.35);
+    }
+
+    html[data-theme="dark"],
+    html[data-theme="dark"] body {
+      background: #1A202C;
+      color: #F9FAFB;
     }
 
     button { 
