@@ -233,6 +233,149 @@ describe('annotateWithSourceLines', () => {
   });
 });
 
+// ── Additional parseEngineOutput coverage ────────────────────────────────────
+
+describe('parseEngineOutput — additional node patterns', () => {
+  it('bare Goal line (no fact/rule marker) is parsed as success node', () => {
+    const output = `Query: foo(a)
+Proof Tree:
+Goal: foo(a)
+---
+`;
+    const result = parseEngineOutput(output);
+    const node = result.queries[0].trace.find(n => n.goal === 'foo(a)');
+    expect(node).toBeDefined();
+    expect(node.result).toBe('success');
+  });
+
+  it('Failed: line creates a fail node', () => {
+    const output = `Query: foo(b)
+Proof Tree:
+Failed: foo(b)
+---
+`;
+    const result = parseEngineOutput(output);
+    const failNode = result.queries[0].trace.find(n => n.result === 'fail');
+    expect(failNode).toBeDefined();
+    expect(failNode.goal).toBe('foo(b)');
+  });
+
+  it('Fail: line (short form) creates a fail node', () => {
+    const output = `Query: bar(x)
+Proof Tree:
+Fail: bar(x)
+---
+`;
+    const result = parseEngineOutput(output);
+    const failNode = result.queries[0].trace.find(n => n.result === 'fail');
+    expect(failNode).toBeDefined();
+  });
+
+  it('Try: line creates a pending node', () => {
+    const output = `Query: foo(a)
+Proof Tree:
+Try: foo(a)
+---
+`;
+    const result = parseEngineOutput(output);
+    const tryNode = result.queries[0].trace.find(n => n.result === 'pending');
+    expect(tryNode).toBeDefined();
+  });
+
+  it('bare ! creates a cut node', () => {
+    const output = `Query: foo(a)
+Proof Tree:
+Goal: foo(a) :- !
+  !
+---
+`;
+    const result = parseEngineOutput(output);
+    const cutNodes = result.queries[0].trace.filter(n => n.result === 'cut');
+    expect(cutNodes.length).toBeGreaterThan(0);
+  });
+
+  it('Cut: ! creates a cut node', () => {
+    const output = `Query: foo(a)
+Proof Tree:
+Goal: foo(a) :- !
+  Cut: !
+---
+`;
+    const result = parseEngineOutput(output);
+    const cutNodes = result.queries[0].trace.filter(n => n.result === 'cut');
+    expect(cutNodes.length).toBeGreaterThan(0);
+  });
+
+  it('multiple Depth 1 goals produce multiple root trace nodes', () => {
+    // Line 172 + 205: uniqueGoals.length > 1 path
+    const output = `Query: foo(X)
+Depth 1: foo(a)
+Depth 1: foo(b)
+Proof Tree:
+Goal: foo(a) (fact)
+---
+`;
+    const result = parseEngineOutput(output);
+    const trace = result.queries[0].trace;
+    // With 2 unique depth-1 goals, it takes the multi-solution path
+    expect(trace.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('empty proof lines produce a synthetic root node', () => {
+    // Line 234: nonEmpty.length === 0 path
+    const output = `Query: foo(a)
+Proof Tree:
+
+---
+`;
+    const result = parseEngineOutput(output);
+    expect(result.queries[0].trace.length).toBeGreaterThan(0);
+    expect(result.queries[0].trace[0].parentId).toBeNull();
+  });
+});
+
+describe('annotateWithSourceLines — additional paths', () => {
+  it('annotates using sourceClauses map lookup (lines 474-481)', () => {
+    const code = 'append([], Y, Y).\n';
+    const sourceClauses = extractSourceClauses(code);
+    const trace = [{ id: 'n1', goal: 'append([],[],[])', lineStart: -1, lineEnd: -1, cutPrevented: false }];
+    const result = annotateWithSourceLines(trace, code, sourceClauses);
+    expect(result[0].lineStart).toBeGreaterThanOrEqual(0);
+  });
+
+  it('falls back to line scan when sourceClauses not provided (lines 484-489)', () => {
+    const code = 'myPred(a).\n';
+    const trace = [{ id: 'n1', goal: 'myPred(a)', lineStart: -1, lineEnd: -1, cutPrevented: false }];
+    const result = annotateWithSourceLines(trace, code, null);
+    expect(result[0].lineStart).toBeGreaterThanOrEqual(0);
+  });
+
+  it('returns node unchanged when goal has no lowercase functor start', () => {
+    const trace = [{ id: 'n1', goal: 'X > 0', lineStart: -1, lineEnd: -1, cutPrevented: false }];
+    const result = annotateWithSourceLines(trace, '', null);
+    expect(result[0].lineStart).toBe(-1);
+  });
+
+  it('cutPrevented node with valid lineStart is returned as-is', () => {
+    const trace = [{ id: 'n1', goal: 'foo(a)', lineStart: 3, lineEnd: 3, cutPrevented: true }];
+    const result = annotateWithSourceLines(trace, 'foo(a).\n', null);
+    expect(result[0].lineStart).toBe(3);
+  });
+});
+
+describe('extractSourceClauses — additional paths', () => {
+  it('handles functor with invalid name (operator head) gracefully', () => {
+    // parseFunctorArity returns null functor for invalid names — lines 110, 116-117
+    const src = 'foo(X) :- X > 0.\n';
+    expect(() => extractSourceClauses(src)).not.toThrow();
+  });
+
+  it('fact without arguments has arity 0', () => {
+    const map = extractSourceClauses('go.\n');
+    expect(map.has('go/0')).toBe(true);
+  });
+});
+
 // ── Ghost injection via cut ───────────────────────────────────────────────────
 
 describe('ghost injection for cut', () => {

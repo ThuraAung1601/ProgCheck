@@ -27,3 +27,10 @@ static/
 /tmp/
 
 data/*.lock
+
+# Code checker result outputs
+result*.txt
+reports/
+.coverage
+htmlcov/
+webui/frontend/coverage/

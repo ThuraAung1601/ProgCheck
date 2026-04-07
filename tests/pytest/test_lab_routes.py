@@ -400,3 +400,114 @@ class TestSubmissions:
         body = resp.json()
         assert body["score"]  == 95
         assert body["status"] == "passed"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# UFR-4  — Student reads problem statement
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestProblemStatement:
+    def test_question_response_contains_problem_field(self, question_in_inactive):
+        """UFR-4: GET question returns the problem statement in the 'problem' field."""
+        resp = client.get("/api/labs/2001/questions/3001")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "problem" in body
+        assert body["problem"] == "append/3 problem text"
+
+    def test_problem_field_is_non_empty_string(self, question_in_inactive):
+        """UFR-4: problem statement is a non-empty string, not null."""
+        resp = client.get("/api/labs/2001/questions/3001")
+        assert resp.status_code == 200
+        problem = resp.json()["problem"]
+        assert isinstance(problem, str)
+        assert len(problem.strip()) > 0
+
+    def test_question_list_includes_problem_field(self, question_in_inactive):
+        """UFR-4: listing all questions also exposes the problem field per item."""
+        resp = client.get("/api/labs/2001/questions")
+        assert resp.status_code == 200
+        questions = resp.json()
+        assert len(questions) >= 1
+        assert "problem" in questions[0]
+        assert len(questions[0]["problem"]) > 0
+
+    def test_problem_field_preserves_content(self, inactive_lab):
+        """UFR-4: the exact problem text added by instructor is returned to student."""
+        long_problem = "Write a Prolog predicate append/3 such that:\n- append([],[],[])\n- append([H|T],Y,[H|R]) :- append(T,Y,R)."
+        resp_add = client.post(
+            "/api/labs/2001/questions?teacher_id=TCH001",
+            json={"title": "Append", "problem": long_problem},
+        )
+        assert resp_add.status_code == 200
+        qid = resp_add.json()["question_id"]
+        resp_get = client.get(f"/api/labs/2001/questions/{qid}")
+        assert resp_get.json()["problem"] == long_problem
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# UFR-6  — Student edits and resubmits code
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestResubmission:
+    def test_student_can_submit_twice_to_same_question(self, active_lab, db):
+        """UFR-6: student submits code, then submits again — both requests accepted."""
+        q = LabQuestion(3020, "Q-resub", "Write append")
+        active_lab.add_question(q)
+
+        resp1 = client.post("/api/labs/submit", json={
+            "student_id": "STU001",
+            "question_id": 3020,
+            "code_file": "append([],Y,[]).",   # wrong code first
+        })
+        assert resp1.status_code == 200
+
+        resp2 = client.post("/api/labs/submit", json={
+            "student_id": "STU001",
+            "question_id": 3020,
+            "code_file": "append([],Y,Y).\nappend([H|T],Y,[H|R]):-append(T,Y,R).",
+        })
+        assert resp2.status_code == 200
+
+    def test_resubmission_creates_new_result_record(self, active_lab, db):
+        """UFR-6: each submission creates a separate result record in the DB."""
+        q = LabQuestion(3021, "Q-resub2", "Problem")
+        active_lab.add_question(q)
+
+        client.post("/api/labs/submit", json={
+            "student_id": "STU001", "question_id": 3021, "code_file": "v1.",
+        })
+        count_after_first = len(db.results)
+
+        client.post("/api/labs/submit", json={
+            "student_id": "STU001", "question_id": 3021, "code_file": "v2.",
+        })
+        count_after_second = len(db.results)
+
+        assert count_after_second > count_after_first
+
+    def test_instructor_can_update_score_after_resubmission(self, active_lab, db):
+        """UFR-6: after resubmission, instructor can update the result score."""
+        q = LabQuestion(3022, "Q-score", "Problem")
+        active_lab.add_question(q)
+
+        submit_resp = client.post("/api/labs/submit", json={
+            "student_id": "STU001", "question_id": 3022, "code_file": "code.",
+        })
+        result_id = submit_resp.json()["result_id"]
+
+        update_resp = client.put(
+            f"/api/labs/results/{result_id}?score=80&result_status=passed"
+        )
+        assert update_resp.status_code == 200
+        assert update_resp.json()["score"] == 80
+
+    def test_resubmission_to_inactive_lab_still_rejected(self, inactive_lab, db):
+        """UFR-6: resubmission is blocked if lab is not active (same rule as first submit)."""
+        q = LabQuestion(3023, "Q-inactive", "Problem")
+        inactive_lab.add_question(q)
+
+        resp = client.post("/api/labs/submit", json={
+            "student_id": "STU001", "question_id": 3023, "code_file": "code.",
+        })
+        assert resp.status_code in (400, 403)

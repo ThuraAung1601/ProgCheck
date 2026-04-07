@@ -271,6 +271,18 @@ def extract_predicate_name_and_arity(goal: str) -> Tuple[str, int]:
 
     name = match.group(1)
     args_str = match.group(2)
-    arity = len(args_str.split(",")) if args_str.strip() else 0
+    if not args_str.strip():
+        return (name, 0)
+
+    # Count top-level commas only (ignore commas inside [], (), {})
+    depth = 0
+    arity = 1
+    for ch in args_str:
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        elif ch == "," and depth == 0:
+            arity += 1
 
     return (name, arity)

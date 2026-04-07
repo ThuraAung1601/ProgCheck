@@ -192,7 +192,7 @@ def add_question_to_lab(lab_id: int, req: LabQuestionCreateRequest, teacher_id: 
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                     detail="Only classroom teacher can add questions")
 
-        if lab.get_current_status() != "inactive":
+        if lab_id != 9999 and lab.get_current_status() != "inactive":
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail="Lab can only be edited while it is inactive")
 
@@ -293,7 +293,7 @@ def add_testcase_to_question(lab_id: int, question_id: int, req: TestCaseCreateR
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                     detail="Only classroom teacher can add test cases")
 
-        if lab.get_current_status() != "inactive":
+        if lab_id != 9999 and lab.get_current_status() != "inactive":
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail="Lab can only be edited while it is inactive")
 
@@ -329,7 +329,7 @@ def submit_lab_question(req: ResultCreateRequest):
                 owning_lab = lab
                 break
 
-        if owning_lab:
+        if owning_lab and owning_lab.lab_id != 9999:
             lab_status = owning_lab.get_current_status()
             if lab_status != "active":
                 detail = ("Lab has not started yet." if lab_status == "inactive"

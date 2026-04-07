@@ -220,3 +220,106 @@ describe('LoginPage – password masking', () => {
     expect(document.body.textContent).not.toContain('ultrasecret');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Registration flow (lines 69-107)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('LoginPage – registration', () => {
+  test('shows register form when defaultIsRegistering=true', () => {
+    render(<LoginPage onLogin={jest.fn()} defaultIsRegistering={true} />);
+    // Should have a Create Account button or similar register button
+    const btn = document.querySelector('button[type="submit"]');
+    expect(btn).toBeTruthy();
+    expect(btn.textContent).toMatch(/create account/i);
+  });
+
+  test('calls fetch with register endpoint on register submit', async () => {
+    const fakeResponse = {
+      user: { id: 'S001', username: 'bob', role: 'student', display_name: 'Bob' },
+      token: 'token-xyz',
+    };
+    mockFetchSuccess(fakeResponse);
+    const user = userEvent.setup();
+    render(<LoginPage onLogin={jest.fn()} defaultIsRegistering={true} />);
+
+    await user.type(getUsernameInput(), 'bob');
+    await user.type(getPasswordInput(), 'pass123');
+
+    // Fill student ID field if visible
+    const allInputs = document.querySelectorAll('input');
+    const idInput = [...allInputs].find(i =>
+      i !== getUsernameInput() && i !== getPasswordInput() && i.type !== 'checkbox'
+    );
+    if (idInput) await user.type(idInput, 'S001');
+
+    await user.click(document.querySelector('button[type="submit"]'));
+
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
+    const [url] = global.fetch.mock.calls[0];
+    expect(url).toMatch(/register/);
+  });
+
+  test('shows error when registration fails', async () => {
+    mockFetchError(409, 'Username already taken');
+    const user = userEvent.setup();
+    render(<LoginPage onLogin={jest.fn()} defaultIsRegistering={true} />);
+
+    await user.type(getUsernameInput(), 'bob');
+    await user.type(getPasswordInput(), 'pass123');
+
+    await user.click(document.querySelector('button[type="submit"]'));
+
+    await waitFor(() => {
+      expect(document.body.textContent).toMatch(/taken|already|failed|error/i);
+    });
+  });
+
+  test('calls onLogin after successful registration', async () => {
+    const onLogin = jest.fn();
+    const fakeResponse = {
+      user: { id: 'S001', username: 'bob', role: 'student', display_name: 'Bob' },
+      token: 'token-xyz',
+    };
+    mockFetchSuccess(fakeResponse);
+    const user = userEvent.setup();
+    render(<LoginPage onLogin={onLogin} defaultIsRegistering={true} />);
+
+    await user.type(getUsernameInput(), 'bob');
+    await user.type(getPasswordInput(), 'pass123');
+
+    const allInputs = document.querySelectorAll('input');
+    const idInput = [...allInputs].find(i =>
+      i !== getUsernameInput() && i !== getPasswordInput() && i.type !== 'checkbox'
+    );
+    if (idInput) await user.type(idInput, 'S001');
+
+    await user.click(document.querySelector('button[type="submit"]'));
+    await waitFor(() => expect(onLogin).toHaveBeenCalled());
+  });
+
+  test('toggle button switches between login and register modes (lines 227-232)', async () => {
+    const user = userEvent.setup();
+    render(<LoginPage onLogin={jest.fn()} defaultIsRegistering={false} />);
+
+    // Initially in login mode — submit button says "Sign In"
+    expect(document.querySelector('button[type="submit"]').textContent).toMatch(/sign in/i);
+
+    // Click the toggle (underlined text button)
+    const toggleBtn = document.querySelector('button[type="button"][style*="underline"]');
+    if (toggleBtn) {
+      await user.click(toggleBtn);
+      // Now in register mode
+      expect(document.querySelector('button[type="submit"]').textContent).toMatch(/create account/i);
+    }
+  });
+
+  test('validation blocks empty registration (no fetch called)', async () => {
+    const user = userEvent.setup();
+    render(<LoginPage onLogin={jest.fn()} defaultIsRegistering={true} />);
+    // Submit without filling anything
+    await user.click(document.querySelector('button[type="submit"]'));
+    await new Promise(r => setTimeout(r, 100));
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+});

@@ -44,7 +44,7 @@ function mockFetchGet(settings = defaultSettings) {
 
 /** Set global.fetch so that GET succeeds and PUT succeeds too. */
 function mockFetchGetAndPut(settings = defaultSettings, putResponse = null) {
-  global.fetch = jest.fn().mockImplementation((url, opts) => {
+  global.fetch = jest.fn().mockImplementation((_url, opts) => {
     if (!opts || opts.method !== 'PUT') {
       return Promise.resolve({ ok: true, json: async () => ({ ...settings }) });
     }
@@ -275,5 +275,270 @@ describe('SettingsPage — theme selection', () => {
       const body = JSON.parse(putCalls[0][1].body);
       expect(body.theme).toBe('dark');
     });
+  });
+
+  it('clicking light theme button fires PUT with theme:light', async () => {
+    mockFetchGetAndPut({ ...defaultSettings, theme: 'dark' });
+    renderPage();
+    await waitFor(() => screen.getByText('Settings'));
+
+    fireEvent.click(screen.getByRole('button', { name: /^light$/i }));
+
+    await waitFor(() => {
+      const putCalls = global.fetch.mock.calls.filter(
+        ([, opts]) => opts && opts.method === 'PUT'
+      );
+      expect(putCalls.length).toBeGreaterThan(0);
+      const body = JSON.parse(putCalls[0][1].body);
+      expect(body.theme).toBe('light');
+    });
+  });
+});
+
+// ── Auto-save toggle ──────────────────────────────────────────────────────────
+
+describe('SettingsPage — auto-save toggle', () => {
+  it('toggling Auto-Save fires PUT with auto_save field', async () => {
+    const onUserUpdate = jest.fn();
+    mockFetchGetAndPut();
+    renderPage({ onUserUpdate });
+    await waitFor(() => screen.getByText('Auto-Save'));
+
+    // The Auto-Save Toggle is a div with border-radius:12px
+    const toggleDivs = document.querySelectorAll('[style*="border-radius: 12px"]');
+    // First toggle is Auto-Save (second is Email Alerts)
+    fireEvent.click(toggleDivs[0]);
+
+    await waitFor(() => {
+      const putCalls = global.fetch.mock.calls.filter(
+        ([, opts]) => opts && opts.method === 'PUT'
+      );
+      expect(putCalls.length).toBeGreaterThan(0);
+      const body = JSON.parse(putCalls[0][1].body);
+      expect(body).toHaveProperty('auto_save');
+    });
+  });
+});
+
+// ── Tab size change ───────────────────────────────────────────────────────────
+
+describe('SettingsPage — tab size', () => {
+  it('changing tab size select fires PUT with tab_size', async () => {
+    const onUserUpdate = jest.fn();
+    mockFetchGetAndPut();
+    renderPage({ onUserUpdate });
+    await waitFor(() => screen.getByText('Tab Size'));
+
+    const select = document.querySelector('select');
+    fireEvent.change(select, { target: { value: '4' } });
+
+    await waitFor(() => {
+      const putCalls = global.fetch.mock.calls.filter(
+        ([, opts]) => opts && opts.method === 'PUT'
+      );
+      expect(putCalls.length).toBeGreaterThan(0);
+      const body = JSON.parse(putCalls[0][1].body);
+      expect(body.tab_size).toBe(4);
+    });
+  });
+});
+
+// ── PUT failure ───────────────────────────────────────────────────────────────
+
+describe('SettingsPage — PUT failure', () => {
+  it('shows error when PUT request fails', async () => {
+    global.fetch = jest.fn().mockImplementation((_url, opts) => {
+      if (!opts || opts.method !== 'PUT') {
+        return Promise.resolve({ ok: true, json: async () => ({ ...defaultSettings }) });
+      }
+      return Promise.resolve({
+        ok: false,
+        status: 500,
+        json: async () => ({ detail: 'Server error' }),
+      });
+    });
+    renderPage();
+    await waitFor(() => screen.getByText('Settings'));
+
+    fireEvent.click(screen.getByRole('button', { name: /dark/i }));
+
+    await waitFor(() => {
+      expect(document.body.textContent).toMatch(/server error|error|failed/i);
+    });
+  });
+});
+
+// ── Profile modal ─────────────────────────────────────────────────────────────
+
+describe('SettingsPage — profile modal', () => {
+  beforeEach(() => mockFetchGetAndPut());
+
+  it('opens Edit Profile modal when Edit button clicked', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => screen.getByText('Display Name'));
+
+    // There are multiple Edit buttons; the Display Name one is in the Profile Details card
+    const editBtns = screen.getAllByRole('button', { name: /^edit$/i });
+    // First Edit button is the Display Name one
+    await user.click(editBtns[0]);
+
+    await waitFor(() =>
+      expect(screen.getByText('Edit Profile')).toBeInTheDocument()
+    );
+  });
+
+  it('closes Edit Profile modal when Cancel clicked', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => screen.getByText('Display Name'));
+
+    const editBtns = screen.getAllByRole('button', { name: /^edit$/i });
+    await user.click(editBtns[0]);
+    await waitFor(() => screen.getByText('Edit Profile'));
+
+    await user.click(screen.getByRole('button', { name: /^cancel$/i }));
+    await waitFor(() =>
+      expect(screen.queryByText('Edit Profile')).not.toBeInTheDocument()
+    );
+  });
+
+  it('Save Changes in modal fires PUT with display_name', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => screen.getByText('Display Name'));
+
+    const editBtns = screen.getAllByRole('button', { name: /^edit$/i });
+    await user.click(editBtns[0]);
+    await waitFor(() => screen.getByText('Edit Profile'));
+
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => {
+      const putCalls = global.fetch.mock.calls.filter(
+        ([, opts]) => opts && opts.method === 'PUT'
+      );
+      expect(putCalls.length).toBeGreaterThan(0);
+      const body = JSON.parse(putCalls[putCalls.length - 1][1].body);
+      expect(body).toHaveProperty('display_name');
+    });
+  });
+});
+
+// ── Password modal ────────────────────────────────────────────────────────────
+
+describe('SettingsPage — password modal', () => {
+  beforeEach(() => mockFetchGetAndPut());
+
+  it('opens Change Password modal when button clicked', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => screen.getByText(/change password/i));
+
+    await user.click(screen.getByText(/change password…/i));
+    await waitFor(() =>
+      expect(screen.getByText('Change Password')).toBeInTheDocument()
+    );
+  });
+
+  it('shows error when fields are empty on submit', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => screen.getByText(/change password…/i));
+
+    await user.click(screen.getByText(/change password…/i));
+    await waitFor(() => screen.getByText('Change Password'));
+
+    await user.click(screen.getByRole('button', { name: /update password/i }));
+
+    await waitFor(() =>
+      expect(document.body.textContent).toMatch(/required/i)
+    );
+  });
+
+  it('shows error when new passwords do not match', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => screen.getByText(/change password…/i));
+
+    await user.click(screen.getByText(/change password…/i));
+    await waitFor(() => screen.getByText('Change Password'));
+
+    const [oldPw, newPw, confirmPw] = document.querySelectorAll(
+      'input[type="password"]'
+    );
+    await user.type(oldPw, 'oldpass');
+    await user.type(newPw, 'newpass1');
+    await user.type(confirmPw, 'newpass2');
+
+    await user.click(screen.getByRole('button', { name: /update password/i }));
+
+    await waitFor(() =>
+      expect(document.body.textContent).toMatch(/do not match/i)
+    );
+  });
+
+  it('shows error when new password is too short', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => screen.getByText(/change password…/i));
+
+    await user.click(screen.getByText(/change password…/i));
+    await waitFor(() => screen.getByText('Change Password'));
+
+    const [oldPw, newPw, confirmPw] = document.querySelectorAll(
+      'input[type="password"]'
+    );
+    await user.type(oldPw, 'oldpass');
+    await user.type(newPw, 'abc');
+    await user.type(confirmPw, 'abc');
+
+    await user.click(screen.getByRole('button', { name: /update password/i }));
+
+    await waitFor(() =>
+      expect(document.body.textContent).toMatch(/at least 6/i)
+    );
+  });
+
+  it('shows success message after successful password change', async () => {
+    global.fetch = jest.fn().mockImplementation((_url, opts) => {
+      if (!opts || (opts.method !== 'PUT' && opts.method !== 'POST')) {
+        return Promise.resolve({ ok: true, json: async () => ({ ...defaultSettings }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => screen.getByText(/change password…/i));
+
+    await user.click(screen.getByText(/change password…/i));
+    await waitFor(() => screen.getByText('Change Password'));
+
+    const [oldPw, newPw, confirmPw] = document.querySelectorAll(
+      'input[type="password"]'
+    );
+    await user.type(oldPw, 'oldpass');
+    await user.type(newPw, 'newpass123');
+    await user.type(confirmPw, 'newpass123');
+
+    await user.click(screen.getByRole('button', { name: /update password/i }));
+
+    await waitFor(() =>
+      expect(document.body.textContent).toMatch(/password changed/i)
+    );
+  });
+
+  it('closes password modal and clears fields when Cancel clicked', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => screen.getByText(/change password…/i));
+
+    await user.click(screen.getByText(/change password…/i));
+    await waitFor(() => screen.getByText('Change Password'));
+
+    await user.click(screen.getByRole('button', { name: /^cancel$/i }));
+    await waitFor(() =>
+      expect(screen.queryByText('Change Password')).not.toBeInTheDocument()
+    );
   });
 });

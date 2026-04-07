@@ -1,0 +1,183 @@
+name: ProgCheck CI
+
+on:
+  push:
+    branches: [ main, testing ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # ── Job 1: Python unit + integration tests ──────────────────────────────────
+  pytest:
+    name: Python Tests (pytest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install SWI-Prolog
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y swi-prolog
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r tests/requirements-test.txt
+
+      - name: Run pytest with coverage
+        run: |
+          mkdir -p reports
+          pytest tests/pytest/ \
+            -v --tb=short \
+            --junitxml=reports/pytest-results.xml \
+            --cov=src \
+            --cov-report=term-missing \
+            --cov-report=html:reports/pytest-coverage \
+            --cov-report=xml:reports/pytest-coverage.xml
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+
+      - name: Upload pytest results and coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: |
+            reports/pytest-results.xml
+            reports/pytest-coverage/
+            reports/pytest-coverage.xml
+
+  # ── Job 2: Frontend Jest tests ───────────────────────────────────────────────
+  jest:
+    name: Frontend Tests (Jest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: webui/frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: webui/frontend
+        run: npm ci
+
+      - name: Run Jest tests
+        working-directory: webui/frontend
+        run: npm test -- --watchAll=false --ci --coverage --coverageDirectory=../../reports/jest-coverage
+        env:
+          CI: true
+
+      - name: Upload Jest coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jest-coverage
+          path: reports/jest-coverage/
+
+  # ── Job 3: SWI-Prolog plunit tests ──────────────────────────────────────────
+  prolog:
+    name: Prolog Tests (PLUnit)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install SWI-Prolog
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y swi-prolog
+
+      - name: Run PLUnit — meta_interpreter
+        run: |
+          swipl -g "
+            consult('src/meta_interpreter.pl'),
+            consult('tests/prolog/test_meta_interpreter.pl'),
+            run_tests,
+            halt(0)
+          " -t "halt(1)"
+
+      - name: Run PLUnit — diagnosis_engine
+        run: |
+          swipl -g "
+            consult('src/meta_interpreter.pl'),
+            consult('src/diagnosis_engine.pl'),
+            consult('tests/prolog/test_diagnosis_engine.pl'),
+            run_tests,
+            halt(0)
+          " -t "halt(1)"
+
+  # ── Job 4: Robot Framework acceptance tests ──────────────────────────────────
+  robot:
+    name: Acceptance Tests (Robot Framework)
+    runs-on: ubuntu-latest
+    needs: [ pytest ]          # only run if unit tests pass
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install SWI-Prolog
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y swi-prolog
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r tests/requirements-test.txt
+
+      - name: Start ProgCheck server
+        run: |
+          python start_server.py &
+          echo $! > /tmp/server.pid
+          # Wait until the server is accepting connections (max 30 s)
+          for i in $(seq 1 30); do
+            curl -s http://localhost:8000/api/health > /dev/null && break
+            sleep 1
+          done
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+
+      - name: Run Robot Framework tests
+        run: |
+          robot \
+            --outputdir reports/robot \
+            --xunit reports/robot/xunit.xml \
+            tests/robot/
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+
+      - name: Stop server
+        if: always()
+        run: |
+          if [ -f /tmp/server.pid ]; then
+            kill $(cat /tmp/server.pid) 2>/dev/null || true
+          fi
+
+      - name: Upload Robot Framework report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: robot-report
+          path: reports/robot/

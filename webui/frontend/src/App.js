@@ -742,7 +742,7 @@ export default function App() {
               {userRole === 'teacher' && showAddProblem && (
                 <div className="flex-shrink-0 border-b border-border-subtle bg-bg-secondary p-3 flex flex-col gap-2">
                   <div className="text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary mb-1">
-                    New Problem → Lab 9999
+                    New Problem
                   </div>
                   <input
                     autoFocus
