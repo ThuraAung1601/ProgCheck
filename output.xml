@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<robot generator="Robot 7.4.1 (Python 3.12.2 on win32)" generated="2026-04-08T15:51:52.398229" rpa="false" schemaversion="5">
+<robot generator="Robot 7.4.1 (Python 3.12.2 on win32)" generated="2026-04-08T17:42:48.027004" rpa="false" schemaversion="5">
 <suite id="s1" name="Prolog Submission" source="C:\n\year3\sem2\team_pj\progcheck\tests\robot\prolog_submission.robot">
 <kw name="Run Keywords" owner="BuiltIn" type="SETUP">
 <kw name="Create Session" owner="common">
@@ -8,10 +8,10 @@
 <arg>${BASE_URL}</arg>
 <arg>verify=False</arg>
 <doc>Create Session: create a HTTP session to a server</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.613503" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.209794" elapsed="0.000000"/>
 </kw>
 <doc>Open a requests session to the ProgCheck API server.</doc>
-<status status="PASS" start="2026-04-08T15:51:52.612514" elapsed="0.000989"/>
+<status status="PASS" start="2026-04-08T17:42:48.209794" elapsed="0.000978"/>
 </kw>
 <kw name="Setup Prolog Suite">
 <kw name="Generate Random String" owner="String">
@@ -19,7 +19,7 @@
 <arg>6</arg>
 <arg>[NUMBERS]</arg>
 <doc>Generates a string with a desired ``length`` from the given ``chars``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.613503" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.210772" elapsed="0.000000"/>
 </kw>
 <kw name="Create Dictionary" owner="BuiltIn">
 <var>${tbody}</var>
@@ -28,7 +28,7 @@
 <arg>role=teacher</arg>
 <arg>teacher_id=PLTCH_${uid}</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.613503" elapsed="0.001010"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.210772" elapsed="0.000000"/>
 </kw>
 <kw name="POST On Session" owner="RequestsLibrary">
 <arg>progcheck</arg>
@@ -36,13 +36,13 @@
 <arg>json=${tbody}</arg>
 <arg>expected_status=200</arg>
 <doc>Sends a POST request on a previously created HTTP Session.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.614513" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.210772" elapsed="0.000000"/>
 </kw>
 <kw name="Set Suite Variable" owner="BuiltIn">
 <arg>${PL_TEACHER}</arg>
 <arg>PLTCH_${uid}</arg>
 <doc>Makes a variable available everywhere within the scope of the current suite.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.614513" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.210772" elapsed="0.000000"/>
 </kw>
 <kw name="Create Dictionary" owner="BuiltIn">
 <var>${sbody}</var>
@@ -51,7 +51,7 @@
 <arg>role=student</arg>
 <arg>student_id=PLSTU_${uid}</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.614513" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.210772" elapsed="0.001000"/>
 </kw>
 <kw name="POST On Session" owner="RequestsLibrary">
 <arg>progcheck</arg>
@@ -59,20 +59,20 @@
 <arg>json=${sbody}</arg>
 <arg>expected_status=200</arg>
 <doc>Sends a POST request on a previously created HTTP Session.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.614513" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.211772" elapsed="0.000000"/>
 </kw>
 <kw name="Set Suite Variable" owner="BuiltIn">
 <arg>${PL_STUDENT}</arg>
 <arg>PLSTU_${uid}</arg>
 <doc>Makes a variable available everywhere within the scope of the current suite.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.614513" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.211772" elapsed="0.000000"/>
 </kw>
 <kw name="Create Dictionary" owner="BuiltIn">
 <var>${cbody}</var>
 <arg>class_name=Prolog Lab</arg>
 <arg>teacher_id=${PL_TEACHER}</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.615513" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.211772" elapsed="0.000000"/>
 </kw>
 <kw name="POST On Session" owner="RequestsLibrary">
 <var>${cresp}</var>
@@ -81,20 +81,20 @@
 <arg>json=${cbody}</arg>
 <arg>expected_status=200</arg>
 <doc>Sends a POST request on a previously created HTTP Session.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.615513" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.211772" elapsed="0.000000"/>
 </kw>
 <kw name="Set Suite Variable" owner="BuiltIn">
 <arg>${PL_CLASS}</arg>
 <arg>${cresp.json()["class_id"]}</arg>
 <doc>Makes a variable available everywhere within the scope of the current suite.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.615513" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.211772" elapsed="0.000000"/>
 </kw>
 <kw name="Create Dictionary" owner="BuiltIn">
 <var>${lbody}</var>
 <arg>title=Prolog Suite Lab</arg>
 <arg>classroom_id=${PL_CLASS}</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.615513" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.211772" elapsed="0.000996"/>
 </kw>
 <kw name="POST On Session" owner="RequestsLibrary">
 <var>${lresp}</var>
@@ -103,26 +103,26 @@
 <arg>json=${lbody}</arg>
 <arg>expected_status=200</arg>
 <doc>Sends a POST request on a previously created HTTP Session.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.615513" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.212768" elapsed="0.000000"/>
 </kw>
 <kw name="Set Suite Variable" owner="BuiltIn">
 <arg>${PL_LAB}</arg>
 <arg>${lresp.json()["lab_id"]}</arg>
 <doc>Makes a variable available everywhere within the scope of the current suite.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.615513" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.212768" elapsed="0.000000"/>
 </kw>
 <kw name="Set Variable" owner="BuiltIn">
 <var>${problem_text}</var>
 <arg>Write the append/3 predicate.\nappend([],Y,Y) should be true.\nappend([a],[b],[a,b]) should be true.</arg>
 <doc>Returns the given values which can then be assigned to a variables.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.616512" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.212768" elapsed="0.000000"/>
 </kw>
 <kw name="Create Dictionary" owner="BuiltIn">
 <var>${qbody}</var>
 <arg>title=append/3</arg>
 <arg>problem=${problem_text}</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.616512" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.212768" elapsed="0.000000"/>
 </kw>
 <kw name="POST On Session" owner="RequestsLibrary">
 <var>${qresp}</var>
@@ -131,22 +131,22 @@
 <arg>json=${qbody}</arg>
 <arg>expected_status=200</arg>
 <doc>Sends a POST request on a previously created HTTP Session.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.616512" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.212768" elapsed="0.000000"/>
 </kw>
 <kw name="Set Suite Variable" owner="BuiltIn">
 <arg>${PL_QUESTION}</arg>
 <arg>${qresp.json()["question_id"]}</arg>
 <doc>Makes a variable available everywhere within the scope of the current suite.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.616512" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.212768" elapsed="0.001015"/>
 </kw>
 <doc>Register a teacher + student, create classroom + active lab + question.</doc>
-<status status="PASS" start="2026-04-08T15:51:52.613503" elapsed="0.003009"/>
+<status status="PASS" start="2026-04-08T17:42:48.210772" elapsed="0.003011"/>
 </kw>
 <arg>Create Session</arg>
 <arg>AND</arg>
 <arg>Setup Prolog Suite</arg>
 <doc>Executes all the given keywords in a sequence.</doc>
-<status status="PASS" start="2026-04-08T15:51:52.612514" elapsed="0.003998"/>
+<status status="PASS" start="2026-04-08T17:42:48.209794" elapsed="0.003989"/>
 </kw>
 <test id="s1-t1" name="TC-PRL-001 Syntax Check Passes For Correct Code" line="57">
 <kw name="Create Dictionary" owner="BuiltIn">
@@ -155,7 +155,7 @@
 <arg>student_file=test.pl</arg>
 <arg>student_code=${CORRECT_CODE}</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.617508" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.213783" elapsed="0.000000"/>
 </kw>
 <kw name="POST On Session" owner="RequestsLibrary">
 <var>${resp}</var>
@@ -164,12 +164,12 @@
 <arg>json=${body}</arg>
 <arg>expected_status=200</arg>
 <doc>Sends a POST request on a previously created HTTP Session.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.617508" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.213783" elapsed="0.000000"/>
 </kw>
 <kw name="Should Be True" owner="BuiltIn">
 <arg>${resp.json()["ok"]} == True</arg>
 <doc>Fails if the given condition is not true.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.617508" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.213783" elapsed="0.000989"/>
 </kw>
 <doc>SFR-6: syntactically valid Prolog returns ok=true.</doc>
 <tag>functional</tag>
@@ -177,7 +177,7 @@
 <tag>prolog</tag>
 <tag>submission</tag>
 <tag>syntax</tag>
-<status status="PASS" start="2026-04-08T15:51:52.616512" elapsed="0.000996"/>
+<status status="PASS" start="2026-04-08T17:42:48.213783" elapsed="0.000989"/>
 </test>
 <test id="s1-t2" name="TC-PRL-002 Syntax Check Fails For Invalid Code" line="66">
 <kw name="Create Dictionary" owner="BuiltIn">
@@ -186,7 +186,7 @@
 <arg>student_file=test.pl</arg>
 <arg>student_code=${SYNTAX_CODE}</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.619024" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.215277" elapsed="0.000000"/>
 </kw>
 <kw name="POST On Session" owner="RequestsLibrary">
 <var>${resp}</var>
@@ -195,32 +195,32 @@
 <arg>json=${body}</arg>
 <arg>expected_status=200</arg>
 <doc>Sends a POST request on a previously created HTTP Session.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.619024" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.215277" elapsed="0.000000"/>
 </kw>
 <kw name="Set Variable" owner="BuiltIn">
 <var>${j}</var>
 <arg>${resp.json()}</arg>
 <doc>Returns the given values which can then be assigned to a variables.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.619024" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.215277" elapsed="0.000000"/>
 </kw>
 <kw name="Get From Dictionary" owner="Collections">
 <var>${ok}</var>
 <arg>${j}</arg>
 <arg>ok</arg>
 <doc>Returns a value from the given ``dictionary`` based on the given ``key``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.619024" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.215277" elapsed="0.000000"/>
 </kw>
 <kw name="Should Be Equal As Integers" owner="BuiltIn">
 <arg>${resp.status_code}</arg>
 <arg>200</arg>
 <doc>Fails if objects are unequal after converting them to integers.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.619024" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.215277" elapsed="0.001026"/>
 </kw>
 <kw name="Dictionary Should Contain Key" owner="Collections">
 <arg>${j}</arg>
 <arg>syntax_error</arg>
 <doc>Fails if ``key`` is not found from ``dictionary``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.620057" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.216303" elapsed="0.000000"/>
 </kw>
 <doc>SFR-6, UFR-8: file with syntax error is detected.
 SYNTAX_CODE contains a bracket mismatch: foo(X) :- bar([X).
@@ -233,7 +233,7 @@ Either outcome confirms the checker ran without crashing.</doc>
 <tag>prolog</tag>
 <tag>submission</tag>
 <tag>syntax</tag>
-<status status="PASS" start="2026-04-08T15:51:52.617508" elapsed="0.002549"/>
+<status status="PASS" start="2026-04-08T17:42:48.214772" elapsed="0.001531"/>
 </test>
 <test id="s1-t3" name="TC-PRL-003 Syntax Error Message Is Human-Readable" line="87">
 <kw name="Create Dictionary" owner="BuiltIn">
@@ -242,7 +242,7 @@ Either outcome confirms the checker ran without crashing.</doc>
 <arg>student_file=test.pl</arg>
 <arg>student_code=${SYNTAX_CODE}</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.620057" elapsed="0.000988"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.217300" elapsed="0.000000"/>
 </kw>
 <kw name="POST On Session" owner="RequestsLibrary">
 <var>${resp}</var>
@@ -250,20 +250,20 @@ Either outcome confirms the checker ran without crashing.</doc>
 <arg>/api/syntax-check</arg>
 <arg>json=${body}</arg>
 <doc>Sends a POST request on a previously created HTTP Session.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.621045" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.217300" elapsed="0.000000"/>
 </kw>
 <kw name="Set Variable" owner="BuiltIn">
 <var>${j}</var>
 <arg>${resp.json()}</arg>
 <doc>Returns the given values which can then be assigned to a variables.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.621045" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.217300" elapsed="0.000000"/>
 </kw>
 <kw name="Get From Dictionary" owner="Collections">
 <var>${ok}</var>
 <arg>${j}</arg>
 <arg>ok</arg>
 <doc>Returns a value from the given ``dictionary`` based on the given ``key``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.621045" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.217300" elapsed="0.000000"/>
 </kw>
 <if>
 <branch type="IF" condition="not $ok">
@@ -272,28 +272,28 @@ Either outcome confirms the checker ran without crashing.</doc>
 <arg>${j}</arg>
 <arg>syntax_error</arg>
 <doc>Returns a value from the given ``dictionary`` based on the given ``key``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.621045" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.217300" elapsed="0.000000"/>
 </kw>
 <kw name="Should Not Be Empty" owner="BuiltIn">
 <arg>${err}</arg>
 <doc>Verifies that the given item is not empty.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.621045" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.217300" elapsed="0.000000"/>
 </kw>
 <kw name="Convert To String" owner="BuiltIn">
 <var>${err_str}</var>
 <arg>${err}</arg>
 <doc>Converts the given item to a Unicode string.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.621045" elapsed="0.001011"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.218289" elapsed="0.000000"/>
 </kw>
 <kw name="Should Not Start With" owner="BuiltIn">
 <arg>${err_str}</arg>
 <arg>error(</arg>
 <doc>Fails if the string ``str1`` starts with the string ``str2``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.622056" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.218289" elapsed="0.000000"/>
 </kw>
-<status status="PASS" start="2026-04-08T15:51:52.621045" elapsed="0.001011"/>
+<status status="PASS" start="2026-04-08T17:42:48.217300" elapsed="0.000989"/>
 </branch>
-<status status="PASS" start="2026-04-08T15:51:52.621045" elapsed="0.001011"/>
+<status status="PASS" start="2026-04-08T17:42:48.217300" elapsed="0.000989"/>
 </if>
 <doc>UFR-8: when a syntax error is detected, the message must not be
 a raw Prolog exception term. If ok=true (SWI accepted the file),
@@ -303,7 +303,7 @@ syntax_error will be None/null — skip the format check in that case.</doc>
 <tag>quality</tag>
 <tag>submission</tag>
 <tag>syntax</tag>
-<status status="PASS" start="2026-04-08T15:51:52.620057" elapsed="0.001999"/>
+<status status="PASS" start="2026-04-08T17:42:48.216303" elapsed="0.001986"/>
 </test>
 <test id="s1-t4" name="TC-PRL-004 Syntax Check Responds Within 5 Seconds" line="106">
 <kw name="Create Dictionary" owner="BuiltIn">
@@ -312,7 +312,7 @@ syntax_error will be None/null — skip the format check in that case.</doc>
 <arg>student_file=test.pl</arg>
 <arg>student_code=${CORRECT_CODE}</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.622056" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.219290" elapsed="0.000000"/>
 </kw>
 <kw name="POST On Session" owner="RequestsLibrary">
 <var>${resp}</var>
@@ -320,25 +320,25 @@ syntax_error will be None/null — skip the format check in that case.</doc>
 <arg>/api/syntax-check</arg>
 <arg>json=${body}</arg>
 <doc>Sends a POST request on a previously created HTTP Session.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.623055" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.219290" elapsed="0.000000"/>
 </kw>
 <kw name="Response Time Is Under" owner="common">
 <kw name="Evaluate" owner="BuiltIn">
 <var>${elapsed_ms}</var>
 <arg>${resp.elapsed.total_seconds()} * 1000</arg>
 <doc>Evaluates the given expression in Python and returns the result.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.623055" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.219290" elapsed="0.000000"/>
 </kw>
 <kw name="Should Be True" owner="BuiltIn">
 <arg>${elapsed_ms} &lt; ${max_ms}</arg>
 <arg>Response took ${elapsed_ms}ms, expected &lt; ${max_ms}ms</arg>
 <doc>Fails if the given condition is not true.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.623055" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.219290" elapsed="0.001010"/>
 </kw>
 <arg>${resp}</arg>
 <arg>5000</arg>
 <doc>Fail if the last HTTP response took longer than threshold (ms).</doc>
-<status status="PASS" start="2026-04-08T15:51:52.623055" elapsed="0.000000"/>
+<status status="PASS" start="2026-04-08T17:42:48.219290" elapsed="0.001010"/>
 </kw>
 <doc>SNFR-1: syntax check must be fast.</doc>
 <tag>functional</tag>
@@ -346,7 +346,7 @@ syntax_error will be None/null — skip the format check in that case.</doc>
 <tag>prolog</tag>
 <tag>submission</tag>
 <tag>syntax</tag>
-<status status="PASS" start="2026-04-08T15:51:52.622056" elapsed="0.000999"/>
+<status status="PASS" start="2026-04-08T17:42:48.218289" elapsed="0.002011"/>
 </test>
 <test id="s1-t5" name="TC-PRL-005 Query Run Returns Proof Tree And Trace" line="118">
 <kw name="Create Dictionary" owner="BuiltIn">
@@ -356,7 +356,7 @@ syntax_error will be None/null — skip the format check in that case.</doc>
 <arg>student_code=${CORRECT_CODE}</arg>
 <arg>query=append([],[],[])</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.624045" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.220300" elapsed="0.000000"/>
 </kw>
 <kw name="POST On Session" owner="RequestsLibrary">
 <var>${resp}</var>
@@ -365,35 +365,35 @@ syntax_error will be None/null — skip the format check in that case.</doc>
 <arg>json=${body}</arg>
 <arg>expected_status=200</arg>
 <doc>Sends a POST request on a previously created HTTP Session.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.624045" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.220300" elapsed="0.000000"/>
 </kw>
 <kw name="Should Be True" owner="BuiltIn">
 <arg>${resp.json()["ok"]} == True</arg>
 <doc>Fails if the given condition is not true.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.624045" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.220300" elapsed="0.000989"/>
 </kw>
 <kw name="Set Variable" owner="BuiltIn">
 <var>${j}</var>
 <arg>${resp.json()}</arg>
 <doc>Returns the given values which can then be assigned to a variables.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.624045" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.221289" elapsed="0.000000"/>
 </kw>
 <kw name="Dictionary Should Contain Key" owner="Collections">
 <arg>${j}</arg>
 <arg>proof_tree</arg>
 <doc>Fails if ``key`` is not found from ``dictionary``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.625035" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.221289" elapsed="0.000000"/>
 </kw>
 <kw name="Dictionary Should Contain Key" owner="Collections">
 <arg>${j}</arg>
 <arg>trace</arg>
 <doc>Fails if ``key`` is not found from ``dictionary``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.625035" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.221289" elapsed="0.000000"/>
 </kw>
 <kw name="Should Not Be Empty" owner="BuiltIn">
 <arg>${j["proof_tree"]}</arg>
 <doc>Verifies that the given item is not empty.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.625035" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.221289" elapsed="0.000000"/>
 </kw>
 <doc>SFR-11, UFR-9: correct code returns proof_tree and trace strings.</doc>
 <tag>functional</tag>
@@ -401,7 +401,7 @@ syntax_error will be None/null — skip the format check in that case.</doc>
 <tag>prolog</tag>
 <tag>query</tag>
 <tag>submission</tag>
-<status status="PASS" start="2026-04-08T15:51:52.623055" elapsed="0.001980"/>
+<status status="PASS" start="2026-04-08T17:42:48.220300" elapsed="0.000989"/>
 </test>
 <test id="s1-t6" name="TC-PRL-006 Query Run Detects Logic Error" line="132">
 <kw name="Create Dictionary" owner="BuiltIn">
@@ -411,7 +411,7 @@ syntax_error will be None/null — skip the format check in that case.</doc>
 <arg>student_code=${WRONG_CODE}</arg>
 <arg>query=append([a],[b],[a,b])</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.626057" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.222300" elapsed="0.000000"/>
 </kw>
 <kw name="POST On Session" owner="RequestsLibrary">
 <var>${resp}</var>
@@ -419,31 +419,31 @@ syntax_error will be None/null — skip the format check in that case.</doc>
 <arg>/api/query-run</arg>
 <arg>json=${body}</arg>
 <doc>Sends a POST request on a previously created HTTP Session.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.626057" elapsed="0.000986"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.222300" elapsed="0.000000"/>
 </kw>
 <kw name="Set Variable" owner="BuiltIn">
 <var>${j}</var>
 <arg>${resp.json()}</arg>
 <doc>Returns the given values which can then be assigned to a variables.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.627043" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.222300" elapsed="0.001529"/>
 </kw>
 <kw name="Should Be True" owner="BuiltIn">
 <arg>${resp.json()["ok"]} == True</arg>
 <doc>Fails if the given condition is not true.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.627043" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.223829" elapsed="0.000000"/>
 </kw>
 <kw name="Get From Dictionary" owner="Collections">
 <var>${mode}</var>
 <arg>${j}</arg>
 <arg>shapiro_mode</arg>
 <doc>Returns a value from the given ``dictionary`` based on the given ``key``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.627043" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.223829" elapsed="0.000000"/>
 </kw>
 <kw name="Should Be Equal" owner="BuiltIn">
 <arg>${mode}</arg>
 <arg>incomplete</arg>
 <doc>Fails if the given objects are unequal.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.627043" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.223829" elapsed="0.000000"/>
 </kw>
 <doc>UFR-10: wrong code is identified by Shapiro's algorithm.
 WRONG_CODE has append([],Y,[]) instead of append([],Y,Y).
@@ -458,7 +458,7 @@ Both "incomplete" and "incorrect" are non-ok bug indicators.</doc>
 <tag>prolog</tag>
 <tag>query</tag>
 <tag>submission</tag>
-<status status="PASS" start="2026-04-08T15:51:52.625035" elapsed="0.002008"/>
+<status status="PASS" start="2026-04-08T17:42:48.222300" elapsed="0.001529"/>
 </test>
 <test id="s1-t7" name="TC-PRL-007 Query Run Responds Within 5 Seconds" line="153">
 <kw name="Create Dictionary" owner="BuiltIn">
@@ -468,7 +468,7 @@ Both "incomplete" and "incorrect" are non-ok bug indicators.</doc>
 <arg>student_code=${CORRECT_CODE}</arg>
 <arg>query=append([],[],[])</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.628044" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.224844" elapsed="0.000000"/>
 </kw>
 <kw name="POST On Session" owner="RequestsLibrary">
 <var>${resp}</var>
@@ -476,25 +476,25 @@ Both "incomplete" and "incorrect" are non-ok bug indicators.</doc>
 <arg>/api/query-run</arg>
 <arg>json=${body}</arg>
 <doc>Sends a POST request on a previously created HTTP Session.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.628044" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.224844" elapsed="0.000000"/>
 </kw>
 <kw name="Response Time Is Under" owner="common">
 <kw name="Evaluate" owner="BuiltIn">
 <var>${elapsed_ms}</var>
 <arg>${resp.elapsed.total_seconds()} * 1000</arg>
 <doc>Evaluates the given expression in Python and returns the result.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.628044" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.224844" elapsed="0.000000"/>
 </kw>
 <kw name="Should Be True" owner="BuiltIn">
 <arg>${elapsed_ms} &lt; ${max_ms}</arg>
 <arg>Response took ${elapsed_ms}ms, expected &lt; ${max_ms}ms</arg>
 <doc>Fails if the given condition is not true.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.628044" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.224844" elapsed="0.000000"/>
 </kw>
 <arg>${resp}</arg>
 <arg>5000</arg>
 <doc>Fail if the last HTTP response took longer than threshold (ms).</doc>
-<status status="PASS" start="2026-04-08T15:51:52.628044" elapsed="0.000000"/>
+<status status="PASS" start="2026-04-08T17:42:48.224844" elapsed="0.000000"/>
 </kw>
 <doc>SNFR-1: query execution must respect response budget.</doc>
 <tag>functional</tag>
@@ -502,7 +502,7 @@ Both "incomplete" and "incorrect" are non-ok bug indicators.</doc>
 <tag>prolog</tag>
 <tag>query</tag>
 <tag>submission</tag>
-<status status="PASS" start="2026-04-08T15:51:52.627043" elapsed="0.002011"/>
+<status status="PASS" start="2026-04-08T17:42:48.223829" elapsed="0.001015"/>
 </test>
 <test id="s1-t8" name="TC-PRL-008 Full Diagnosis On Correct Code Shows No Failures" line="166">
 <kw name="Create Dictionary" owner="BuiltIn">
@@ -511,7 +511,7 @@ Both "incomplete" and "incorrect" are non-ok bug indicators.</doc>
 <arg>student_file=test.pl</arg>
 <arg>student_code=${CORRECT_CODE}</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.629054" elapsed="0.000511"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.225860" elapsed="0.000000"/>
 </kw>
 <kw name="POST On Session" owner="RequestsLibrary">
 <var>${resp}</var>
@@ -520,30 +520,30 @@ Both "incomplete" and "incorrect" are non-ok bug indicators.</doc>
 <arg>json=${body}</arg>
 <arg>expected_status=200</arg>
 <doc>Sends a POST request on a previously created HTTP Session.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.629565" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.225860" elapsed="0.000000"/>
 </kw>
 <kw name="Set Variable" owner="BuiltIn">
 <var>${j}</var>
 <arg>${resp.json()}</arg>
 <doc>Returns the given values which can then be assigned to a variables.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.629565" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.225860" elapsed="0.000000"/>
 </kw>
 <kw name="Should Be True" owner="BuiltIn">
 <arg>${j["ok"]} == True</arg>
 <doc>Fails if the given condition is not true.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.629565" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.225860" elapsed="0.001011"/>
 </kw>
 <kw name="Get From Dictionary" owner="Collections">
 <var>${log}</var>
 <arg>${j}</arg>
 <arg>log</arg>
 <doc>Returns a value from the given ``dictionary`` based on the given ``key``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.629565" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.226871" elapsed="0.000000"/>
 </kw>
 <kw name="Should Not Be Empty" owner="BuiltIn">
 <arg>${log}</arg>
 <doc>Verifies that the given item is not empty.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.629565" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.226871" elapsed="0.000000"/>
 </kw>
 <doc>SFR-10, UFR-7: correct code should produce no failure entries in the log.</doc>
 <tag>diagnosis</tag>
@@ -551,7 +551,7 @@ Both "incomplete" and "incorrect" are non-ok bug indicators.</doc>
 <tag>positive</tag>
 <tag>prolog</tag>
 <tag>submission</tag>
-<status status="PASS" start="2026-04-08T15:51:52.629054" elapsed="0.000511"/>
+<status status="PASS" start="2026-04-08T17:42:48.225860" elapsed="0.001011"/>
 </test>
 <test id="s1-t9" name="TC-PRL-009 Full Diagnosis On Wrong Code Reports Failure" line="178">
 <kw name="Create Dictionary" owner="BuiltIn">
@@ -560,7 +560,7 @@ Both "incomplete" and "incorrect" are non-ok bug indicators.</doc>
 <arg>student_file=test.pl</arg>
 <arg>student_code=${WRONG_CODE}</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.630590" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.226871" elapsed="0.001000"/>
 </kw>
 <kw name="POST On Session" owner="RequestsLibrary">
 <var>${resp}</var>
@@ -568,31 +568,31 @@ Both "incomplete" and "incorrect" are non-ok bug indicators.</doc>
 <arg>/api/full-diagnosis</arg>
 <arg>json=${body}</arg>
 <doc>Sends a POST request on a previously created HTTP Session.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.630590" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.227871" elapsed="0.000000"/>
 </kw>
 <kw name="Get From Dictionary" owner="Collections">
 <var>${log}</var>
 <arg>${resp.json()}</arg>
 <arg>log</arg>
 <doc>Returns a value from the given ``dictionary`` based on the given ``key``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.630590" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.227871" elapsed="0.000000"/>
 </kw>
 <kw name="Should Not Be Empty" owner="BuiltIn">
 <arg>${log}</arg>
 <doc>Verifies that the given item is not empty.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.630590" elapsed="0.001003"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.227871" elapsed="0.000000"/>
 </kw>
 <kw name="Convert To Lower Case" owner="String">
 <var>${lower_log}</var>
 <arg>${log}</arg>
 <doc>Converts string to lower case.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.631593" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.227871" elapsed="0.000000"/>
 </kw>
 <kw name="Should Match Regexp" owner="BuiltIn">
 <arg>${lower_log}</arg>
 <arg>(fail|error|incorrect|wrong|diagnos)</arg>
 <doc>Fails if ``string`` does not match ``pattern`` as a regular expression.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.631593" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.227871" elapsed="0.000000"/>
 </kw>
 <doc>UFR-7, UFR-10: wrong base case causes test failure in log.</doc>
 <tag>diagnosis</tag>
@@ -600,7 +600,7 @@ Both "incomplete" and "incorrect" are non-ok bug indicators.</doc>
 <tag>negative</tag>
 <tag>prolog</tag>
 <tag>submission</tag>
-<status status="PASS" start="2026-04-08T15:51:52.630590" elapsed="0.001003"/>
+<status status="PASS" start="2026-04-08T17:42:48.226871" elapsed="0.002000"/>
 </test>
 <test id="s1-t10" name="TC-PRL-010 Full Diagnosis Responds Within 30 Seconds" line="190">
 <kw name="Create Dictionary" owner="BuiltIn">
@@ -609,7 +609,7 @@ Both "incomplete" and "incorrect" are non-ok bug indicators.</doc>
 <arg>student_file=test.pl</arg>
 <arg>student_code=${CORRECT_CODE}</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.632583" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.228871" elapsed="0.000989"/>
 </kw>
 <kw name="POST On Session" owner="RequestsLibrary">
 <var>${resp}</var>
@@ -617,25 +617,25 @@ Both "incomplete" and "incorrect" are non-ok bug indicators.</doc>
 <arg>/api/full-diagnosis</arg>
 <arg>json=${body}</arg>
 <doc>Sends a POST request on a previously created HTTP Session.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.632583" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.229860" elapsed="0.000000"/>
 </kw>
 <kw name="Response Time Is Under" owner="common">
 <kw name="Evaluate" owner="BuiltIn">
 <var>${elapsed_ms}</var>
 <arg>${resp.elapsed.total_seconds()} * 1000</arg>
 <doc>Evaluates the given expression in Python and returns the result.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.632583" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.229860" elapsed="0.000000"/>
 </kw>
 <kw name="Should Be True" owner="BuiltIn">
 <arg>${elapsed_ms} &lt; ${max_ms}</arg>
 <arg>Response took ${elapsed_ms}ms, expected &lt; ${max_ms}ms</arg>
 <doc>Fails if the given condition is not true.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.632583" elapsed="0.001103"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.229860" elapsed="0.000000"/>
 </kw>
 <arg>${resp}</arg>
 <arg>30000</arg>
 <doc>Fail if the last HTTP response took longer than threshold (ms).</doc>
-<status status="PASS" start="2026-04-08T15:51:52.632583" elapsed="0.001103"/>
+<status status="PASS" start="2026-04-08T17:42:48.229860" elapsed="0.000000"/>
 </kw>
 <doc>SNFR-1: full diagnosis must complete within 30 seconds.
 Full diagnosis involves SWI-Prolog meta-interpretation,
@@ -647,7 +647,7 @@ hangs without setting an unreachable 5s target.</doc>
 <tag>performance</tag>
 <tag>prolog</tag>
 <tag>submission</tag>
-<status status="PASS" start="2026-04-08T15:51:52.631593" elapsed="0.002093"/>
+<status status="PASS" start="2026-04-08T17:42:48.228871" elapsed="0.000989"/>
 </test>
 <test id="s1-t11" name="TC-PRL-011 Full Diagnosis With Custom Test Cases" line="202">
 <kw name="Create Dictionary" owner="BuiltIn">
@@ -656,7 +656,7 @@ hangs without setting an unreachable 5s target.</doc>
 <arg>input=append([],[],[])</arg>
 <arg>expected_output=true</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.633686" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.230871" elapsed="0.000000"/>
 </kw>
 <kw name="Create Dictionary" owner="BuiltIn">
 <var>${tc2}</var>
@@ -664,14 +664,14 @@ hangs without setting an unreachable 5s target.</doc>
 <arg>input=append([a],[b],[a,b])</arg>
 <arg>expected_output=true</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.633686" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.230871" elapsed="0.000000"/>
 </kw>
 <kw name="Create List" owner="BuiltIn">
 <var>${tcs}</var>
 <arg>${tc1}</arg>
 <arg>${tc2}</arg>
 <doc>Returns a list containing given items.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.634578" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.230871" elapsed="0.000000"/>
 </kw>
 <kw name="Create Dictionary" owner="BuiltIn">
 <var>${body}</var>
@@ -679,13 +679,13 @@ hangs without setting an unreachable 5s target.</doc>
 <arg>student_file=test.pl</arg>
 <arg>student_code=${CORRECT_CODE}</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.634578" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.230871" elapsed="0.000000"/>
 </kw>
 <kw name="Set To Dictionary" owner="Collections">
 <arg>${body}</arg>
 <arg>test_cases_file=${tcs}</arg>
 <doc>Adds the given ``key_value_pairs`` and/or ``items`` to the ``dictionary``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.634578" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.231860" elapsed="0.000000"/>
 </kw>
 <kw name="POST On Session" owner="RequestsLibrary">
 <var>${resp}</var>
@@ -693,13 +693,13 @@ hangs without setting an unreachable 5s target.</doc>
 <arg>/api/full-diagnosis</arg>
 <arg>json=${body}</arg>
 <doc>Sends a POST request on a previously created HTTP Session.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.634578" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.231860" elapsed="0.000000"/>
 </kw>
 <kw name="Should Be Equal As Integers" owner="BuiltIn">
 <arg>${resp.status_code}</arg>
 <arg>200</arg>
 <doc>Fails if objects are unequal after converting them to integers.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.634578" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.231860" elapsed="0.000000"/>
 </kw>
 <doc>SFR-9, UFR-5: teacher-supplied test cases are respected.</doc>
 <tag>diagnosis</tag>
@@ -707,7 +707,7 @@ hangs without setting an unreachable 5s target.</doc>
 <tag>prolog</tag>
 <tag>submission</tag>
 <tag>testcase</tag>
-<status status="PASS" start="2026-04-08T15:51:52.633686" elapsed="0.000892"/>
+<status status="PASS" start="2026-04-08T17:42:48.230871" elapsed="0.000989"/>
 </test>
 <test id="s1-t12" name="TC-PRL-012 Generate Testcases Degrades Gracefully Without LLM" line="218">
 <kw name="Create Dictionary" owner="BuiltIn">
@@ -715,7 +715,7 @@ hangs without setting an unreachable 5s target.</doc>
 <arg>problem_id=${PL_QUESTION}</arg>
 <arg>student_code=${CORRECT_CODE}</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.635580" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.231860" elapsed="0.000000"/>
 </kw>
 <kw name="POST On Session" owner="RequestsLibrary">
 <var>${resp}</var>
@@ -723,30 +723,30 @@ hangs without setting an unreachable 5s target.</doc>
 <arg>/api/generate-diagnosis-testcases</arg>
 <arg>json=${body}</arg>
 <doc>Sends a POST request on a previously created HTTP Session.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.635580" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.232889" elapsed="0.000000"/>
 </kw>
 <kw name="Should Be Equal As Integers" owner="BuiltIn">
 <arg>${resp.status_code}</arg>
 <arg>200</arg>
 <doc>Fails if objects are unequal after converting them to integers.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.635580" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.232889" elapsed="0.000000"/>
 </kw>
 <kw name="Set Variable" owner="BuiltIn">
 <var>${j}</var>
 <arg>${resp.json()}</arg>
 <doc>Returns the given values which can then be assigned to a variables.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.635580" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.232889" elapsed="0.000000"/>
 </kw>
 <kw name="Dictionary Should Contain Key" owner="Collections">
 <arg>${j}</arg>
 <arg>test_cases</arg>
 <doc>Fails if ``key`` is not found from ``dictionary``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.636578" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.232889" elapsed="0.000000"/>
 </kw>
 <kw name="Should Be True" owner="BuiltIn">
 <arg>isinstance($j["test_cases"], list)</arg>
 <doc>Fails if the given condition is not true.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.636578" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.232889" elapsed="0.000000"/>
 </kw>
 <doc>SNFR-10: endpoint returns ok=false and empty list when LLM unavailable.</doc>
 <tag>degradation</tag>
@@ -754,7 +754,7 @@ hangs without setting an unreachable 5s target.</doc>
 <tag>llm</tag>
 <tag>prolog</tag>
 <tag>submission</tag>
-<status status="PASS" start="2026-04-08T15:51:52.635580" elapsed="0.000998"/>
+<status status="PASS" start="2026-04-08T17:42:48.231860" elapsed="0.001029"/>
 </test>
 <test id="s1-t13" name="TC-PRL-013 Diagnosis Log Does Not Expose API Keys" line="234">
 <kw name="Create Dictionary" owner="BuiltIn">
@@ -763,7 +763,7 @@ hangs without setting an unreachable 5s target.</doc>
 <arg>student_file=test.pl</arg>
 <arg>student_code=${CORRECT_CODE}</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.637595" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.233883" elapsed="0.000000"/>
 </kw>
 <kw name="POST On Session" owner="RequestsLibrary">
 <var>${resp}</var>
@@ -771,40 +771,45 @@ hangs without setting an unreachable 5s target.</doc>
 <arg>/api/full-diagnosis</arg>
 <arg>json=${body}</arg>
 <doc>Sends a POST request on a previously created HTTP Session.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.637595" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.233883" elapsed="0.000978"/>
 </kw>
 <kw name="Get From Dictionary" owner="Collections">
 <var>${log}</var>
 <arg>${resp.json()}</arg>
 <arg>log</arg>
 <doc>Returns a value from the given ``dictionary`` based on the given ``key``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.637595" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.234861" elapsed="0.000000"/>
 </kw>
 <kw name="Should Not Contain" owner="BuiltIn">
 <arg>${log}</arg>
-<arg>GROQ_API_KEY</arg>
+<arg>gsk_</arg>
 <doc>Fails if ``container`` contains ``item`` one or more times.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.637595" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.234861" elapsed="0.000000"/>
 </kw>
 <kw name="Should Not Contain" owner="BuiltIn">
 <arg>${log}</arg>
 <arg>sk-</arg>
 <doc>Fails if ``container`` contains ``item`` one or more times.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.637595" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.234861" elapsed="0.000508"/>
 </kw>
-<doc>SNFR-8: GROQ_API_KEY must not appear in the diagnosis log.</doc>
+<doc>SNFR-8: the actual API key value must not leak into the diagnosis log.
+The env-var NAME ("GROQ_API_KEY") may legitimately appear in error
+messages when no key is configured (e.g. on CI), so we only assert
+that known secret-value prefixes are absent:
+  gsk_  — Groq API key prefix
+  sk-   — legacy OpenAI-style key prefix</doc>
 <tag>functional</tag>
 <tag>prolog</tag>
 <tag>security</tag>
 <tag>submission</tag>
-<status status="PASS" start="2026-04-08T15:51:52.636578" elapsed="0.001017"/>
+<status status="PASS" start="2026-04-08T17:42:48.232889" elapsed="0.002480"/>
 </test>
-<test id="s1-t14" name="TC-PRL-014 Infinite Loop Code Does Not Hang Server" line="248">
+<test id="s1-t14" name="TC-PRL-014 Infinite Loop Code Does Not Hang Server" line="254">
 <kw name="Set Variable" owner="BuiltIn">
 <var>${loop_code}</var>
 <arg>loop(X) :- loop(X).</arg>
 <doc>Returns the given values which can then be assigned to a variables.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.639107" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.235369" elapsed="0.000000"/>
 </kw>
 <kw name="Create Dictionary" owner="BuiltIn">
 <var>${body}</var>
@@ -812,7 +817,7 @@ hangs without setting an unreachable 5s target.</doc>
 <arg>student_file=loop.pl</arg>
 <arg>student_code=${loop_code}</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.639107" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.235369" elapsed="0.001013"/>
 </kw>
 <kw name="POST On Session" owner="RequestsLibrary">
 <var>${resp}</var>
@@ -820,25 +825,25 @@ hangs without setting an unreachable 5s target.</doc>
 <arg>/api/syntax-check</arg>
 <arg>json=${body}</arg>
 <doc>Sends a POST request on a previously created HTTP Session.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.639107" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.236382" elapsed="0.000000"/>
 </kw>
 <kw name="Response Time Is Under" owner="common">
 <kw name="Evaluate" owner="BuiltIn">
 <var>${elapsed_ms}</var>
 <arg>${resp.elapsed.total_seconds()} * 1000</arg>
 <doc>Evaluates the given expression in Python and returns the result.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.640143" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.236382" elapsed="0.000000"/>
 </kw>
 <kw name="Should Be True" owner="BuiltIn">
 <arg>${elapsed_ms} &lt; ${max_ms}</arg>
 <arg>Response took ${elapsed_ms}ms, expected &lt; ${max_ms}ms</arg>
 <doc>Fails if the given condition is not true.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.640143" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.236382" elapsed="0.000000"/>
 </kw>
 <arg>${resp}</arg>
 <arg>15000</arg>
 <doc>Fail if the last HTTP response took longer than threshold (ms).</doc>
-<status status="PASS" start="2026-04-08T15:51:52.639107" elapsed="0.001036"/>
+<status status="PASS" start="2026-04-08T17:42:48.236382" elapsed="0.000000"/>
 </kw>
 <kw name="Create Dictionary" owner="BuiltIn">
 <var>${diag_body}</var>
@@ -846,7 +851,7 @@ hangs without setting an unreachable 5s target.</doc>
 <arg>student_file=loop.pl</arg>
 <arg>student_code=${loop_code}</arg>
 <doc>Creates and returns a dictionary based on the given ``items``.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.640143" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.237381" elapsed="0.000000"/>
 </kw>
 <kw name="POST On Session" owner="RequestsLibrary">
 <var>${dresp}</var>
@@ -854,25 +859,25 @@ hangs without setting an unreachable 5s target.</doc>
 <arg>/api/full-diagnosis</arg>
 <arg>json=${diag_body}</arg>
 <doc>Sends a POST request on a previously created HTTP Session.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.640143" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.237381" elapsed="0.000000"/>
 </kw>
 <kw name="Response Time Is Under" owner="common">
 <kw name="Evaluate" owner="BuiltIn">
 <var>${elapsed_ms}</var>
 <arg>${resp.elapsed.total_seconds()} * 1000</arg>
 <doc>Evaluates the given expression in Python and returns the result.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.641129" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.237381" elapsed="0.000000"/>
 </kw>
 <kw name="Should Be True" owner="BuiltIn">
 <arg>${elapsed_ms} &lt; ${max_ms}</arg>
 <arg>Response took ${elapsed_ms}ms, expected &lt; ${max_ms}ms</arg>
 <doc>Fails if the given condition is not true.</doc>
-<status status="NOT RUN" start="2026-04-08T15:51:52.641129" elapsed="0.000000"/>
+<status status="NOT RUN" start="2026-04-08T17:42:48.237381" elapsed="0.000000"/>
 </kw>
 <arg>${dresp}</arg>
 <arg>15000</arg>
 <doc>Fail if the last HTTP response took longer than threshold (ms).</doc>
-<status status="PASS" start="2026-04-08T15:51:52.641129" elapsed="0.000000"/>
+<status status="PASS" start="2026-04-08T17:42:48.237381" elapsed="0.000000"/>
 </kw>
 <doc>SNFR-4: non-terminating student code must be cut off by depth/time limit.</doc>
 <tag>functional</tag>
@@ -880,14 +885,14 @@ hangs without setting an unreachable 5s target.</doc>
 <tag>prolog</tag>
 <tag>safety</tag>
 <tag>submission</tag>
-<status status="PASS" start="2026-04-08T15:51:52.637595" elapsed="0.003534"/>
+<status status="PASS" start="2026-04-08T17:42:48.235369" elapsed="0.002012"/>
 </test>
 <doc>Acceptance tests for Prolog code submission and diagnosis pipeline
 (UFR-5..UFR-10, SFR-6..SFR-13, SNFR-1, SNFR-4, SNFR-10).
 
 Requires the ProgCheck server running at http://localhost:8000.
 Run with: robot tests/robot/prolog_submission.robot</doc>
-<status status="PASS" start="2026-04-08T15:51:52.400429" elapsed="0.240700"/>
+<status status="PASS" start="2026-04-08T17:42:48.029006" elapsed="0.209375"/>
 </suite>
 <statistics>
 <total>

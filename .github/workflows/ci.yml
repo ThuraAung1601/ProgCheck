@@ -114,8 +114,8 @@ jobs:
       - name: Run PLUnit — diagnosis_engine
         run: |
           swipl -g "
-            consult('src/meta_interpreter.pl'),
-            consult('src/diagnosis_engine.pl'),
+            consult('src/prolog/meta_interpreter.pl'),
+            consult('src/prolog/diagnosis_engine.pl'),
             consult('tests/prolog/test_diagnosis_engine.pl'),
             run_tests,
             halt(0)

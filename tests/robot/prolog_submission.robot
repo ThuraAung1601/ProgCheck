@@ -232,13 +232,19 @@ TC-PRL-012 Generate Testcases Degrades Gracefully Without LLM
 # ─────────────────────────────────────────────────────────────────────────────
 
 TC-PRL-013 Diagnosis Log Does Not Expose API Keys
-    [Documentation]    SNFR-8: GROQ_API_KEY must not appear in the diagnosis log.
+    [Documentation]    SNFR-8: the actual API key value must not leak into the diagnosis log.
+    ...                The env-var NAME ("GROQ_API_KEY") may legitimately appear in error
+    ...                messages when no key is configured (e.g. on CI), so we only assert
+    ...                that known secret-value prefixes are absent:
+    ...                  gsk_  — Groq API key prefix
+    ...                  sk-   — legacy OpenAI-style key prefix
     [Tags]    prolog    security
     ${body}=    Create Dictionary
     ...    problem_id=${PL_QUESTION}    student_file=test.pl    student_code=${CORRECT_CODE}
     ${resp}=    POST On Session    progcheck    /api/full-diagnosis    json=${body}
     ${log}=    Get From Dictionary    ${resp.json()}    log
-    Should Not Contain    ${log}    GROQ_API_KEY
+    # Only check that actual secret values are not present — not the variable name
+    Should Not Contain    ${log}    gsk_
     Should Not Contain    ${log}    sk-
 
 # ─────────────────────────────────────────────────────────────────────────────
