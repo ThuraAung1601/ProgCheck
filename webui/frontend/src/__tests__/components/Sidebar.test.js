@@ -90,4 +90,58 @@ describe('Sidebar — collapsed', () => {
     fireEvent.click(screen.getByTitle('Expand sidebar'));
     expect(onCollapseChange).toHaveBeenCalledWith(false);
   });
+
+  test('collapsed logout button calls onLogout', () => {
+    const onLogout = jest.fn();
+    renderSidebar({ collapsed: true, onLogout });
+    fireEvent.click(screen.getByTitle('Log out'));
+    expect(onLogout).toHaveBeenCalled();
+  });
+});
+
+describe('Sidebar — hover interactions', () => {
+  test('mouseEnter on collapse button does not crash', () => {
+    renderSidebar();
+    const btn = screen.getByTitle('Collapse sidebar');
+    expect(() => fireEvent.mouseEnter(btn)).not.toThrow();
+  });
+
+  test('mouseLeave on collapse button does not crash', () => {
+    renderSidebar();
+    const btn = screen.getByTitle('Collapse sidebar');
+    fireEvent.mouseEnter(btn);
+    expect(() => fireEvent.mouseLeave(btn)).not.toThrow();
+  });
+
+  test('mouseEnter on logout button does not crash (expanded)', () => {
+    renderSidebar();
+    const btn = screen.getByTitle('Log out');
+    expect(() => fireEvent.mouseEnter(btn)).not.toThrow();
+  });
+
+  test('mouseLeave on logout button does not crash (expanded)', () => {
+    renderSidebar();
+    const btn = screen.getByTitle('Log out');
+    fireEvent.mouseEnter(btn);
+    expect(() => fireEvent.mouseLeave(btn)).not.toThrow();
+  });
+
+  test('mouseEnter on logout button does not crash (collapsed)', () => {
+    renderSidebar({ collapsed: true });
+    const btn = screen.getByTitle('Log out');
+    expect(() => fireEvent.mouseEnter(btn)).not.toThrow();
+  });
+
+  test('mouseLeave on logout button does not crash (collapsed)', () => {
+    renderSidebar({ collapsed: true });
+    const btn = screen.getByTitle('Log out');
+    fireEvent.mouseEnter(btn);
+    expect(() => fireEvent.mouseLeave(btn)).not.toThrow();
+  });
+
+  test('onCollapseChange not called when prop is undefined', () => {
+    // should not throw when onCollapseChange is not passed
+    renderSidebar({ onCollapseChange: undefined });
+    expect(() => fireEvent.click(screen.getByTitle('Collapse sidebar'))).not.toThrow();
+  });
 });

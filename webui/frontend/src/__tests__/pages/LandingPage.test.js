@@ -34,7 +34,6 @@ describe('LandingPage', () => {
   test('scroll event does not crash', () => {
     render(<LandingPage onStudentLogin={noop} onTeacherLogin={noop} onSignup={noop} />);
     fireEvent.scroll(window, { target: { scrollY: 50 } });
-    // no assertion needed — just confirm no throw
   });
 
   test('cleanup removes scroll listener', () => {
@@ -45,5 +44,55 @@ describe('LandingPage', () => {
     unmount();
     expect(removeSpy).toHaveBeenCalledWith('scroll', expect.any(Function));
     removeSpy.mockRestore();
+  });
+
+  test('Student Login button calls onStudentLogin', () => {
+    const onStudentLogin = jest.fn();
+    render(<LandingPage onStudentLogin={onStudentLogin} onTeacherLogin={noop} onSignup={noop} />);
+    fireEvent.click(screen.getByText('Student Login'));
+    expect(onStudentLogin).toHaveBeenCalled();
+  });
+
+  test('Teacher Login button calls onTeacherLogin', () => {
+    const onTeacherLogin = jest.fn();
+    render(<LandingPage onStudentLogin={noop} onTeacherLogin={onTeacherLogin} onSignup={noop} />);
+    fireEvent.click(screen.getByText('Teacher Login'));
+    expect(onTeacherLogin).toHaveBeenCalled();
+  });
+
+  test('Get Started button opens role modal', () => {
+    render(<LandingPage onStudentLogin={noop} onTeacherLogin={noop} onSignup={noop} />);
+    fireEvent.click(screen.getByText('Get Started'));
+    expect(screen.getByText('Choose your role')).toBeInTheDocument();
+  });
+
+  test('modal Student button calls onSignup with student', () => {
+    const onSignup = jest.fn();
+    render(<LandingPage onStudentLogin={noop} onTeacherLogin={noop} onSignup={onSignup} />);
+    fireEvent.click(screen.getByText('Get Started'));
+    const [studentBtn] = screen.getAllByText('Student');
+    fireEvent.click(studentBtn);
+    expect(onSignup).toHaveBeenCalledWith('student');
+  });
+
+  test('modal Teacher button calls onSignup with teacher', () => {
+    const onSignup = jest.fn();
+    render(<LandingPage onStudentLogin={noop} onTeacherLogin={noop} onSignup={onSignup} />);
+    fireEvent.click(screen.getByText('Get Started'));
+    fireEvent.click(screen.getByText('Teacher'));
+    expect(onSignup).toHaveBeenCalledWith('teacher');
+  });
+
+  test('modal Cancel button closes the modal', () => {
+    render(<LandingPage onStudentLogin={noop} onTeacherLogin={noop} onSignup={noop} />);
+    fireEvent.click(screen.getByText('Get Started'));
+    expect(screen.getByText('Choose your role')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(screen.queryByText('Choose your role')).not.toBeInTheDocument();
+  });
+
+  test('footer shows copyright text', () => {
+    render(<LandingPage onStudentLogin={noop} onTeacherLogin={noop} onSignup={noop} />);
+    expect(document.body.textContent).toMatch(/ProgCheck/);
   });
 });
