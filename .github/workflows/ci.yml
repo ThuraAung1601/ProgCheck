@@ -105,7 +105,7 @@ jobs:
       - name: Run PLUnit — meta_interpreter
         run: |
           swipl -g "
-            consult('src/meta_interpreter.pl'),
+            consult('src/prolog/meta_interpreter.pl'),
             consult('tests/prolog/test_meta_interpreter.pl'),
             run_tests,
             halt(0)
