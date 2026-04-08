@@ -193,7 +193,7 @@ export default function App() {
       setNewProbTitle(''); setNewProbText(''); setNewProbTcs([]);
       setNewProbTcInput(''); setNewProbTcExpected('true');
       setShowAddProblem(false);
-      setMsg('Problem saved to lab 9999', 'ok');
+      setMsg('Problem saved to playground editor', 'ok');
     } catch (e) {
       setProbError(e.message);
     } finally {

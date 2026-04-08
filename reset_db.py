@@ -384,7 +384,9 @@ def seed_demo_data(db: DB):
                     "Define predicate p/0 that succeeds if both a and b hold; otherwise, it should also succeed if both c and d hold. Facts a/0, b/0, c/0, d/0 are provided.\n"
                     "Clarify your intended precedence with parentheses if needed."
                 ),
-                test_cases=[]
+                test_cases=[
+                    ("p", "true"),
+                ]
             ),
             _make_question(
                 qid=99992,
@@ -398,7 +400,12 @@ def seed_demo_data(db: DB):
                     "- Sum of empty list is 0\n"
                     "- Sum of [H|T] is H + sum of T"
                 ),
-                test_cases=[]
+                test_cases=[
+                    ("sum_list([], 0)", "true"),
+                    ("sum_list([1,2,3], 6)", "true"),
+                    ("sum_list([5], 5)", "true"),
+                    ("sum_list([1,2,3,4,5], 15)", "true"),
+                ]
             ),
             _make_question(
                 qid=99993,
@@ -421,7 +428,13 @@ def seed_demo_data(db: DB):
                     "max(X, Y, X) :- X >= Y, !.\n"
                     "max(_, Y, Y)."
                 ),
-                test_cases=[]
+                test_cases=[
+                    ("max(3, 5, 5)", "true"),
+                    ("max(7, 2, 7)", "true"),
+                    ("max(4, 4, 4)", "true"),
+                    ("max(0, 1, 1)", "true"),
+                    ("max(10, 3, 10)", "true"),
+                ]
             ),
             _make_question(
                 qid=99994,
@@ -442,9 +455,10 @@ def seed_demo_data(db: DB):
                 ),
                 test_cases=[
                     ("factorial(0, 1)", "true"),
+                    ("factorial(1, 1)", "true"),
                     ("factorial(3, 6)", "true"),
                     ("factorial(5, 120)", "true"),
-                    ]
+                ]
             ),
             _make_question(
                 qid=99995,
@@ -466,7 +480,13 @@ def seed_demo_data(db: DB):
                     "- X is grandparent of Y if X is parent of Z and Z is parent of Y\n"
                     "- X and Y are siblings if they have the same parent P and X != Y"
                 ),
-                test_cases=[]
+                test_cases=[
+                    ("grandparent(tom, ann)", "true"),
+                    ("grandparent(tom, pat)", "true"),
+                    ("grandparent(bob, jim)", "true"),
+                    ("sibling(ann, pat)", "true"),
+                    ("sibling(bob, liz)", "true"),
+                ]
             ),
             _make_question(
                 qid=99996,
@@ -489,7 +509,13 @@ def seed_demo_data(db: DB):
                     "append([], L, L).\n"
                     "append([H|T1], L2, [H|T3]) :- append(T1, L2, T3)."
                 ),
-                test_cases=[]
+                test_cases=[
+                    ("append([], [1,2,3], [1,2,3])", "true"),
+                    ("append([1,2], [3,4], [1,2,3,4])", "true"),
+                    ("append([a], [b,c], [a,b,c])", "true"),
+                    ("append([1,2,3], [], [1,2,3])", "true"),
+                    ("append([], [], [])", "true"),
+                ]
             ),
             _make_question(
                 qid=99997,
@@ -510,7 +536,13 @@ def seed_demo_data(db: DB):
                     "- member(x, []) should be false\n"
                     "- member(1, [1,1,2]) should be true (duplicates ok)"
                 ),
-                test_cases=[]
+                test_cases=[
+                    ("member(2, [1,2,3])", "true"),
+                    ("member(a, [a,b,c])", "true"),
+                    ("member(3, [1,2])", "false"),
+                    ("member(x, [])", "false"),
+                    ("member(1, [1,1,2])", "true"),
+                ]
             ),
             _make_question(
                 qid=99998,
@@ -528,7 +560,45 @@ def seed_demo_data(db: DB):
                     "1. What is the base case? (empty list)\n"
                     "2. How to reverse the tail and append the head at the end?"
                 ),
-                test_cases=[]
+                test_cases=[
+                    ("reverse_list([1,2,3], [3,2,1])", "true"),
+                    ("reverse_list([], [])", "true"),
+                    ("reverse_list([a], [a])", "true"),
+                ]
+            ),
+            _make_question(
+                qid=121219,
+                qnum=9,
+                title="Homemade Meal and Fruit Selection",
+                problem=(
+                    "Write a Prolog program to represent a simple meal selection system.\n\n"
+                    "Define facts to represent foods that are homemade. The homemade foods are:\n"
+                    "- pizza\n"
+                    "- soup\n"
+                    "- fish\n"
+                    "Define facts to represent ripe fruits. The ripe fruits are:\n"
+                    "- apple\n"
+                    "- orange\n"
+                    "- banana\n"
+                    "Write a rule called meal(Main, Fruit) that succeeds when:\n"
+                    "- Main is a homemade food, and\n"
+                    "- Fruit is a ripe fruit.\n"
+                    "Use the cut operator (!) after confirming that Main is homemade to prevent Prolog from backtracking to other homemade options once one is chosen."
+                ),
+                test_cases=[
+                    ("meal(pizza, apple)", "true"),
+                    ("meal(soup, banana)", "true"),
+                    ("meal(fish, orange)", "true"),
+                ]
+            ),
+            _make_question(
+                qid=298615,
+                qnum=10,
+                title="new problem",
+                problem="can try any code here",
+                test_cases=[
+                    ("test(true)", "true"),
+                ]
             ),
         ],
     )
@@ -568,7 +638,7 @@ def seed_demo_data(db: DB):
     print("    Lab 2002  List Operations             (active: yesterday→+7d)  3 questions")
     print("    Lab 3001  Search Algorithms in Prolog (inactive: no schedule)  1 question")
     print("    Lab 3002  Cut & Negation              (inactive: no schedule)  1 question")
-    print("    Playground                            (active: yesterday→+14d) 8 questions")
+    print("    Playground                            (active: yesterday→+14d) 10 questions")
 
 
 # ── main ─────────────────────────────────────────────────────────────────────

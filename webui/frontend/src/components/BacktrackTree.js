@@ -14,8 +14,8 @@ const NODE_W = 160, NODE_H = 64;
 function TreeNode({ node, pos, isSelected, isStepActive, onClick }) {
   const c   = node.cutPrevented ? COLORS.ghost : (COLORS[node.result] || COLORS.pending);
   const isG = node.cutPrevented;
-  const goal   = node.goal.length   > 20 ? node.goal.slice(0,19)   + '…' : node.goal;
-  const clause = node.clause.length > 22 ? node.clause.slice(0,21) + '…' : node.clause;
+  const goal   = (node.goal   || '').length > 20 ? (node.goal   || '').slice(0,19) + '…' : (node.goal   || '');
+  const clause = (node.clause || '').length > 22 ? (node.clause || '').slice(0,21) + '…' : (node.clause || '');
   const bindingEntries = Object.entries(node.bindings || {});
   const badgeText = isG ? '✂ prevented'
     : node.result === 'success' && bindingEntries.length > 0

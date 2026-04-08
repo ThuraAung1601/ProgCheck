@@ -14,6 +14,30 @@ function parseTerm(str) {
   if (/^[A-Z_][a-zA-Z0-9_]*$/.test(str))
     return { type: 'var', name: str };
 
+  // List: [...] — handles [], [a,b,c], [H|T], [a,b|T]
+  if (str.startsWith('[') && str.endsWith(']')) {
+    const inner = str.slice(1, -1).trim();
+    if (!inner) return { type: 'atom', name: '[]' };
+    const pipeIdx = findTopLevelPipe(inner);
+    if (pipeIdx >= 0) {
+      // [Head|Tail] — split head elements and tail
+      const headPart = inner.slice(0, pipeIdx).trim();
+      const tailPart = inner.slice(pipeIdx + 1).trim();
+      const headElems = splitTop(headPart).map(parseTerm);
+      const tail = parseTerm(tailPart);
+      let result = tail;
+      for (let i = headElems.length - 1; i >= 0; i--)
+        result = { type: 'compound', functor: '.', args: [headElems[i], result] };
+      return result;
+    }
+    // [a,b,c] — regular list
+    const elements = splitTop(inner).map(parseTerm);
+    let result = { type: 'atom', name: '[]' };
+    for (let i = elements.length - 1; i >= 0; i--)
+      result = { type: 'compound', functor: '.', args: [elements[i], result] };
+    return result;
+  }
+
   const p = str.indexOf('(');
   if (p !== -1 && str.endsWith(')')) {
     const functor = str.slice(0, p).trim();
@@ -25,12 +49,24 @@ function parseTerm(str) {
   return { type: 'atom', name: str };
 }
 
+// Find index of | at top-level depth (not inside parens/brackets)
+function findTopLevelPipe(str) {
+  let depth = 0;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (ch === '(' || ch === '[') depth++;
+    else if (ch === ')' || ch === ']') depth--;
+    else if (ch === '|' && depth === 0) return i;
+  }
+  return -1;
+}
+
 function splitTop(str) {
   const parts = [];
   let depth = 0, cur = '';
   for (const ch of str) {
-    if (ch === '(') depth++;
-    else if (ch === ')') depth--;
+    if (ch === '(' || ch === '[') depth++;
+    else if (ch === ')' || ch === ']') depth--;
     else if (ch === ',' && depth === 0) {
       parts.push(cur.trim());
       cur = '';
@@ -57,6 +93,8 @@ function unify(t1, t2, bindings) {
   t1 = walk(t1, bindings);
   t2 = walk(t2, bindings);
 
+  // Same variable — nothing to do (avoids circular self-bindings)
+  if (t1.type === 'var' && t2.type === 'var' && t1.name === t2.name) return bindings;
   if (t1.type === 'var') return { ...bindings, [t1.name]: t2 };
   if (t2.type === 'var') return { ...bindings, [t2.name]: t1 };
 
@@ -101,7 +139,23 @@ function termToString(term, bindings) {
   if (term.type === 'var') return term.name;
   if (term.type === 'atom') return term.name;
 
+  // Render '.'(H,T) as list notation [H|T] / [a,b,c]
+  if (term.functor === '.' && term.args.length === 2)
+    return listToString(term, bindings);
+
   return `${term.functor}(${term.args.map(a => termToString(a, bindings)).join(',')})`;
+}
+
+function listToString(term, bindings) {
+  const elements = [];
+  let current = applyBindings(term, bindings);
+  while (current.type === 'compound' && current.functor === '.' && current.args.length === 2) {
+    elements.push(termToString(current.args[0], bindings));
+    current = applyBindings(current.args[1], bindings);
+  }
+  if (current.type === 'atom' && current.name === '[]')
+    return `[${elements.join(',')}]`;
+  return `[${elements.join(',')}|${termToString(current, bindings)}]`;
 }
 
 function goalKey(term) {
