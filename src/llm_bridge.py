@@ -77,10 +77,10 @@ Your task:
 1. Identify what predicates the problem asks to implement
 2. Analyze the facts/data in the student code
 3. Generate 8-12 test cases PER PREDICATE that cover:
-    ✓ Valid inputs that SHOULD succeed
-    ✓ Invalid inputs that SHOULD fail
-    ✓ Edge cases (empty lists, zero, boundaries, etc.)
-    ✓ Reversed/inverted logic tests (to catch argument order bugs)
+    Valid inputs that SHOULD succeed
+    Invalid inputs that SHOULD fail
+    Edge cases (empty lists, zero, boundaries, etc.)
+    Reversed/inverted logic tests (to catch argument order bugs)
 
 Output format (pure Prolog):
 test(PredicateName(Args), [ExpectedResult1, ExpectedResult2, ...]).

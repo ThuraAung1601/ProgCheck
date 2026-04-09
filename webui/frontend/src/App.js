@@ -577,6 +577,11 @@ export default function App() {
     setUser(null);
     setUserRole(null);
     fetchOptions(null);
+    setCode('');
+    setQuery('');
+    setSelProblemPreset('');
+    setLastResult(null);
+    setCanVisualize(false);
     setScreen('landing');
   }, [fetchOptions]);
 
