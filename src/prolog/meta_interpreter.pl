@@ -45,6 +45,7 @@ builtin(_ =< _).
 builtin(_ >= _).
 builtin(_ = _).
 builtin(_ \= _).
+builtin(\+ _).
 builtin(!).
 builtin(true).
 builtin(atom(_)).
@@ -54,6 +55,7 @@ builtin(nonvar(_)).
 builtin(append(_, _, _)).
 builtin(member(_, _)).
 builtin(length(_, _)).
+builtin(reverse(_, _)).
 builtin(write(_)).
 builtin(writeln(_)).
 builtin(nl).
@@ -75,9 +77,6 @@ solve_with_trace((Goal1, Goal2), (Tree1, Tree2)) :-
 
 solve_with_trace(Goal, builtin(Goal)) :-
     builtin(Goal),
-    % Use catch so that clause/2 on control predicates (!, true, etc.) that
-    % throw existence_error instead of failing is treated as "no user clause".
-    \+ catch(clause(Goal, _), _, fail),
     !,
     call(Goal).   % call/1 makes cut a no-op inside its own call boundary
 

@@ -278,7 +278,7 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
     if (!q) { setMsg('Enter a query first', 'error'); return; }
     const r = await apiFetch('/api/query-run', { ...buildPayload(), query: q });
     setLastResult(r);
-    setCanVisualize(!!r.ok && !r.has_logic_error);
+    setCanVisualize(!!r.ok && r.shapiro_mode !== 'nonterminate');
     if (!r.ok) { setFeedback(r.feedback || 'Query failed.'); setRightTab('feedback'); return; }
     const verdict = r.has_logic_error ? (r.shapiro_mode || 'unknown') : 'correct';
     setFeedback([

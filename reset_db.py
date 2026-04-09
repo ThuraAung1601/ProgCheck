@@ -425,8 +425,6 @@ def seed_demo_data(db: DB):
                     "- When X >= Y: Max is X (commit with cut to avoid redundant backtracking)\n"
                     "- When X < Y:  Max is Y (fallback clause)\n"
                     "Use cut (!) to make the predicate deterministic:\n"
-                    "max(X, Y, X) :- X >= Y, !.\n"
-                    "max(_, Y, Y)."
                 ),
                 test_cases=[
                     ("max(3, 5, 5)", "true"),
@@ -496,18 +494,9 @@ def seed_demo_data(db: DB):
                     "List Append Problem\n"
                     "Write a Prolog predicate append/3 that concatenates two lists.\n"
                     "append(L1, L2, L3) should be true when L3 is the result of appending list L2 to list L1.\n"
-                    "Test Cases:\n"
-                    "- append([], [1,2,3], [1,2,3]) should be true\n"
-                    "- append([1,2], [3,4], [1,2,3,4]) should be true\n"
-                    "- append([a], [b,c], [a,b,c]) should be true\n"
-                    "- append([1,2,3], [], [1,2,3]) should be true\n"
-                    "- append([], [], []) should be true\n"
                     "Requirements:\n"
                     "- Base case: appending anything to empty list gives that list\n"
                     "- Recursive case: move first element from L1 to result, append rest\n"
-                    "Expected behavior:\n"
-                    "append([], L, L).\n"
-                    "append([H|T1], L2, [H|T3]) :- append(T1, L2, T3)."
                 ),
                 test_cases=[
                     ("append([], [1,2,3], [1,2,3])", "true"),
@@ -529,12 +518,6 @@ def seed_demo_data(db: DB):
                     "- An element X is a member of a list if it's the head\n"
                     "- An element X is a member if it's in the tail\n"
                     "- Empty list has no members\n"
-                    "Expected test cases:\n"
-                    "- member(2, [1,2,3]) should be true\n"
-                    "- member(a, [a,b,c]) should be true\n"
-                    "- member(3, [1,2]) should be false\n"
-                    "- member(x, []) should be false\n"
-                    "- member(1, [1,1,2]) should be true (duplicates ok)"
                 ),
                 test_cases=[
                     ("member(2, [1,2,3])", "true"),
@@ -552,10 +535,6 @@ def seed_demo_data(db: DB):
                     "Problem: List Reversal\n"
                     "Write a Prolog predicate `reverse_list(L, R)` that reverses a list.\n"
                     "The predicate should be true when R is the reverse of list L.\n"
-                    "For example:\n"
-                    "- reverse_list([1,2,3], [3,2,1]) should succeed\n"
-                    "- reverse_list([], []) should succeed\n"
-                    "- reverse_list([a], [a]) should succeed\n"
                     "This is a classic recursive problem. Think about:\n"
                     "1. What is the base case? (empty list)\n"
                     "2. How to reverse the tail and append the head at the end?"

@@ -196,6 +196,119 @@ function prepareClause(c) {
 }
 
 // ─────────────────────────────────────────
+// NATIVE BUILTIN HANDLERS
+// Returns array of {bindings} on success, empty array on failure
+// ─────────────────────────────────────────
+
+function* nativeBuiltin(term, bindings) {
+  const f = term.functor || (term.type === 'atom' ? term.name : null);
+  const args = term.args || [];
+
+  // true/0
+  if (f === 'true' && args.length === 0) {
+    yield bindings; return;
+  }
+
+  // fail/0, false/0
+  if ((f === 'fail' || f === 'false') && args.length === 0) {
+    return;
+  }
+
+  // member(X, [H|T])
+  if (f === 'member' && args.length === 2) {
+    const list = walk(args[1], bindings);
+    let cur = applyBindings(list, bindings);
+    while (cur.type === 'compound' && cur.functor === '.' && cur.args.length === 2) {
+      const head = cur.args[0];
+      const b2 = unify(args[0], head, bindings);
+      if (b2) yield b2;
+      cur = applyBindings(cur.args[1], bindings);
+    }
+    return;
+  }
+
+  // append([], L, L)  /  append([H|T], L, [H|R]) :- append(T, L, R)
+  if (f === 'append' && args.length === 3) {
+    // Try all splits of args[2] as append(prefix, args[1], args[2])
+    const nil = { type: 'atom', name: '[]' };
+    function* appendGen(a1, a2, a3, b) {
+      // case 1: a1 = []
+      const b1 = unify(a1, nil, b);
+      if (b1) {
+        const b2 = unify(a2, a3, b1);
+        if (b2) yield b2;
+      }
+      // case 2: a1 = [H|T1], a3 = [H|T3], append(T1, a2, T3)
+      const freshH = { type: 'var', name: `_AH${++_varSuffix}` };
+      const freshT1 = { type: 'var', name: `_AT1${_varSuffix}` };
+      const freshT3 = { type: 'var', name: `_AT3${_varSuffix}` };
+      const cons1 = { type: 'compound', functor: '.', args: [freshH, freshT1] };
+      const cons3 = { type: 'compound', functor: '.', args: [freshH, freshT3] };
+      const ba = unify(a1, cons1, b);
+      if (!ba) return;
+      const bb = unify(a3, cons3, ba);
+      if (!bb) return;
+      yield* appendGen(applyBindings(freshT1, bb), a2, applyBindings(freshT3, bb), bb);
+    }
+    yield* appendGen(
+      applyBindings(args[0], bindings),
+      applyBindings(args[1], bindings),
+      applyBindings(args[2], bindings),
+      bindings
+    );
+    return;
+  }
+
+  // reverse(List, Rev)
+  if (f === 'reverse' && args.length === 2) {
+    const list = applyBindings(args[0], bindings);
+    function toArray(t) {
+      const arr = [];
+      let cur = t;
+      while (cur.type === 'compound' && cur.functor === '.' && cur.args.length === 2) {
+        arr.push(cur.args[0]);
+        cur = cur.args[1];
+      }
+      if (cur.type !== 'atom' || cur.name !== '[]') return null; // partial list
+      return arr;
+    }
+    const arr = toArray(list);
+    if (arr === null) return; // can't reverse partial list
+    let rev = { type: 'atom', name: '[]' };
+    for (const el of arr)
+      rev = { type: 'compound', functor: '.', args: [el, rev] };
+    const b2 = unify(args[1], rev, bindings);
+    if (b2) yield b2;
+    return;
+  }
+
+  // length(List, N)
+  if (f === 'length' && args.length === 2) {
+    const list = applyBindings(args[0], bindings);
+    let count = 0, cur = list;
+    while (cur.type === 'compound' && cur.functor === '.' && cur.args.length === 2) {
+      count++; cur = applyBindings(cur.args[1], bindings);
+    }
+    if (cur.type === 'atom' && cur.name === '[]') {
+      const b2 = unify(args[1], { type: 'atom', name: String(count) }, bindings);
+      if (b2) yield b2;
+    }
+    return;
+  }
+
+  // msort/sort — just yield null to indicate "not handled here"
+  return null;
+}
+
+const NATIVE_BUILTINS = new Set(['true','fail','false','member','append','reverse','length']);
+
+function isNativeBuiltin(term) {
+  const f = term.functor || (term.type === 'atom' ? term.name : null);
+  const arity = term.args ? term.args.length : 0;
+  return NATIVE_BUILTINS.has(f) && !(f === 'true' && arity !== 0);
+}
+
+// ─────────────────────────────────────────
 // 🔥 CORE SOLVER
 // ─────────────────────────────────────────
 
@@ -282,6 +395,65 @@ function resolve(goals, parentId, depth, bindings, db, nodes) {
     return resolve(rest, id, depth, newBindings, db, nodes);
   }
 
+  // ───── BUILTIN: NEGATION AS FAILURE (\+) ─────
+  if (current.raw.trim().startsWith('\\+')) {
+    const id = nextId();
+    const innerRaw = current.raw.trim().slice(2).trim();
+    const innerNodes = [];
+    const innerResult = resolve(
+      [{ raw: innerRaw, term: parseTerm(innerRaw) }],
+      id, depth + 1, bindings, db, innerNodes
+    );
+
+    // Push a node for \+ itself
+    nodes.push({
+      id, parentId, depth,
+      goal: `\\+ ${innerRaw}`,
+      clause: '(builtin \\+)',
+      result: innerResult.success ? 'fail' : 'success',
+      cutPrevented: false
+    });
+    // Include inner nodes for visibility
+    for (const n of innerNodes) nodes.push(n);
+
+    if (innerResult.success) return { success: false, cut: false };
+    return resolve(rest, id, depth, bindings, db, nodes);
+  }
+
+  // ───── NATIVE BUILTINS (member, append, reverse, length, true, fail) ─────
+  if (isNativeBuiltin(term)) {
+    const id = nextId();
+    let success = false;
+    let lastBindings = bindings;
+
+    for (const b2 of nativeBuiltin(term, bindings)) {
+      success = true;
+      lastBindings = b2;
+      nodes.push({
+        id, parentId, depth,
+        goal: label,
+        clause: '(builtin)',
+        result: 'success',
+        cutPrevented: false
+      });
+      const r = resolve(rest, id, depth, b2, db, nodes);
+      if (r.success) return { success: true, cut: false };
+    }
+
+    if (!success) {
+      nodes.push({
+        id, parentId, depth,
+        goal: label,
+        clause: '(builtin)',
+        result: 'fail',
+        cutPrevented: false
+      });
+      return { success: false, cut: false };
+    }
+
+    return { success: false, cut: false };
+  }
+
   // ───── USER PREDICATE ─────
   const key = goalKey(term);
   const clauses = db.get(key) || [];
@@ -356,7 +528,9 @@ function resolve(goals, parentId, depth, bindings, db, nodes) {
         });
       }
 
-      return { success, cut: true };
+      // Cut is absorbed here — only affects THIS predicate's choice points,
+      // not the caller's. Do NOT propagate cut: true to the parent.
+      return { success, cut: false };
     }
   }
 
