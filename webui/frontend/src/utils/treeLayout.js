@@ -3,47 +3,61 @@
  * Uses Reingold-Tilford style — siblings don't overlap, parents centered over children.
  */
 
-const NODE_W = 180;  // node width
-const NODE_H = 72;   // node height
-const H_GAP  = 20;   // horizontal gap between siblings
+const NODE_W = 160;  // node width  (must match BacktrackTree.js NODE_W)
+const NODE_H = 64;   // node height (must match BacktrackTree.js NODE_H)
+const H_GAP  = 24;   // horizontal gap between siblings
 const V_GAP  = 60;   // vertical gap between levels
 
 export function layoutTree(trace) {
   if (!trace || trace.length === 0) return {};
 
-  // Build parent→children map
+  // Build parent→children map, guarding against cycles
+  const idSet = new Set(trace.map(n => n.id));
   const childrenOf = {};
   trace.forEach(n => { childrenOf[n.id] = []; });
-  trace.forEach(n => { if (n.parentId) childrenOf[n.parentId]?.push(n.id); });
+  trace.forEach(n => {
+    if (n.parentId && n.parentId !== n.id && idSet.has(n.parentId)) {
+      childrenOf[n.parentId].push(n.id);
+    }
+  });
 
-  const roots = trace.filter(n => !n.parentId).map(n => n.id);
+  const roots = trace.filter(n => !n.parentId || !idSet.has(n.parentId)).map(n => n.id);
 
-  // Compute subtree widths bottom-up
+  // Compute subtree widths bottom-up (iterative to avoid stack overflow)
   const subtreeW = {};
+  const visiting = new Set();
   function calcWidth(id) {
+    if (visiting.has(id)) { subtreeW[id] = NODE_W; return NODE_W; }  // cycle guard
+    if (subtreeW[id] !== undefined) return subtreeW[id];
+    visiting.add(id);
     const children = childrenOf[id] || [];
-    if (children.length === 0) { subtreeW[id] = NODE_W; return NODE_W; }
-    let total = children.reduce((sum, cid) => sum + calcWidth(cid), 0);
-    total += H_GAP * (children.length - 1);
+    let total = children.length === 0
+      ? NODE_W
+      : children.reduce((sum, cid) => sum + calcWidth(cid), 0) + H_GAP * (children.length - 1);
     subtreeW[id] = Math.max(total, NODE_W);
+    visiting.delete(id);
     return subtreeW[id];
   }
   roots.forEach(calcWidth);
 
   // Assign x,y top-down
   const positions = {};
+  const assignVisiting = new Set();
   function assign(id, leftX, depth) {
+    if (assignVisiting.has(id)) return;  // cycle guard
+    assignVisiting.add(id);
     const y = depth * (NODE_H + V_GAP);
     const children = childrenOf[id] || [];
-    const sw = subtreeW[id];
+    const sw = subtreeW[id] ?? NODE_W;
     const cx = leftX + sw / 2;
     positions[id] = { x: cx - NODE_W / 2, y, cx, cy: y + NODE_H / 2, w: NODE_W, h: NODE_H };
 
     let childLeft = leftX;
     children.forEach(cid => {
       assign(cid, childLeft, depth + 1);
-      childLeft += subtreeW[cid] + H_GAP;
+      childLeft += (subtreeW[cid] ?? NODE_W) + H_GAP;
     });
+    assignVisiting.delete(id);
   }
 
   let leftX = 0;

@@ -12,12 +12,15 @@ const RESULT_LABEL = { success:'✓', fail:'✗', cut:'!', pending:'…' };
 const NODE_W = 160, NODE_H = 64;
 
 function TreeNode({ node, pos, isSelected, isStepActive, onClick }) {
-  const c   = node.cutPrevented ? COLORS.ghost : (COLORS[node.result] || COLORS.pending);
+  const isQ = node.isQueryRoot;
+  const c   = isQ ? { bg:'#1a1f2e', border:'#4a90d9', text:'#85B7EB', badge:'#1d4e89' }
+              : node.cutPrevented ? COLORS.ghost : (COLORS[node.result] || COLORS.pending);
   const isG = node.cutPrevented;
   const goal   = (node.goal   || '').length > 20 ? (node.goal   || '').slice(0,19) + '…' : (node.goal   || '');
-  const clause = (node.clause || '').length > 22 ? (node.clause || '').slice(0,21) + '…' : (node.clause || '');
+  const clause = isQ ? '' : (node.clause || '').length > 22 ? (node.clause || '').slice(0,21) + '…' : (node.clause || '');
   const bindingEntries = Object.entries(node.bindings || {});
-  const badgeText = isG ? '✂ prevented'
+  const badgeText = isQ ? '? query'
+    : isG ? '✂ prevented'
     : node.result === 'success' && bindingEntries.length > 0
       ? (() => { const s = `${bindingEntries[0][0]}=${bindingEntries[0][1]}`; return s.length > 10 ? s.slice(0,9)+'…' : s; })()
       : (RESULT_LABEL[node.result] || node.result);
@@ -124,18 +127,30 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
   const playTimer = useRef(null);
   const panStart  = useRef(null);
 
-  useEffect(() => {
-    setStepIdx(-1); setSelectedNode(null);
-    setShowGhosts(true); setShowBlocks(true); setIsPlaying(false);
-    setPan({ x: 10, y: 10 }); setZoom(compact ? 0.75 : 0.9);
-  }, [trace, compact]);
-
   const { positions, totalW, totalH } = useMemo(() => {
     if (!trace?.length) return { positions:{}, totalW:0, totalH:0 };
     return layoutTree(trace);
   }, [trace]);
 
-  const executionOrder = useMemo(() => trace?.filter(n => !n.cutPrevented) ?? [], [trace]);
+  useEffect(() => {
+    setStepIdx(-1); setSelectedNode(null);
+    setShowGhosts(true); setShowBlocks(true); setIsPlaying(false);
+    const initZoom = compact ? 0.75 : 0.9;
+    // Center the root node horizontally; put it near the top
+    const rootNode = trace?.find(n => !n.parentId);
+    const rootPos = rootNode ? positions[rootNode.id] : null;
+    const cvs = canvasRef.current;
+    if (rootPos && cvs) {
+      const { width } = cvs.getBoundingClientRect();
+      const rootCx = (rootPos.cx ?? rootPos.x + NODE_W / 2) * initZoom;
+      setPan({ x: Math.max(10, width / 2 - rootCx), y: 20 });
+    } else {
+      setPan({ x: 10, y: 20 });
+    }
+    setZoom(initZoom);
+  }, [trace, compact, positions]);
+
+  const executionOrder = useMemo(() => trace?.filter(n => !n.cutPrevented && !n.isQueryRoot) ?? [], [trace]);
   const activeNode = stepIdx >= 0 && stepIdx < executionOrder.length ? executionOrder[stepIdx] : null;
 
   useEffect(() => {
@@ -199,10 +214,12 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
         childrenOf[n.parentId]?.push(n.id);
     });
 
-    // Collect all descendant ids (inclusive)
-    function allDesc(id) {
+    // Collect all descendant ids (inclusive) — visited set is per-call to guard against cycles
+    function allDesc(id, visited = new Set()) {
+      if (visited.has(id)) return [];
+      visited.add(id);
       const out = [id];
-      for (const c of (childrenOf[id] || [])) out.push(...allDesc(c));
+      for (const c of (childrenOf[id] || [])) out.push(...allDesc(c, visited));
       return out;
     }
 

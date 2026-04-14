@@ -175,6 +175,271 @@ def _trace_stats(text: str) -> dict[str, int]:
         "depth_limit_hits": text.count("Depth limit exceeded"),
     }
 
+def _proof_text_to_nodes(text: str) -> list[dict]:
+    """Convert print_proof_tree/1 output into a flat list of trace nodes
+    that BacktrackTree.js can render directly.
+
+    print_proof_tree indents with 2 spaces per unit and increments by 2 units
+    per level, so each level = 4 raw spaces.  We use raw-space count to infer
+    depth and parent-child relationships (same algorithm as engineOutputParser.js).
+    """
+    import re as _re
+
+    if isinstance(text, bytes):
+        text = text.decode("utf-8", errors="replace")
+    if not text or not text.strip():
+        return []
+
+    lines = text.split('\n')
+    nodes: list[dict] = []
+    counter = [0]
+    stack: list[tuple[int, str]] = []  # (indent_chars, node_id)
+
+    def nid() -> str:
+        counter[0] += 1
+        return f"n{counter[0]}"
+
+    for line in lines:
+        if not line.strip():
+            continue
+
+        indent_chars = len(line) - len(line.lstrip(' '))
+        text_part = line.strip()
+
+        # Pop stack entries that are at the same or deeper indent
+        while stack and stack[-1][0] >= indent_chars:
+            stack.pop()
+
+        parent_id = stack[-1][1] if stack else None
+        depth = len(stack)
+        node_id = nid()
+
+        # "Goal: X (fact)"
+        m = _re.match(r'^Goal:\s+(.+?)\s*\(fact\)\s*$', text_part, _re.I)
+        if m:
+            goal = m.group(1).strip()
+            nodes.append({'id': node_id, 'parentId': parent_id, 'depth': depth,
+                          'goal': goal, 'clause': goal, 'result': 'success',
+                          'cutPrevented': False, 'bindings': {}, 'isFact': True})
+            stack.append((indent_chars, node_id))
+            continue
+
+        # "Goal: X :- body"
+        m = _re.match(r'^Goal:\s+(.+?)\s*:-\s*(.+)$', text_part)
+        if m:
+            goal = m.group(1).strip()
+            body = m.group(2).strip()
+            nodes.append({'id': node_id, 'parentId': parent_id, 'depth': depth,
+                          'goal': goal, 'clause': f"{goal} :- {body}",
+                          'result': 'success', 'cutPrevented': False, 'bindings': {}})
+            stack.append((indent_chars, node_id))
+            continue
+
+        # "Builtin: expr"
+        m = _re.match(r'^Builtin:\s+(.+)$', text_part, _re.I)
+        if m:
+            goal = m.group(1).strip()
+            result = 'cut' if goal == '!' else 'success'
+            nodes.append({'id': node_id, 'parentId': parent_id, 'depth': depth,
+                          'goal': goal, 'clause': '(built-in)', 'result': result,
+                          'cutPrevented': False, 'bindings': {}})
+            stack.append((indent_chars, node_id))
+            continue
+
+        # "true"
+        if text_part == 'true':
+            nodes.append({'id': node_id, 'parentId': parent_id, 'depth': depth,
+                          'goal': 'true', 'clause': '(built-in)', 'result': 'success',
+                          'cutPrevented': False, 'bindings': {}})
+            stack.append((indent_chars, node_id))
+            continue
+
+        # "!" bare
+        if text_part == '!':
+            nodes.append({'id': node_id, 'parentId': parent_id, 'depth': depth,
+                          'goal': '!', 'clause': '!', 'result': 'cut',
+                          'cutPrevented': False, 'bindings': {}})
+            stack.append((indent_chars, node_id))
+            continue
+
+        # "Goal: X" bare
+        m = _re.match(r'^Goal:\s+(.+)$', text_part)
+        if m:
+            goal = m.group(1).strip()
+            nodes.append({'id': node_id, 'parentId': parent_id, 'depth': depth,
+                          'goal': goal, 'clause': goal, 'result': 'success',
+                          'cutPrevented': False, 'bindings': {}})
+            stack.append((indent_chars, node_id))
+            continue
+
+    return nodes
+
+
+def _get_graph_data(student_code: str) -> dict[str, Any]:
+    """Parse Prolog source into a detailed AST graph:
+    - predicate nodes (rule/fact)
+    - head argument nodes (atom/var) with arg1/arg2/… edges
+    - body builtin-goal nodes (fact) with calls edges
+    - body variables as var nodes with uses edges
+    - body user-predicate calls as dashed calls edges to the target predicate
+    """
+    import re as _re
+
+    code = _re.sub(r'%[^\n]*', '', student_code)
+    code = _re.sub(r'/\*.*?\*/', '', code, flags=_re.DOTALL)
+
+    nodes_map: dict[str, dict] = {}
+    edges_list: list[dict] = []
+    edge_set: set[str] = set()
+
+    def add_node(nid: str, label: str, ntype: str, arity: int = 0) -> None:
+        if nid not in nodes_map:
+            nodes_map[nid] = {"id": nid, "label": label, "type": ntype,
+                              "arity": arity, "x": None, "y": None}
+
+    def add_edge(from_id: str, to_id: str, label: str, style: str = "solid") -> None:
+        eid = f"{from_id}=>{to_id}:{label}"
+        if eid not in edge_set:
+            edge_set.add(eid)
+            edges_list.append({"id": eid, "from": from_id, "to": to_id,
+                               "label": label, "style": style})
+
+    def split_top(s: str) -> list[str]:
+        """Split s by top-level commas (respects nested parens/brackets)."""
+        parts: list[str] = []
+        depth, cur = 0, ""
+        for ch in s:
+            if ch in "([{":
+                depth += 1
+            elif ch in ")]}":
+                depth -= 1
+            elif ch == "," and depth == 0:
+                parts.append(cur.strip())
+                cur = ""
+                continue
+            cur += ch
+        if cur.strip():
+            parts.append(cur.strip())
+        return parts
+
+    def parse_head(head: str):
+        """Return (functor, arity, args_list) from a head term string."""
+        head = head.strip()
+        m = _re.match(r'^([a-z_][a-zA-Z0-9_]*)\s*\((.+)\)\s*$', head, _re.DOTALL)
+        if m:
+            args = split_top(m.group(2))
+            return m.group(1), len(args), args
+        m2 = _re.match(r'^([a-z_][a-zA-Z0-9_]*)$', head)
+        if m2:
+            return m2.group(1), 0, []
+        return None, 0, []
+
+    def classify(term: str):
+        """Classify a term as 'var', 'atom', or 'compound'."""
+        t = term.strip()
+        if _re.match(r'^[A-Z_][a-zA-Z0-9_]*$', t):
+            return "var"
+        if _re.match(r'^-?\d+(\.\d+)?$', t) or _re.match(r'^[a-z_][a-zA-Z0-9_]*$', t):
+            return "atom"
+        return "compound"
+
+    def all_vars(text: str) -> list[str]:
+        """Extract all unique variable names (uppercase start) from text."""
+        return list(dict.fromkeys(
+            v for v in _re.findall(r'\b([A-Z_][a-zA-Z0-9_]*)\b', text)
+            if v != '_'
+        ))
+
+    # ── First pass: collect all user-defined predicate keys ──────────────────
+    raw_clauses = _re.split(r'\.\s+|\.\s*$', code, flags=_re.MULTILINE)
+    clauses: list[tuple] = []
+    pred_keys: set[str] = set()
+    has_body: set[str] = set()
+
+    for raw in raw_clauses:
+        clause = raw.strip()
+        if not clause:
+            continue
+        if ":-" in clause:
+            head_str, body_str = clause.split(":-", 1)
+        else:
+            head_str, body_str = clause, ""
+        functor, arity, args = parse_head(head_str)
+        if not functor:
+            continue
+        key = f"{functor}/{arity}"
+        pred_keys.add(key)
+        if body_str.strip():
+            has_body.add(key)
+        clauses.append((key, functor, arity, args, body_str.strip()))
+
+    # ── Create predicate nodes ────────────────────────────────────────────────
+    seen_pred: set[str] = set()
+    for key, functor, arity, args, body_str in clauses:
+        ntype = "rule" if key in has_body else "fact"
+        pred_id = f"pred:{key}"
+        if key not in seen_pred:
+            add_node(pred_id, functor, ntype, arity)
+            seen_pred.add(key)
+        elif ntype == "rule":
+            nodes_map[pred_id]["type"] = "rule"
+
+    # ── Second pass: head args + body goals ──────────────────────────────────
+    for key, functor, arity, args, body_str in clauses:
+        pred_id = f"pred:{key}"
+
+        # Head arguments → argN edges
+        for i, arg in enumerate(args):
+            kind = classify(arg)
+            if kind == "var":
+                nid = f"var:{key}:{arg}"
+                add_node(nid, arg, "var", 0)
+                add_edge(pred_id, nid, f"arg{i+1}")
+            elif kind == "atom":
+                nid = f"atom:{arg}"
+                add_node(nid, arg, "atom", 0)
+                add_edge(pred_id, nid, f"arg{i+1}")
+            # compound head args: skip (rare in typical Prolog)
+
+        # Body goals
+        if body_str:
+            body_goals = split_top(body_str)
+            for goal in body_goals:
+                goal = goal.strip()
+                if not goal:
+                    continue
+
+                # Check if it calls a known user-defined predicate
+                gm = _re.match(r'^([a-z_][a-zA-Z0-9_]*)\s*\((.+)\)\s*$', goal, _re.DOTALL)
+                if gm:
+                    gf = gm.group(1)
+                    gargs = split_top(gm.group(2))
+                    gkey = f"{gf}/{len(gargs)}"
+                    if gkey in pred_keys:
+                        add_edge(pred_id, f"pred:{gkey}", "calls", "dashed")
+                        continue
+                elif _re.match(r'^([a-z_][a-zA-Z0-9_]*)$', goal):
+                    # Bare atom body goal (e.g. a known fact)
+                    gkey = f"{goal}/0"
+                    if gkey in pred_keys:
+                        add_edge(pred_id, f"pred:{gkey}", "calls", "dashed")
+                        continue
+
+                # Builtin / expression goal → FACT node + calls edge
+                norm = _re.sub(r'\s+', ' ', goal)
+                goal_id = f"goal:{key}:{norm}"
+                label = norm if len(norm) <= 14 else norm[:13] + "…"
+                add_node(goal_id, label, "fact", 0)
+                add_edge(pred_id, goal_id, "calls", "dashed")
+
+                # Variables inside the body goal → VAR nodes + uses edges
+                for var_name in all_vars(goal):
+                    vid = f"var:{key}:{var_name}"
+                    add_node(vid, var_name, "var", 0)
+                    add_edge(pred_id, vid, "uses")
+
+    return {"nodes": list(nodes_map.values()), "edges": edges_list}
+
 def _build_debug_summary(analysis: dict) -> str:
     """Build a plain-text debug summary from analysis dict (replaces missing _attach_debug_summary)."""
     parts: list[str] = []
@@ -242,12 +507,16 @@ def _execute_query(problem_path: Path, student_code: str, query: str) -> dict[st
         }
         debug_summary = _build_debug_summary(analysis)
 
+        proof_tree_str = proof_tree.decode("utf-8", errors="replace") if isinstance(proof_tree, bytes) else (proof_tree or "")
+        proof_nodes = _proof_text_to_nodes(proof_tree_str)
+
         return {
             "ok":                 True,
             "query":              query,
             "query_result":       "false" if query_failed else "true",
             "trace":              trace_text,
             "proof_tree":         proof_tree,
+            "proof_nodes":        proof_nodes,
             "shapiro_mode":       mode,
             "has_logic_error":    has_logic_error,
             "shapiro_nodes_text": nodes_text,
@@ -397,6 +666,16 @@ def cut_compare(payload: CutComparePayload) -> dict[str, Any]:
         "left":  _execute_query(problem_path, payload.code_a, query),
         "right": _execute_query(problem_path, payload.code_b, query),
     }
+
+class GraphDataPayload(BaseModel):
+    student_code: str
+
+@app.post("/api/graph-data")
+def graph_data(payload: GraphDataPayload) -> dict[str, Any]:
+    """Return predicate-level graph nodes and edges extracted by SWI-Prolog
+    from the student code.  Replaces the frontend-only prologParser.js approach."""
+    result = _get_graph_data(payload.student_code)
+    return {"ok": True, **result}
 
 @app.post("/api/llm-feedback")
 def llm_feedback(payload: QueryPayload) -> dict[str, Any]:

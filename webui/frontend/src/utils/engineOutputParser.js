@@ -347,12 +347,14 @@ function buildNode(text, query, parentId, depth) {
 // Ghosts should appear as additional depth-0 nodes (siblings in the tree).
 // ═══════════════════════════════════════════════════════════════
 
-function injectCutGhostsFromSource(trace, sourceClauses) {
+export function injectCutGhostsFromSource(trace, sourceClauses) {
   if (!sourceClauses || sourceClauses.size === 0) return;
 
-  // Collect all nodes that have a cut in their clause text
-  // (either hasCutInClause flag, or they are parent of a 'cut' Builtin node)
-  const nodeById = Object.fromEntries(trace.map(n => [n.id, n]));
+  // Sync nodeCounter past all existing backend-generated IDs to avoid collisions
+  trace.forEach(n => {
+    const m = n.id && String(n.id).match(/^n(\d+)$/);
+    if (m) nodeCounter = Math.max(nodeCounter, parseInt(m[1], 10));
+  });
 
   // Mark nodes whose direct children include a cut builtin
   const cutParentIds = new Set(
@@ -362,43 +364,33 @@ function injectCutGhostsFromSource(trace, sourceClauses) {
       .filter(Boolean)
   );
 
-  // Nodes with cut = those flagged OR those whose clause text has '!'
   const cutFiringNodes = trace.filter(n =>
     (n.hasCutInClause === true || cutParentIds.has(n.id))
   );
 
   const ghostsToAdd = [];
 
+  // 1. Cut-prevented ghosts: clauses AFTER the cut-firing clause
   cutFiringNodes.forEach(cutNode => {
-    // Determine which predicate this node is resolving
     const { functor, arity } = parseFunctorArityFromGoal(cutNode.goal);
     if (!functor) return;
     const key = `${functor}/${arity}`;
-
     const allClauses = sourceClauses.get(key);
     if (!allClauses || allClauses.length < 2) return;
 
-    // Find which source clause this node matched
     const matchedIdx = findMatchedClauseIndex(cutNode, allClauses);
-
-    // Every clause AFTER matchedIdx is cut-prevented
     const preventedClauses = allClauses.slice(matchedIdx + 1);
     if (preventedClauses.length === 0) return;
 
-    // Parent for ghost nodes = same parent as the cut-firing node
-    const ghostParentId = cutNode.parentId; // may be null (root-level)
-
     preventedClauses.forEach((srcClause, offset) => {
-      const ghostId = nextId();
       const clauseDisplay = srcClause.isRule
         ? `${srcClause.head} :- ${srcClause.body}`
         : srcClause.head;
-
       ghostsToAdd.push({
-        id: ghostId,
-        parentId: ghostParentId,
+        id: nextId(),
+        parentId: cutNode.parentId,
         depth: cutNode.depth,
-        goal: cutNode.goal,           // same goal being solved
+        goal: cutNode.goal,
         clause: clauseDisplay,
         clauseIndex: matchedIdx + 1 + offset,
         lineStart: srcClause.lineStart,
@@ -412,10 +404,39 @@ function injectCutGhostsFromSource(trace, sourceClauses) {
     });
   });
 
+  // 2. Failed-unification ghosts: clauses tried BEFORE the matched clause
+  trace.filter(n => !n.cutPrevented && !n.isQueryRoot).forEach(node => {
+    const { functor, arity } = parseFunctorArityFromGoal(node.goal);
+    if (!functor) return;
+    const key = `${functor}/${arity}`;
+    const allClauses = sourceClauses.get(key);
+    if (!allClauses || allClauses.length < 2) return;
+
+    const matchedIdx = findMatchedClauseIndex(node, allClauses);
+    if (matchedIdx === 0) return; // first clause matched — nothing tried before
+
+    allClauses.slice(0, matchedIdx).forEach((srcClause, offset) => {
+      const clauseDisplay = srcClause.isRule
+        ? `${srcClause.head} :- ${srcClause.body}`
+        : srcClause.head;
+      ghostsToAdd.push({
+        id: nextId(),
+        parentId: node.parentId,
+        depth: node.depth,
+        goal: node.goal,
+        clause: clauseDisplay,
+        clauseIndex: offset,
+        lineStart: srcClause.lineStart,
+        lineEnd: srcClause.lineEnd,
+        result: 'fail',
+        cutPrevented: false,
+        bindings: {},
+        children: [],
+      });
+    });
+  });
+
   ghostsToAdd.forEach(g => trace.push(g));
-  console.log("ALL TRACE:", trace);
-  console.log("CUT NODES:", cutFiringNodes);
-  console.log("SOURCE CLAUSES:", sourceClauses);
 }
 
 function parseFunctorArityFromGoal(goalStr) {

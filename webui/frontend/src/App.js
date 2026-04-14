@@ -9,10 +9,8 @@ import NodeInfo from './components/NodeInfo';
 import BacktrackTree from './components/BacktrackTree';
 import Modal from './components/Modal';
 import DiffViewer from './components/DiffViewer';
-import { parseProlog, clausesToGraph } from './utils/prologParser';
 import { rewireEdge } from './utils/rewire';
-import { simulateProlog } from './utils/prologEngineSimulator';
-import { extractSourceClauses } from './utils/engineOutputParser';
+import { extractSourceClauses, injectCutGhostsFromSource } from './utils/engineOutputParser';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
 
@@ -289,17 +287,29 @@ export default function App() {
 
   useEffect(() => {
     clearTimeout(parseTimer.current);
-    parseTimer.current = setTimeout(() => {
+    parseTimer.current = setTimeout(async () => {
+      if (!code.trim()) { setGraph({ nodes: [], edges: [] }); return; }
       try {
-        const clauses = parseProlog(code);
-        const newGraph = clausesToGraph(clauses, posRef.current);
+        const res = await fetch(API_BASE + '/api/graph-data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ student_code: code }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const newNodes = (data.nodes || []).map(n => {
+          const pos = posRef.current[n.id];
+          return pos ? { ...n, x: pos.x, y: pos.y } : n;
+        });
+        console.log('Parsed graph nodes', newNodes);
+        const newGraph = { nodes: newNodes, edges: data.edges || [] };
         setGraph(newGraph);
         setSelNode(prev => {
           if (!prev) return null;
-          return newGraph.nodes.some(n => n.id === prev.id) ? prev : null;
+          return newNodes.some(n => n.id === prev.id) ? prev : null;
         });
       } catch { /* ignore while typing */ }
-    }, 350);
+    }, 500);
     return () => clearTimeout(parseTimer.current);
   }, [code]);
 
@@ -546,20 +556,36 @@ export default function App() {
     setMsg('Review test cases', 'idle');
   });
 
-  const visualize = useCallback(() => {
+  const visualize = useCallback(async () => {
     if (!code.trim()) { setMsg('Load or write some code first', 'error'); return; }
     const q = normalizeQuery(query);
     if (!q) { setMsg('Enter a query to visualize', 'error'); return; }
+    setLoading(true);
     try {
+      const r = await apiFetch('/api/query-run', { ...buildPayload(), query: q });
+      if (!r.ok) { setMsg('Query failed — cannot visualize', 'error'); return; }
+      const nodes = r.proof_nodes || [];
+
+      // Prepend a query-root node so the tree starts from the user's query
+      const queryRootId = 'query_root';
+      nodes.forEach(n => { if (!n.parentId) n.parentId = queryRootId; });
+      nodes.unshift({
+        id: queryRootId, parentId: null, depth: 0,
+        goal: q, clause: q, result: 'success',
+        isQueryRoot: true, bindings: {}, children: [],
+      });
+
       const sourceClauses = extractSourceClauses(code);
-      const trace = simulateProlog(q, sourceClauses);
-      setTraceData(trace);
+      injectCutGhostsFromSource(nodes, sourceClauses);
+      setTraceData(nodes);
       setRightTab('trace');
-      setMsg(`Visualizing ${trace.length} nodes`, 'ok');
+      setMsg(`Visualizing ${nodes.length} nodes`, 'ok');
     } catch (e) {
       setMsg(`Visualize error: ${e.message}`, 'error');
+    } finally {
+      setLoading(false);
     }
-  }, [code, query, setMsg]);
+  }, [code, query, buildPayload, setMsg]);
 
   // ── Shared login handler ──────────────────────────────────────────────────
   const handleLogin = useCallback((userData, role) => {
