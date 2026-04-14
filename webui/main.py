@@ -175,13 +175,15 @@ def _trace_stats(text: str) -> dict[str, int]:
         "depth_limit_hits": text.count("Depth limit exceeded"),
     }
 
-def _proof_text_to_nodes(text: str) -> list[dict]:
+def _proof_text_to_nodes(text: str, counter: list | None = None) -> list[dict]:
     """Convert print_proof_tree/1 output into a flat list of trace nodes
     that BacktrackTree.js can render directly.
 
     print_proof_tree indents with 2 spaces per unit and increments by 2 units
     per level, so each level = 4 raw spaces.  We use raw-space count to infer
     depth and parent-child relationships (same algorithm as engineOutputParser.js).
+
+    counter: shared [int] list so multiple calls produce non-colliding IDs.
     """
     import re as _re
 
@@ -192,7 +194,8 @@ def _proof_text_to_nodes(text: str) -> list[dict]:
 
     lines = text.split('\n')
     nodes: list[dict] = []
-    counter = [0]
+    if counter is None:
+        counter = [0]
     stack: list[tuple[int, str]] = []  # (indent_chars, node_id)
 
     def nid() -> str:
@@ -476,7 +479,46 @@ def _execute_query(problem_path: Path, student_code: str, query: str) -> dict[st
         checker._consult(prolog, temp_student)
 
         trace_text = checker._gen_trace_for_goal(prolog, query) or "No trace generated"
-        proof_tree = checker._gen_proof_for_goal(query)       or "No proof tree (query failed)"
+
+        # Collect ALL proof trees correctly:
+        # 1. Use call(Query) to enumerate real solutions — this respects ! cuts.
+        # 2. For each solution, variables are already bound (e.g. X=pizza, Y=apple),
+        #    so solve_with_trace(Query, T) runs the meta-interpreter on the specific
+        #    instantiated goal, producing one correct proof tree per solution.
+        # This avoids findall's cut-barrier problem AND avoids iterating the
+        # meta-interpreter directly (which treats ! as a no-op via call(!)).
+        q_proof_all = (
+            "catch(("
+            "call(" + query + "),"
+            "meta_interpreter:solve_with_trace(" + query + ", T),"
+            "with_output_to(string(S), meta_interpreter:print_proof_tree(T))"
+            "), _, fail)"
+        )
+        try:
+            all_sols = checker._call_with_timeout(
+                lambda: list(prolog.query(q_proof_all, maxresult=50)),
+                5
+            )
+        except Exception:
+            all_sols = []
+
+        if all_sols:
+            counter = [0]
+            proof_nodes = []
+            for sol in all_sols:
+                tree_str = sol.get("S", b"")
+                if isinstance(tree_str, bytes):
+                    tree_str = tree_str.decode("utf-8", errors="replace")
+                proof_nodes.extend(_proof_text_to_nodes(tree_str, counter))
+            proof_tree = "\n---\n".join(
+                (sol.get("S", b"").decode("utf-8", errors="replace")
+                 if isinstance(sol.get("S", b""), bytes) else str(sol.get("S", "")))
+                for sol in all_sols
+            )
+        else:
+            proof_tree = checker._gen_proof_for_goal(query) or "No proof tree (query failed)"
+            proof_tree_str = proof_tree.decode("utf-8", errors="replace") if isinstance(proof_tree, bytes) else (proof_tree or "")
+            proof_nodes = _proof_text_to_nodes(proof_tree_str)
 
         q_diag = (
             "catch((diagnosis_engine:shapiro_diagnose(" + query + ", Mode, Data),"
@@ -506,9 +548,6 @@ def _execute_query(problem_path: Path, student_code: str, query: str) -> dict[st
             "trace_records":      [{"goal": query, "trace": trace_text}],
         }
         debug_summary = _build_debug_summary(analysis)
-
-        proof_tree_str = proof_tree.decode("utf-8", errors="replace") if isinstance(proof_tree, bytes) else (proof_tree or "")
-        proof_nodes = _proof_text_to_nodes(proof_tree_str)
 
         return {
             "ok":                 True,

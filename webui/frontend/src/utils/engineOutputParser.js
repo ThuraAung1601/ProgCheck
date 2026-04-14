@@ -404,7 +404,24 @@ export function injectCutGhostsFromSource(trace, sourceClauses) {
     });
   });
 
-  // 2. Failed-unification ghosts: clauses tried BEFORE the matched clause
+  // 2. Failed-unification ghosts: clauses tried BEFORE the matched clause.
+  // Skip nodes whose siblings (same parent, same functor) represent backtracking
+  // ALTERNATIVES that all succeeded — e.g. ripe(apple), ripe(orange), ripe(banana)
+  // all succeed as separate solutions; ripe(apple) did NOT fail before ripe(orange).
+  // We detect this by checking whether a sibling with the same functor/arity already
+  // covers a LOWER clause index (meaning the earlier clause succeeded, not failed).
+  const siblingMatchedIndices = {};  // parentId+functor/arity → Set of matched indices
+  trace.filter(n => !n.cutPrevented && !n.isQueryRoot).forEach(node => {
+    const { functor, arity } = parseFunctorArityFromGoal(node.goal);
+    if (!functor) return;
+    const key = `${functor}/${arity}`;
+    const allClauses = sourceClauses.get(key);
+    if (!allClauses || allClauses.length < 2) return;
+    const mapKey = `${node.parentId || ''}|||${key}`;
+    if (!siblingMatchedIndices[mapKey]) siblingMatchedIndices[mapKey] = new Set();
+    siblingMatchedIndices[mapKey].add(findMatchedClauseIndex(node, allClauses));
+  });
+
   trace.filter(n => !n.cutPrevented && !n.isQueryRoot).forEach(node => {
     const { functor, arity } = parseFunctorArityFromGoal(node.goal);
     if (!functor) return;
@@ -414,6 +431,13 @@ export function injectCutGhostsFromSource(trace, sourceClauses) {
 
     const matchedIdx = findMatchedClauseIndex(node, allClauses);
     if (matchedIdx === 0) return; // first clause matched — nothing tried before
+
+    // If any sibling matched a lower-index clause (and all succeeded), those are
+    // backtracking alternatives, not failures — skip fail-ghost injection.
+    const mapKey = `${node.parentId || ''}|||${key}`;
+    const siblingsSet = siblingMatchedIndices[mapKey] || new Set();
+    const hasSucceedingSiblingAtLowerIdx = [...siblingsSet].some(idx => idx < matchedIdx);
+    if (hasSucceedingSiblingAtLowerIdx) return;
 
     allClauses.slice(0, matchedIdx).forEach((srcClause, offset) => {
       const clauseDisplay = srcClause.isRule
@@ -432,6 +456,51 @@ export function injectCutGhostsFromSource(trace, sourceClauses) {
         cutPrevented: false,
         bindings: {},
         children: [],
+      });
+    });
+  });
+
+  // 3. Body-goal cut-prevented: when "!" fires inside a rule body, body goals
+  //    executed BEFORE "!" lose their remaining choice points.
+  //    e.g. meal(M,F) :- homemade(M), !, ripe(F).
+  //    → homemade(soup) and homemade(fish) are cut-prevented siblings of homemade(pizza).
+  const cutBuiltinNodes = trace.filter(n => n.result === 'cut' && n.goal === '!');
+  cutBuiltinNodes.forEach(cutNode => {
+    const parentId = cutNode.parentId;
+    if (!parentId) return;
+    const cutIdx = trace.indexOf(cutNode);
+    // Find siblings that appear BEFORE the cut in the trace (same parentId, not ghost, not the cut itself)
+    const siblingsBeforeCut = trace
+      .slice(0, cutIdx)
+      .filter(n => n.parentId === parentId && !n.cutPrevented && n.result !== 'cut' && !n.isQueryRoot);
+    siblingsBeforeCut.forEach(sibling => {
+      const { functor, arity } = parseFunctorArityFromGoal(sibling.goal);
+      if (!functor) return;
+      const key = `${functor}/${arity}`;
+      const allClauses = sourceClauses.get(key);
+      if (!allClauses || allClauses.length < 2) return;
+      const matchedIdx = findMatchedClauseIndex(sibling, allClauses);
+      const preventedClauses = allClauses.slice(matchedIdx + 1);
+      if (preventedClauses.length === 0) return;
+      preventedClauses.forEach((srcClause, offset) => {
+        const clauseDisplay = srcClause.isRule
+          ? `${srcClause.head} :- ${srcClause.body}`
+          : srcClause.head;
+        ghostsToAdd.push({
+          id: nextId(),
+          parentId: sibling.parentId,
+          depth: sibling.depth,
+          goal: sibling.goal,
+          clause: clauseDisplay,
+          clauseIndex: matchedIdx + 1 + offset,
+          lineStart: srcClause.lineStart,
+          lineEnd: srcClause.lineEnd,
+          result: 'fail',
+          cutPrevented: true,
+          cutBy: cutNode.id,
+          bindings: {},
+          children: [],
+        });
       });
     });
   });

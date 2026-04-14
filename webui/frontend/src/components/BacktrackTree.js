@@ -150,7 +150,71 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
     setZoom(initZoom);
   }, [trace, compact, positions]);
 
-  const executionOrder = useMemo(() => trace?.filter(n => !n.cutPrevented && !n.isQueryRoot) ?? [], [trace]);
+  // Build execution order: DFS traversal where fail-unification ghosts are
+  // inserted immediately BEFORE the real node they preceded (so stepping through
+  // shows "tried X and failed, then tried Y and succeeded" in the correct order).
+  const executionOrder = useMemo(() => {
+    if (!trace?.length) return [];
+
+    const nodeByIdMap = {};
+    trace.forEach(n => { nodeByIdMap[n.id] = n; });
+
+    // Children map ordered by trace-array position
+    const childOf = {};
+    trace.forEach(n => { childOf[n.id] = []; });
+    trace.forEach(n => {
+      if (n.parentId && childOf[n.parentId]) childOf[n.parentId].push(n.id);
+    });
+
+    // Group fail-unification ghosts (result='fail', !cutPrevented) by (parentId|goal)
+    const failByKey = {};
+    trace.forEach(n => {
+      if (n.result === 'fail' && !n.cutPrevented && !n.isQueryRoot) {
+        const k = `${n.parentId || ''}|||${n.goal || ''}`;
+        (failByKey[k] = failByKey[k] || []).push(n);
+      }
+    });
+
+    const emitted = new Set();
+    const order = [];
+
+    function visit(nodeId) {
+      const node = nodeByIdMap[nodeId];
+      if (!node || node.cutPrevented || node.isQueryRoot || emitted.has(nodeId)) return;
+      // Stand-alone fail ghosts are emitted when we visit their real sibling
+      if (node.result === 'fail' && !node.cutPrevented) return;
+
+      // Emit fail ghosts for this real node (same parent + same goal)
+      const k = `${node.parentId || ''}|||${node.goal || ''}`;
+      (failByKey[k] || []).forEach(g => {
+        if (!emitted.has(g.id)) { emitted.add(g.id); order.push(g); }
+      });
+
+      emitted.add(nodeId);
+      order.push(node);
+
+      // Recurse into real children (skip cut-prevented and fail-ghosts)
+      (childOf[nodeId] || []).forEach(cid => {
+        const c = nodeByIdMap[cid];
+        if (c && !c.cutPrevented && !c.isQueryRoot && !(c.result === 'fail' && !c.cutPrevented))
+          visit(cid);
+      });
+    }
+
+    const root = trace.find(n => !n.parentId);
+    if (root) {
+      if (root.isQueryRoot) {
+        (childOf[root.id] || []).forEach(cid => {
+          const c = nodeByIdMap[cid];
+          if (c && !c.cutPrevented && !(c.result === 'fail' && !c.cutPrevented)) visit(cid);
+        });
+      } else {
+        visit(root.id);
+      }
+    }
+
+    return order;
+  }, [trace]);
   const activeNode = stepIdx >= 0 && stepIdx < executionOrder.length ? executionOrder[stepIdx] : null;
 
   useEffect(() => {
@@ -187,6 +251,8 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
   const visibleIds = useMemo(() => {
     if (stepIdx === -1) return new Set(trace?.map(n => n.id) || []);
     const shown = new Set();
+    // Query root is always visible
+    trace?.filter(n => n.isQueryRoot).forEach(n => shown.add(n.id));
     executionOrder.slice(0, stepIdx+1).forEach(n => shown.add(n.id));
     if (showGhosts) trace?.filter(n => n.cutPrevented).forEach(n => shown.add(n.id));
     return shown;
