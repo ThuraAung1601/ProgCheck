@@ -8,6 +8,11 @@
     solve_with_trace/2,
     print_proof_tree/1,
     extract_proof_nodes/2,
+    % 1b. Failure-aware tracer
+    solve_fail_trace/3,
+    print_fail_tree/1,
+    % 1c. Source graph extractor
+    extract_source_graph/2,
     % 2. Incorrectness Debugger
     %    (uses solve_with_trace/2 + extract_proof_nodes/2 above)
     % 3. Incompleteness Debugger
@@ -104,7 +109,8 @@ print_tree(builtin(Goal), Indent) :-
 
 print_tree((Tree1, Tree2), Indent) :-
     print_tree(Tree1, Indent),
-    print_tree(Tree2, Indent).
+    NextIndent is Indent + 2,
+    print_tree(Tree2, NextIndent).
 
 print_tree(proof(Goal, Body, SubTree), Indent) :-
     print_indent(Indent),
@@ -125,6 +131,353 @@ print_indent(N) :-
     write('  '),
     N1 is N - 1,
     print_indent(N1).
+
+% ----------------------------------------------------------------------------
+% Failure-aware trace
+% ----------------------------------------------------------------------------
+
+% solve_fail_trace(+Goal, -Tree, -Succeeded)
+%
+% Simulates Prolog execution exactly:
+%   - Tries every clause whose HEAD unifies with Goal, in order.
+%   - Uses nth_clause/3 + clause/3 with copy_term so variable bindings
+%     from the head unification are properly propagated into the body,
+%     while Goal's own variables stay unbound for the next iteration.
+%   - For each clause entered, recursively traces the body.
+%   - If the body fails, records it and moves to the next clause.
+%   - Stops at the first clause whose body succeeds.
+%   - If all fail (or no head unifies), records the full attempted set.
+%
+% Tree node types:
+%   proof(Goal, Body, Sub)        — clause succeeded
+%   failed_proof(Goal, Body, Sub) — clause entered, body failed
+%   no_clause(Goal)               — no clause head unified at all
+%   builtin(Goal)                 — builtin succeeded
+%   failed_builtin(Goal)          — builtin called but failed
+%   skipped                       — conjunction tail after earlier failure
+%   seq(T1, T2)                   — sibling clause attempts (same Goal level)
+
+solve_fail_trace(true, true, true) :- !.
+
+solve_fail_trace((G1, G2), (T1, T2), Succ) :- !,
+    solve_fail_trace(G1, T1, S1),
+    ( S1 = true
+    -> solve_fail_trace(G2, T2, Succ)
+    ;  T2 = skipped, Succ = false
+    ).
+
+solve_fail_trace(!, builtin(!), true) :- !.
+
+solve_fail_trace(Goal, builtin(Goal), true) :-
+    builtin(Goal), !, call(Goal).
+
+solve_fail_trace(Goal, failed_builtin(Goal), false) :-
+    builtin(Goal), !.
+
+% User-defined predicate:
+%   1. Collect ALL clause references for Goal's functor/arity (not just unifiable ones).
+%   2. Try each in order; record head-unification failures AND body failures.
+solve_fail_trace(Goal, Tree, Succ) :-
+    functor(Goal, F, A),
+    functor(Template, F, A),          % generic template — same functor/arity, all vars free
+    catch(
+        findall(Ref, nth_clause(Template, _, Ref), Refs),
+        _, Refs = []
+    ),
+    ( Refs = []
+    -> Tree = no_clause(Goal), Succ = false
+    ;  try_clause_refs(Goal, Refs, Tree, Succ)
+    ).
+
+% try_clause_refs(+Goal, +Refs, -Tree, -Succ)
+% Tries each clause reference in order. Uses copy_term so successive
+% iterations do not see bindings from earlier clause attempts.
+% When clause/3 fails the head didn't unify — record as head_fail node.
+try_clause_refs(Goal, [Ref], Tree, Succ) :- !,
+    copy_term(Goal, GC),
+    ( clause(GC, Body, Ref)
+    -> solve_fail_trace(Body, SubTree, Succ),
+       ( Succ = true
+       -> Tree = proof(GC, Body, SubTree)
+       ;  Tree = failed_proof(GC, Body, SubTree)
+       )
+    ;  clause_head_term(Ref, HeadTerm),
+       Tree = head_fail(Goal, HeadTerm), Succ = false
+    ).
+try_clause_refs(Goal, [Ref|Rest], Tree, Succ) :-
+    copy_term(Goal, GC),
+    ( clause(GC, Body, Ref)
+    -> solve_fail_trace(Body, SubTree, S1),
+       ( S1 = true
+       -> Tree = proof(GC, Body, SubTree), Succ = true
+       ;  try_clause_refs(Goal, Rest, RestTree, Succ),
+          Tree = seq(failed_proof(GC, Body, SubTree), RestTree)
+       )
+    ;  % Head didn't unify — record as head_fail and continue
+       clause_head_term(Ref, HeadTerm),
+       try_clause_refs(Goal, Rest, RestTree, Succ),
+       Tree = seq(head_fail(Goal, HeadTerm), RestTree)
+    ).
+
+% Retrieve the head term for a clause ref (for head_fail display).
+clause_head_term(Ref, Head) :-
+    ( catch(clause(Head, _, Ref), _, fail) -> true
+    ; Head = unknown
+    ).
+
+% print_fail_tree(+Tree)
+print_fail_tree(Tree) :- print_fail_i(Tree, 0).
+
+print_fail_i(true,    I) :- !, print_indent(I), writeln(true).
+print_fail_i(skipped, _) :- !.
+print_fail_i(seq(T1, T2), I) :- !, print_fail_i(T1, I), print_fail_i(T2, I).
+print_fail_i((T1,T2), I) :- !,
+    print_fail_i(T1, I),
+    I2 is I + 2,
+    print_fail_i(T2, I2).
+print_fail_i(builtin(G), I) :- !,
+    pfi_write_term(G, I, 'Builtin: ').
+print_fail_i(failed_builtin(G), I) :- !,
+    pfi_write_term(G, I, 'Failed: ').
+print_fail_i(no_clause(G), I) :- !,
+    pfi_write_term(G, I, 'Failed: ').
+print_fail_i(head_fail(Goal, HeadTerm), I) :- !,
+    copy_term(Goal-HeadTerm, GC-HC), numbervars(GC-HC, 0, _),
+    print_indent(I), write('Head Fail: '),
+    write_term(GC, [numbervars(true), quoted(false)]),
+    write(' (tried '),
+    write_term(HC, [numbervars(true), quoted(false)]),
+    writeln(').').
+print_fail_i(proof(Goal, Body, Sub), I) :- !,
+    pfi_goal_line('Goal: ', Goal, Body, I),
+    I2 is I + 2, print_fail_i(Sub, I2).
+print_fail_i(failed_proof(Goal, Body, Sub), I) :- !,
+    pfi_goal_line('Failed Goal: ', Goal, Body, I),
+    I2 is I + 2, print_fail_i(Sub, I2).
+
+% Write a single term on one line with nice variable names via numbervars.
+pfi_write_term(T, I, Prefix) :-
+    copy_term(T, TC), numbervars(TC, 0, _),
+    print_indent(I), write(Prefix),
+    write_term(TC, [numbervars(true), quoted(false)]), nl.
+
+% Write "Prefix: Goal :- Body" or "Prefix: Goal (fact)" with nice var names.
+pfi_goal_line(Prefix, Goal, Body, I) :-
+    copy_term(Goal-Body, GC-BC), numbervars(GC-BC, 0, _),
+    print_indent(I), write(Prefix),
+    write_term(GC, [numbervars(true), quoted(false)]),
+    ( BC = true
+    -> writeln(' (fact)')
+    ;  write(' :- '),
+       write_term(BC, [numbervars(true), quoted(false)]), nl
+    ).
+
+% ============================================================================
+% SOURCE GRAPH EXTRACTION
+% ============================================================================
+%
+% extract_source_graph(+Source, -JSON)
+%
+% Uses read_term/3 with variable_names(VN) so variable identity is preserved:
+%   - The same Prolog variable appearing in both the head and the body gets
+%     instantiated to the SAME '$VAR'(Name) term, so we can draw "used-in"
+%     edges between head-arg nodes and body-goal nodes.
+%
+% Node types: predicate, var, atom, builtin
+% Edge labels/styles:
+%   arg1/arg2/… solid     — predicate → head argument
+%   calls       dashed    — predicate → called predicate (user-defined)
+%   calls       dashed    — predicate → builtin goal node
+%   uses        solid     — predicate → var node for body variable
+%
+% JSON output: {"nodes":[{id,label,type,arity},...], "edges":[{from,to,label,style},...]}
+
+extract_source_graph(Source, JSON) :-
+    atom_string(SAtom, Source),
+    catch(
+        setup_call_cleanup(
+            open_string(SAtom, Strm),
+            sg_read_all(Strm, CDs),
+            close(Strm)
+        ),
+        _, CDs = []
+    ),
+    % Collect all user-defined functor/arity pairs
+    findall(F/A, (member(cd(H,_), CDs), sg_head_fa(H,F,A)), FAs0),
+    sort(FAs0, UserFAs),
+    % Determine which are rules (have a non-trivial body)
+    findall(F/A, (member(cd(H,B), CDs), B \= true, sg_head_fa(H,F,A)), RFAs0),
+    sort(RFAs0, RuleFAs),
+    % Build predicate nodes
+    findall(N, (member(FA, UserFAs), sg_pred_node(FA, RuleFAs, N)), PredNodes),
+    % Build per-clause arg/body nodes and edges, accumulating into sets
+    foldl(sg_clause_elements(UserFAs), CDs, []-[], ClauseNodes-ClauseEdges),
+    % Merge, dedup
+    append(PredNodes, ClauseNodes, AllNodes0),
+    sort(AllNodes0, AllNodes),
+    sort(ClauseEdges, AllEdges),
+    with_output_to(string(JSON), sg_emit_json(AllNodes, AllEdges)).
+
+% sg_read_all(+Stream, -CDs)
+% CD = cd(Head, Body) where all variables are '$VAR'(Name) atoms for display.
+sg_read_all(Strm, CDs) :-
+    catch(read_term(Strm, T, [variable_names(VN)]), _, (CDs=[], !)),
+    ( T = end_of_file -> CDs = []
+    ;   % Bind each var to '$VAR'(Name) so write_term(numbervars(true)) prints the name
+        maplist([N=V]>>(V='$VAR'(N)), VN),
+        ( T = (H :- B) -> Head=H, Body=B ; Head=T, Body=true ),
+        sg_read_all(Strm, Rest),
+        CDs = [cd(Head,Body)|Rest]
+    ).
+
+sg_head_fa(H, F, A) :- compound(H), !, functor(H,F,A), atom(F).
+sg_head_fa(H, H, 0) :- atom(H).
+
+sg_pred_node(F/A, RuleFAs, node(Id,Label,Type,A)) :-
+    atomic_list_concat(['pred:',F,'/',A], Id),
+    atomic_list_concat([F,'/',A], Label),
+    (member(F/A, RuleFAs) -> Type = rule ; Type = fact).
+
+% sg_clause_elements: for one cd(Head,Body), add arg nodes/edges and body nodes/edges
+sg_clause_elements(UserFAs, cd(Head,Body), Ns0-Es0, Ns1-Es1) :-
+    sg_head_fa(Head, F, A),
+    atomic_list_concat(['pred:',F,'/',A], PId),
+    % --- Head arguments ---
+    ( compound(Head)
+    -> Head =.. [_|Args],
+       numlist(1, A, Idxs),
+       maplist(sg_arg_ne(PId, F, A), Args, Idxs, ANss, AEss),
+       flatten(ANss, ANs), flatten(AEss, AEs)
+    ;  ANs=[], AEs=[]
+    ),
+    % --- Body goals ---
+    sg_conj_list(Body, Goals),
+    maplist(sg_body_ne(PId, UserFAs), Goals, GNss, GEss),
+    flatten(GNss, GNs), flatten(GEss, GEs),
+    % --- Variable "uses" edges: vars that appear in body but were also head args ---
+    sg_var_uses(PId, F, A, Args0, Goals, VEs),
+    ( compound(Head) -> Head=..[_|Args0] ; Args0=[] ),
+    append([ANs,GNs], Ns0, Ns1),
+    append([AEs,GEs,VEs], Es0, Es1).
+
+% sg_arg_ne: produce node+edge for one head argument
+sg_arg_ne(PId, F, A, Arg, Idx, Nodes, Edges) :-
+    with_output_to(atom(ArgStr), write_term(Arg,[numbervars(true),quoted(false)])),
+    atomic_list_concat(['arg',Idx], EdgeLabel),
+    ( Arg = '$VAR'(VName)
+    ->  atomic_list_concat(['var:',F,'/',A,':',VName], NId),
+        Type = var, Label = VName
+    ; number(Arg)
+    ->  atomic_list_concat(['num:',Arg], NId),
+        Type = atom, Label = ArgStr
+    ; atom(Arg)
+    ->  atomic_list_concat(['atom:',Arg], NId),
+        Type = atom, Label = ArgStr
+    ;   % compound argument — show as atom-type node with written form
+        functor(Arg, AF, AA),
+        atomic_list_concat(['compound:',AF,'/',AA], NId),
+        Type = atom, Label = ArgStr
+    ),
+    Nodes = [node(NId, Label, Type, 0)],
+    Edges = [edge(PId, NId, EdgeLabel, solid)].
+
+% sg_body_ne: produce nodes+edges for one body goal
+sg_body_ne(PId, UserFAs, Goal, Nodes, Edges) :-
+    with_output_to(atom(GoalStr), write_term(Goal,[numbervars(true),quoted(false)])),
+    ( Goal = '!'
+    ->  GId = 'builtin:!',
+        Nodes = [node(GId, '!', builtin, 0)],
+        Edges = [edge(PId, GId, calls, dashed)]
+    ; sg_head_fa(Goal, GF, GA), member(GF/GA, UserFAs)
+    ->  atomic_list_concat(['pred:',GF,'/',GA], GId),
+        Nodes = [],
+        Edges = [edge(PId, GId, calls, dashed)]
+    ;   % Builtin or arithmetic expression
+        ( atom_length(GoalStr, L), L > 15
+        -> sub_atom(GoalStr, 0, 14, _, L0), atom_concat(L0, '…', Lbl)
+        ;  Lbl = GoalStr
+        ),
+        atomic_list_concat(['builtin:',PId,':',GoalStr], GId),
+        Nodes = [node(GId, Lbl, builtin, 0)],
+        Edges = [edge(PId, GId, calls, dashed)]
+    ).
+
+% sg_var_uses: for each head-arg var that also appears in a body goal, add a uses edge
+sg_var_uses(PId, F, A, HeadArgs, Goals, Edges) :-
+    % Collect head var names
+    include(['$VAR'(_)]>>true, HeadArgs, HeadVars),
+    maplist(['$VAR'(N), N]>>true, HeadVars, HeadVarNames),
+    sort(HeadVarNames, HVNs),
+    % Collect body vars
+    term_to_atom(Goals, GoalsAtom),
+    atom_string(GoalsAtom, GoalsStr),
+    findall(VN,
+        (member(VN, HVNs),
+         atomic_list_concat(['$VAR'(VN)|_], _, _),  % just check membership
+         sg_occurs_in_body(VN, Goals)),
+        BodyUsedVars0),
+    sort(BodyUsedVars0, BodyUsedVars),
+    maplist([VN, edge(PId, NId, uses, solid)]>>(
+        atomic_list_concat(['var:',F,'/',A,':',VN], NId)
+    ), BodyUsedVars, Edges).
+
+% sg_occurs_in_body: check if '$VAR'(VN) occurs somewhere in the body goals
+sg_occurs_in_body(VN, Goals) :-
+    with_output_to(atom(S), write_term(Goals,[numbervars(true),quoted(false)])),
+    atom_concat(_, VN, _),      % VN is an atom
+    sub_atom(S, _, _, _, VN).   % appears somewhere in the written body
+
+% sg_conj_list: flatten (A,B,C) conjunction into a list
+sg_conj_list(true, []) :- !.
+sg_conj_list((A,B), [A|Rest]) :- !, sg_conj_list(B, Rest).
+sg_conj_list(G, [G]).
+
+% ── JSON output ──────────────────────────────────────────────────────────────
+
+sg_emit_json(Nodes, Edges) :-
+    write('{"nodes":['),
+    sg_write_list(Nodes, sg_write_node),
+    write('],"edges":['),
+    sg_write_list(Edges, sg_write_edge),
+    write(']}').
+
+sg_write_list([], _) :- !.
+sg_write_list([X], Pred) :- !, call(Pred, X).
+sg_write_list([X|Xs], Pred) :- call(Pred, X), write(','), sg_write_list(Xs, Pred).
+
+sg_write_node(node(Id,Label,Type,Arity)) :-
+    write('{'),
+    sg_kv(id,    Id),    write(','),
+    sg_kv(label, Label), write(','),
+    sg_kv(type,  Type),  write(','),
+    format('"arity":~w', [Arity]),
+    write('}').
+
+sg_write_edge(edge(From,To,Label,Style)) :-
+    write('{'),
+    sg_kv(from,  From),  write(','),
+    sg_kv(to,    To),    write(','),
+    sg_kv(label, Label), write(','),
+    sg_kv(style, Style),
+    write('}').
+
+% sg_kv: write "key":"value" with JSON string escaping
+sg_kv(Key, Val) :-
+    atom_string(Key, KS), atom_string(Val, VS),
+    sg_json_str(KS), write(':'), sg_json_str(VS).
+
+sg_json_str(S) :-
+    write('"'),
+    string_codes(S, Codes),
+    maplist(sg_json_char, Codes),
+    write('"').
+
+sg_json_char(0'") :- !, write('\\\"').
+sg_json_char(0'\\) :- !, write('\\\\').
+sg_json_char(0'\n) :- !, write('\\n').
+sg_json_char(0'\r) :- !, write('\\r').
+sg_json_char(0'\t) :- !, write('\\t').
+sg_json_char(C)   :- put_code(C).
 
 % ----------------------------------------------------------------------------
 % Proof node extraction (for algorithmic debugging)

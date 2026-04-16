@@ -217,6 +217,59 @@ def _proof_text_to_nodes(text: str, counter: list | None = None) -> list[dict]:
         depth = len(stack)
         node_id = nid()
 
+        # "Failed Goal: X (fact)"  — failed proof node, fact form
+        m = _re.match(r'^Failed Goal:\s+(.+?)\s*\(fact\)\s*$', text_part, _re.I)
+        if m:
+            goal = m.group(1).strip()
+            nodes.append({'id': node_id, 'parentId': parent_id, 'depth': depth,
+                          'goal': goal, 'clause': goal, 'result': 'fail',
+                          'cutPrevented': False, 'bindings': {}, 'isFact': True})
+            stack.append((indent_chars, node_id))
+            continue
+
+        # "Failed Goal: X :- body"
+        m = _re.match(r'^Failed Goal:\s+(.+?)\s*:-\s*(.+)$', text_part)
+        if m:
+            goal = m.group(1).strip()
+            body = m.group(2).strip()
+            nodes.append({'id': node_id, 'parentId': parent_id, 'depth': depth,
+                          'goal': goal, 'clause': f"{goal} :- {body}",
+                          'result': 'fail', 'cutPrevented': False, 'bindings': {}})
+            stack.append((indent_chars, node_id))
+            continue
+
+        # "Failed Goal: X" bare
+        m = _re.match(r'^Failed Goal:\s+(.+)$', text_part)
+        if m:
+            goal = m.group(1).strip()
+            nodes.append({'id': node_id, 'parentId': parent_id, 'depth': depth,
+                          'goal': goal, 'clause': goal, 'result': 'fail',
+                          'cutPrevented': False, 'bindings': {}})
+            stack.append((indent_chars, node_id))
+            continue
+
+        # "Failed: X"  — builtin failed or no clause
+        m = _re.match(r'^Failed:\s+(.+)$', text_part, _re.I)
+        if m:
+            goal = m.group(1).strip()
+            nodes.append({'id': node_id, 'parentId': parent_id, 'depth': depth,
+                          'goal': goal, 'clause': goal, 'result': 'fail',
+                          'cutPrevented': False, 'bindings': {}})
+            # leaf node — don't push onto stack
+            continue
+
+        # "Head Fail: Query (tried HeadTerm)."  — head unification failed
+        m = _re.match(r'^Head Fail:\s+(.+?)\s*\(tried\s+(.+?)\)\.\s*$', text_part, _re.I)
+        if m:
+            query_term = m.group(1).strip()
+            head_term  = m.group(2).strip()
+            nodes.append({'id': node_id, 'parentId': parent_id, 'depth': depth,
+                          'goal': head_term, 'clause': head_term,
+                          'result': 'fail', 'isHeadFail': True,
+                          'cutPrevented': False, 'bindings': {}})
+            # leaf node — don't push onto stack
+            continue
+
         # "Goal: X (fact)"
         m = _re.match(r'^Goal:\s+(.+?)\s*\(fact\)\s*$', text_part, _re.I)
         if m:
@@ -278,6 +331,35 @@ def _proof_text_to_nodes(text: str, counter: list | None = None) -> list[dict]:
     return nodes
 
 
+def _get_graph_data_prolog(student_code: str) -> dict[str, Any] | None:
+    """Use meta_interpreter:extract_source_graph/2 (SWI-Prolog) to build the
+    AST graph.  Returns None if Prolog is unavailable or the call fails, so
+    the caller can fall back to the Python parser."""
+    import json as _json
+    try:
+        from pyswip import Prolog as _Prolog
+        p = _Prolog()
+        mi_path = SRC / "prolog" / "meta_interpreter.pl"
+        p.consult(str(mi_path))
+        # Escape the source code as a Prolog atom string literal
+        safe = student_code.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
+        q = f"meta_interpreter:extract_source_graph('{safe}', JSON)"
+        results = list(p.query(q, maxresult=1))
+        if not results:
+            return None
+        raw = results[0].get("JSON", b"")
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8", errors="replace")
+        data = _json.loads(raw)
+        # Add x/y placeholders expected by the frontend
+        for n in data.get("nodes", []):
+            n.setdefault("x", None)
+            n.setdefault("y", None)
+        return data
+    except Exception:
+        return None
+
+
 def _get_graph_data(student_code: str) -> dict[str, Any]:
     """Parse Prolog source into a detailed AST graph:
     - predicate nodes (rule/fact)
@@ -285,7 +367,15 @@ def _get_graph_data(student_code: str) -> dict[str, Any]:
     - body builtin-goal nodes (fact) with calls edges
     - body variables as var nodes with uses edges
     - body user-predicate calls as dashed calls edges to the target predicate
+
+    Tries the Prolog-based extractor first (meta_interpreter:extract_source_graph),
+    which correctly handles variable identity and complex terms.
+    Falls back to pure-Python string parsing if Prolog is unavailable.
     """
+    prolog_result = _get_graph_data_prolog(student_code)
+    if prolog_result is not None:
+        return prolog_result
+    # ── Python fallback ───────────────────────────────────────────────────────
     import re as _re
 
     code = _re.sub(r'%[^\n]*', '', student_code)
@@ -516,9 +606,29 @@ def _execute_query(problem_path: Path, student_code: str, query: str) -> dict[st
                 for sol in all_sols
             )
         else:
-            proof_tree = checker._gen_proof_for_goal(query) or "No proof tree (query failed)"
-            proof_tree_str = proof_tree.decode("utf-8", errors="replace") if isinstance(proof_tree, bytes) else (proof_tree or "")
-            proof_nodes = _proof_text_to_nodes(proof_tree_str)
+            # Query failed — use solve_fail_trace to capture the attempted path
+            q_fail = (
+                "catch(("
+                "meta_interpreter:solve_fail_trace(" + query + ", T, _),"
+                "with_output_to(string(S), meta_interpreter:print_fail_tree(T))"
+                "), _, fail)"
+            )
+            try:
+                fail_sol = checker._call_with_timeout(
+                    lambda: list(prolog.query(q_fail, maxresult=1)),
+                    5
+                )
+            except Exception:
+                fail_sol = []
+            if fail_sol:
+                tree_str = fail_sol[0].get("S", b"")
+                if isinstance(tree_str, bytes):
+                    tree_str = tree_str.decode("utf-8", errors="replace")
+                proof_tree = tree_str
+                proof_nodes = _proof_text_to_nodes(tree_str)
+            else:
+                proof_tree = "No proof tree (query failed)"
+                proof_nodes = []
 
         q_diag = (
             "catch((diagnosis_engine:shapiro_diagnose(" + query + ", Mode, Data),"

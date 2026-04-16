@@ -356,17 +356,10 @@ export function injectCutGhostsFromSource(trace, sourceClauses) {
     if (m) nodeCounter = Math.max(nodeCounter, parseInt(m[1], 10));
   });
 
-  // Mark nodes whose direct children include a cut builtin
-  const cutParentIds = new Set(
-    trace
-      .filter(n => n.result === 'cut' && n.goal === '!')
-      .map(n => n.parentId)
-      .filter(Boolean)
-  );
-
-  const cutFiringNodes = trace.filter(n =>
-    (n.hasCutInClause === true || cutParentIds.has(n.id))
-  );
+  // In the chained structure, ! is a child of the body goal before it.
+  // Only rule nodes (hasCutInClause=true) should be treated as cut-firing
+  // for Section 1 (sibling clause prevention).
+  const cutFiringNodes = trace.filter(n => n.hasCutInClause === true);
 
   const ghostsToAdd = [];
 
@@ -404,14 +397,17 @@ export function injectCutGhostsFromSource(trace, sourceClauses) {
     });
   });
 
-  // 2. Failed-unification ghosts: clauses tried BEFORE the matched clause.
-  // Skip nodes whose siblings (same parent, same functor) represent backtracking
-  // ALTERNATIVES that all succeeded — e.g. ripe(apple), ripe(orange), ripe(banana)
-  // all succeed as separate solutions; ripe(apple) did NOT fail before ripe(orange).
-  // We detect this by checking whether a sibling with the same functor/arity already
-  // covers a LOWER clause index (meaning the earlier clause succeeded, not failed).
-  const siblingMatchedIndices = {};  // parentId+functor/arity → Set of matched indices
-  trace.filter(n => !n.cutPrevented && !n.isQueryRoot).forEach(node => {
+  // 2. Failed-unification ghosts: clauses whose HEAD did not unify, tried BEFORE
+  //    the clause that was actually entered.
+  //
+  //    Rules:
+  //    - Only add for SUCCESS nodes: the backend already records every body-entered
+  //      clause as "Failed Goal:" nodes for failing queries. Adding ghosts on top
+  //      of those would duplicate.
+  //    - Skip when a sibling has the same functor at a lower clause index with
+  //      result=success (backtracking alternatives, not failures).
+  const siblingMatchedIndices = {};  // parentId+functor/arity → Set of {idx, result}
+  trace.filter(n => !n.cutPrevented && !n.isQueryRoot && n.result === 'success').forEach(node => {
     const { functor, arity } = parseFunctorArityFromGoal(node.goal);
     if (!functor) return;
     const key = `${functor}/${arity}`;
@@ -422,7 +418,8 @@ export function injectCutGhostsFromSource(trace, sourceClauses) {
     siblingMatchedIndices[mapKey].add(findMatchedClauseIndex(node, allClauses));
   });
 
-  trace.filter(n => !n.cutPrevented && !n.isQueryRoot).forEach(node => {
+  // Only process SUCCESS nodes — fail nodes from backend already capture body attempts
+  trace.filter(n => !n.cutPrevented && !n.isQueryRoot && n.result === 'success').forEach(node => {
     const { functor, arity } = parseFunctorArityFromGoal(node.goal);
     if (!functor) return;
     const key = `${functor}/${arity}`;
@@ -432,8 +429,7 @@ export function injectCutGhostsFromSource(trace, sourceClauses) {
     const matchedIdx = findMatchedClauseIndex(node, allClauses);
     if (matchedIdx === 0) return; // first clause matched — nothing tried before
 
-    // If any sibling matched a lower-index clause (and all succeeded), those are
-    // backtracking alternatives, not failures — skip fail-ghost injection.
+    // Skip if a sibling succeeded at a lower clause index (backtracking alternatives)
     const mapKey = `${node.parentId || ''}|||${key}`;
     const siblingsSet = siblingMatchedIndices[mapKey] || new Set();
     const hasSucceedingSiblingAtLowerIdx = [...siblingsSet].some(idx => idx < matchedIdx);
@@ -460,49 +456,64 @@ export function injectCutGhostsFromSource(trace, sourceClauses) {
     });
   });
 
-  // 3. Body-goal cut-prevented: when "!" fires inside a rule body, body goals
-  //    executed BEFORE "!" lose their remaining choice points.
-  //    e.g. meal(M,F) :- homemade(M), !, ripe(F).
-  //    → homemade(soup) and homemade(fish) are cut-prevented siblings of homemade(pizza).
+  // 3. Body-goal cut-prevented (chained structure):
+  //    In the chained output, body goals form a parent→child chain:
+  //      rule → G1 → G2 → ! → G3
+  //    When ! fires, it prevents backtracking to alternative clauses for G1 and G2.
+  //    Walk UP from !'s parent to the rule node; for each body goal encountered,
+  //    add its remaining clause alternatives as siblings of its direct child
+  //    (i.e., children of that body goal node, at the same depth as the next link).
   const cutBuiltinNodes = trace.filter(n => n.result === 'cut' && n.goal === '!');
+  const nodeById = Object.fromEntries(trace.map(n => [n.id, n]));
   cutBuiltinNodes.forEach(cutNode => {
-    const parentId = cutNode.parentId;
-    if (!parentId) return;
-    const cutIdx = trace.indexOf(cutNode);
-    // Find siblings that appear BEFORE the cut in the trace (same parentId, not ghost, not the cut itself)
-    const siblingsBeforeCut = trace
-      .slice(0, cutIdx)
-      .filter(n => n.parentId === parentId && !n.cutPrevented && n.result !== 'cut' && !n.isQueryRoot);
-    siblingsBeforeCut.forEach(sibling => {
-      const { functor, arity } = parseFunctorArityFromGoal(sibling.goal);
-      if (!functor) return;
-      const key = `${functor}/${arity}`;
-      const allClauses = sourceClauses.get(key);
-      if (!allClauses || allClauses.length < 2) return;
-      const matchedIdx = findMatchedClauseIndex(sibling, allClauses);
-      const preventedClauses = allClauses.slice(matchedIdx + 1);
-      if (preventedClauses.length === 0) return;
-      preventedClauses.forEach((srcClause, offset) => {
-        const clauseDisplay = srcClause.isRule
-          ? `${srcClause.head} :- ${srcClause.body}`
-          : srcClause.head;
-        ghostsToAdd.push({
-          id: nextId(),
-          parentId: sibling.parentId,
-          depth: sibling.depth,
-          goal: sibling.goal,
-          clause: clauseDisplay,
-          clauseIndex: matchedIdx + 1 + offset,
-          lineStart: srcClause.lineStart,
-          lineEnd: srcClause.lineEnd,
-          result: 'fail',
-          cutPrevented: true,
-          cutBy: cutNode.id,
-          bindings: {},
-          children: [],
-        });
-      });
-    });
+    let childDepth = cutNode.depth;   // depth at which siblings of the next-in-chain appear
+    let currentId  = cutNode.parentId;
+
+    while (currentId) {
+      const currentNode = nodeById[currentId];
+      if (!currentNode || currentNode.isQueryRoot) break;
+
+      // Stop when we reach the rule node (has :- in clause) — that's the clause boundary
+      const isRuleNode = currentNode.clause && currentNode.clause.includes(':-');
+      if (isRuleNode) break;
+
+      // Skip builtin nodes (they have no clause alternatives)
+      if (currentNode.result !== 'cut' && !currentNode.cutPrevented) {
+        const { functor, arity } = parseFunctorArityFromGoal(currentNode.goal);
+        if (functor) {
+          const key = `${functor}/${arity}`;
+          const allClauses = sourceClauses.get(key);
+          if (allClauses && allClauses.length >= 2) {
+            const matchedIdx = findMatchedClauseIndex(currentNode, allClauses);
+            const preventedClauses = allClauses.slice(matchedIdx + 1);
+            preventedClauses.forEach((srcClause, offset) => {
+              const clauseDisplay = srcClause.isRule
+                ? `${srcClause.head} :- ${srcClause.body}`
+                : srcClause.head;
+              ghostsToAdd.push({
+                id: nextId(),
+                parentId: currentId,   // child of the current body goal (sibling of next chain link)
+                depth: childDepth,     // same depth as the next link in the chain
+                goal: currentNode.goal,
+                clause: clauseDisplay,
+                clauseIndex: matchedIdx + 1 + offset,
+                lineStart: srcClause.lineStart,
+                lineEnd: srcClause.lineEnd,
+                result: 'fail',
+                cutPrevented: true,
+                cutBy: cutNode.id,
+                bindings: {},
+                children: [],
+              });
+            });
+          }
+        }
+      }
+
+      // Move up one level in the chain
+      childDepth  = currentNode.depth;
+      currentId   = currentNode.parentId;
+    }
   });
 
   ghostsToAdd.forEach(g => trace.push(g));
