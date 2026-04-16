@@ -624,7 +624,19 @@ export function annotateWithSourceLines(trace, code, sourceClauses) {
 // Starts AFTER the head line (headLine+1) to avoid matching the head itself.
 function _findGoalLineInRange(goal, headLine, clauseEnd, lines) {
   const g = goal.trim();
+
+  // Attempt 1: direct substring match — works when goal text matches source exactly
+  // (abstract/uninstantiated goals like "N > 0" or "N1 is N - 1")
+  const normalG = g.replace(/\s+/g, ' ');
+  for (let i = headLine + 1; i <= clauseEnd; i++) {
+    const line = lines[i] || '';
+    if (line.trim().startsWith('%')) continue;
+    if (line.replace(/\s+/g, ' ').includes(normalG)) return i;
+  }
+
+  // Attempt 2: token-based search (for instantiated goals like "2 is 1*2")
   const terms = [];
+  let extraRequired = null;
 
   if (g === '!') {
     terms.push('!');
@@ -637,6 +649,18 @@ function _findGoalLineInRange(goal, headLine, clauseEnd, lines) {
     const kwMatch = g.match(/\b(is|not|true|fail|assert|retract|findall|bagof|setof)\b/);
     if (kwMatch && !terms.includes(kwMatch[1])) terms.push(kwMatch[1]);
 
+    // For `is` expressions: require the RHS arithmetic operator to disambiguate between
+    // multiple `is` goals in the same clause (e.g. "N1 is N-1" vs "F is F1*N").
+    // Without this, "2 is 1*2" would match "N1 is N - 1" (first `is` in the clause).
+    if (kwMatch?.[1] === 'is') {
+      const isIdx = g.indexOf(' is ');
+      if (isIdx >= 0) {
+        const rhs = g.slice(isIdx + 4).trim();
+        const rhsOp = rhs.match(/([+\-*\/])/);
+        if (rhsOp) extraRequired = rhsOp[1];
+      }
+    }
+
     // Symbolic operators (>, <, >=, =<, =:=, \=, etc.) — only when no functor found
     if (terms.length === 0) {
       const opMatch = g.match(/([><=\\!+\-*\/]+)/);
@@ -646,11 +670,22 @@ function _findGoalLineInRange(goal, headLine, clauseEnd, lines) {
 
   if (terms.length === 0) return -1;
 
+  // First pass: match primary terms AND the extra disambiguator (if any)
+  if (extraRequired) {
+    for (let i = headLine + 1; i <= clauseEnd; i++) {
+      const line = lines[i] || '';
+      if (line.trim().startsWith('%')) continue;
+      if (terms.some(t => line.includes(t)) && line.includes(extraRequired)) return i;
+    }
+  }
+
+  // Fallback: match with primary terms only
   for (let i = headLine + 1; i <= clauseEnd; i++) {
     const line = lines[i] || '';
     if (line.trim().startsWith('%')) continue;
     if (terms.some(t => line.includes(t))) return i;
   }
+
   return -1;
 }
 

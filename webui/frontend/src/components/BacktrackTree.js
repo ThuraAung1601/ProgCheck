@@ -45,7 +45,7 @@ function TreeNode({ node, pos, isSelected, isStepActive, onClick, scopeDepth=0, 
           <rect x={NODE_W-22} y={2} width={20} height={12} rx={3} fill="rgba(245,158,11,0.2)" />
           <text x={NODE_W-12} y={8} textAnchor="middle" dominantBaseline="central"
             fontSize={7} fontWeight={700} fontFamily="'DM Sans',sans-serif" fill="#f59e0b">
-            ×{scopeDepth+1}
+            ×{scopeDepth}
           </text>
         </>
       )}
@@ -466,7 +466,6 @@ export default function BacktrackTree({
   // full subtrees — i.e. the entire scope of that one rule invocation.
   const blocks = useMemo(() => {
     if (!showBlocks || !trace?.length) return [];
-    const PAD = 22;
 
     // Build children map over visible, non-cut nodes
     const childrenOf = {};
@@ -497,6 +496,9 @@ export default function BacktrackTree({
       const ids = allDesc(n.id);
       const pts = ids.map(id => positions[id]).filter(Boolean);
       if (pts.length < 2) return; // no children yet visible — skip
+
+      // Inner (deeper scope) boxes get smaller padding so their borders don't overlap outer boxes
+      const PAD = Math.max(8, 22 - (scopeDepths[n.id] || 0) * 4);
 
       const minX = Math.min(...pts.map(p => p.x)) - PAD;
       const minY = Math.min(...pts.map(p => p.y)) - PAD;
@@ -603,7 +605,7 @@ export default function BacktrackTree({
           {(scopeDepths[activeNode.id] || 0) > 0 && (
             <span className="px-1.5 rounded text-[9px] leading-5"
               style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
-              scope ×{(scopeDepths[activeNode.id] || 0) + 1}
+              scope ×{(scopeDepths[activeNode.id] || 0)}
             </span>
           )}
           {/* Variable substitutions */}
@@ -666,7 +668,7 @@ export default function BacktrackTree({
                         fontSize={8} fontWeight={700} fontFamily="'DM Sans',sans-serif"
                         fill="#f59e0b"
                       >
-                        ×{b.scopeDepth + 1}
+                        ×{b.scopeDepth}
                       </text>
                     </>
                   )}
