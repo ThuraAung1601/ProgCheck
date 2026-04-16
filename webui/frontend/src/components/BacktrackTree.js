@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { layoutTree } from '../utils/treeLayout';
+import { extractNodeBindings, getNextChoiceClause } from '../utils/engineOutputParser';
 
 const COLORS = {
   success: { bg: '#0f2a1a', border: '#22c55e', text: '#86efac', badge: '#15803d' },
@@ -11,7 +12,7 @@ const COLORS = {
 const RESULT_LABEL = { success:'✓', fail:'✗', cut:'!', pending:'…' };
 const NODE_W = 160, NODE_H = 64;
 
-function TreeNode({ node, pos, isSelected, isStepActive, onClick }) {
+function TreeNode({ node, pos, isSelected, isStepActive, onClick, scopeDepth=0, hasChildren=false, isCollapsed=false, onToggleCollapse }) {
   const isQ = node.isQueryRoot;
   const c   = isQ ? { bg:'#1a1f2e', border:'#4a90d9', text:'#85B7EB', badge:'#1d4e89' }
               : node.cutPrevented ? COLORS.ghost : (COLORS[node.result] || COLORS.pending);
@@ -24,6 +25,7 @@ function TreeNode({ node, pos, isSelected, isStepActive, onClick }) {
     : node.result === 'success' && bindingEntries.length > 0
       ? (() => { const s = `${bindingEntries[0][0]}=${bindingEntries[0][1]}`; return s.length > 10 ? s.slice(0,9)+'…' : s; })()
       : (RESULT_LABEL[node.result] || node.result);
+
   return (
     <g transform={`translate(${pos.x},${pos.y})`} onClick={() => onClick(node)} style={{ cursor:'pointer' }}>
       {isStepActive && (
@@ -37,6 +39,16 @@ function TreeNode({ node, pos, isSelected, isStepActive, onClick }) {
         strokeWidth={isSelected ? 2 : isG ? 1 : 1.5}
         strokeDasharray={isG ? '5 3' : undefined}
         opacity={isG ? 0.7 : 1} />
+      {/* Scope depth badge — top-right corner */}
+      {scopeDepth > 0 && (
+        <>
+          <rect x={NODE_W-22} y={2} width={20} height={12} rx={3} fill="rgba(245,158,11,0.2)" />
+          <text x={NODE_W-12} y={8} textAnchor="middle" dominantBaseline="central"
+            fontSize={7} fontWeight={700} fontFamily="'DM Sans',sans-serif" fill="#f59e0b">
+            ×{scopeDepth+1}
+          </text>
+        </>
+      )}
       <text x={NODE_W/2} y={20} textAnchor="middle" dominantBaseline="central"
         fontSize={10} fontWeight={600} fontFamily="'JetBrains Mono',monospace" fill={c.text}>
         {goal}
@@ -50,6 +62,18 @@ function TreeNode({ node, pos, isSelected, isStepActive, onClick }) {
         fontSize={7.5} fontWeight={600} fontFamily="'DM Sans',sans-serif" fill={c.text} opacity={isG?0.7:1}>
         {badgeText}
       </text>
+      {/* Collapse / expand toggle below node */}
+      {hasChildren && onToggleCollapse && (
+        <g transform={`translate(${NODE_W/2},${NODE_H+8})`}
+          onClick={e => { e.stopPropagation(); onToggleCollapse(node.id); }}
+          style={{ cursor:'pointer' }}>
+          <circle r={7} fill={c.bg} stroke={c.border} strokeWidth={1} opacity={0.9} />
+          <text textAnchor="middle" dominantBaseline="central"
+            fontSize={10} fontWeight={700} fontFamily="monospace" fill={c.text} opacity={0.9}>
+            {isCollapsed ? '+' : '−'}
+          </text>
+        </g>
+      )}
     </g>
   );
 }
@@ -86,42 +110,58 @@ function GhostConnector({ cutPos, ghostPos }) {
   );
 }
 
-function BindingsPanel({ node, onClose }) {
+function BindingsPanel({ node, extractedBindings, onClose }) {
   if (!node) return null;
   const c = node.cutPrevented ? COLORS.ghost : (COLORS[node.result] || COLORS.pending);
-  const entries = Object.entries(node.bindings || {});
+  // Merge node.bindings (from backend) with freshly extracted ones
+  const merged = { ...(node.bindings || {}), ...(extractedBindings || {}) };
+  const entries = Object.entries(merged);
   return (
-    <div className="absolute bottom-2 right-2 w-48 bg-bg-secondary border rounded-lg p-2.5 z-30 shadow-xl animate-fade-slide text-[11px]"
+    <div className="absolute bottom-2 right-2 w-52 bg-bg-secondary border rounded-lg p-2.5 z-30 shadow-xl text-[11px]"
       style={{ borderColor: c.border }}>
       <button onClick={onClose} className="absolute top-1.5 right-1.5 bg-transparent border-none text-txt-tertiary text-[10px] cursor-pointer">✕</button>
       <div className="font-bold tracking-widest uppercase mb-1" style={{ color: c.border, fontSize: 8 }}>
         {node.cutPrevented ? 'CUT PREVENTED' : (node.result||'?').toUpperCase()}
       </div>
       <div className="font-mono font-semibold mb-1 leading-tight" style={{ color: c.text, fontSize: 10 }}>{node.goal}</div>
-      {entries.length > 0 && (
-        <div className="mt-1 space-y-0.5">
+      {node.clause && node.clause !== node.goal && (
+        <div className="font-mono mb-1 leading-tight opacity-50" style={{ color: c.text, fontSize: 8 }}>
+          {node.clause.length > 40 ? node.clause.slice(0,39)+'…' : node.clause}
+        </div>
+      )}
+      {entries.length > 0 ? (
+        <div className="mt-1 space-y-0.5 border-t border-white/10 pt-1">
+          <div className="text-[8px] uppercase tracking-widest text-txt-tertiary mb-0.5">Substitutions</div>
           {entries.map(([k,v]) => (
-            <div key={k} className="flex gap-1.5">
+            <div key={k} className="flex gap-1.5 items-center">
               <span className="font-mono text-[#ED93B1]">{k}</span>
-              <span className="text-txt-tertiary">=</span>
+              <span className="text-txt-tertiary text-[9px]">=</span>
               <span className="font-mono text-[#EF9F27]">{v}</span>
             </div>
           ))}
         </div>
+      ) : (
+        <div className="text-txt-tertiary text-[10px] border-t border-white/10 pt-1">No substitutions</div>
       )}
-      {entries.length === 0 && <div className="text-txt-tertiary text-[10px]">No bindings</div>}
     </div>
   );
 }
 
-export default function BacktrackTree({ trace, onHighlightLine, compact = false }) {
-  const [stepIdx, setStepIdx]     = useState(-1);
+export default function BacktrackTree({
+  trace,
+  sourceClauses   = null,  // Map from extractSourceClauses — for bindings + choice points
+  onHighlightLine,         // (start, end) — kept for backward compat
+  onHighlightDetails,      // ({ primary, secondary, choice, gutter }) — richer highlight
+  compact = false,
+}) {
+  const [stepIdx, setStepIdx]         = useState(-1);
   const [selectedNode, setSelectedNode] = useState(null);
-  const [showGhosts, setShowGhosts] = useState(true);
-  const [showBlocks, setShowBlocks] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [pan, setPan]             = useState({ x: 10, y: 10 });
-  const [zoom, setZoom]           = useState(0.85);
+  const [showGhosts, setShowGhosts]   = useState(true);
+  const [showBlocks, setShowBlocks]   = useState(true);
+  const [isPlaying, setIsPlaying]     = useState(false);
+  const [pan, setPan]                 = useState({ x: 10, y: 10 });
+  const [zoom, setZoom]               = useState(0.85);
+  const [collapsedIds, setCollapsedIds] = useState(new Set());
   const svgRef    = useRef(null);
   const canvasRef = useRef(null);
   const playTimer = useRef(null);
@@ -156,15 +196,12 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
   const executionOrder = useMemo(() => {
     if (!trace?.length) return [];
 
-    const nodeByIdMap = {};
-    trace.forEach(n => { nodeByIdMap[n.id] = n; });
-
-    // Children map ordered by trace-array position
-    const childOf = {};
-    trace.forEach(n => { childOf[n.id] = []; });
-    trace.forEach(n => {
-      if (n.parentId && childOf[n.parentId]) childOf[n.parentId].push(n.id);
-    });
+    // Local maps (self-contained — does not depend on outer childOf/nodeById memos)
+    const _nb = {};
+    trace.forEach(n => { _nb[n.id] = n; });
+    const _ch = {};
+    trace.forEach(n => { _ch[n.id] = []; });
+    trace.forEach(n => { if (n.parentId && _ch[n.parentId]) _ch[n.parentId].push(n.id); });
 
     // Group fail-unification ghosts (result='fail', !cutPrevented) by (parentId|goal)
     const failByKey = {};
@@ -179,7 +216,7 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
     const order = [];
 
     function visit(nodeId) {
-      const node = nodeByIdMap[nodeId];
+      const node = _nb[nodeId];
       if (!node || node.cutPrevented || node.isQueryRoot || emitted.has(nodeId)) return;
       // Stand-alone fail ghosts are emitted when we visit their real sibling
       if (node.result === 'fail' && !node.cutPrevented) return;
@@ -194,8 +231,8 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
       order.push(node);
 
       // Recurse into real children (skip cut-prevented and fail-ghosts)
-      (childOf[nodeId] || []).forEach(cid => {
-        const c = nodeByIdMap[cid];
+      (_ch[nodeId] || []).forEach(cid => {
+        const c = _nb[cid];
         if (c && !c.cutPrevented && !c.isQueryRoot && !(c.result === 'fail' && !c.cutPrevented))
           visit(cid);
       });
@@ -204,8 +241,8 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
     const root = trace.find(n => !n.parentId);
     if (root) {
       if (root.isQueryRoot) {
-        (childOf[root.id] || []).forEach(cid => {
-          const c = nodeByIdMap[cid];
+        (_ch[root.id] || []).forEach(cid => {
+          const c = _nb[cid];
           if (c && !c.cutPrevented && !(c.result === 'fail' && !c.cutPrevented)) visit(cid);
         });
       } else {
@@ -217,9 +254,163 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
   }, [trace]);
   const activeNode = stepIdx >= 0 && stepIdx < executionOrder.length ? executionOrder[stepIdx] : null;
 
+  // ── nodeById map ─────────────────────────────────────────────────────────
+  const nodeById = useMemo(() =>
+    Object.fromEntries((trace||[]).map(n => [n.id, n])),
+  [trace]);
+
+  // ── childOf map (all nodes, not just visible) ────────────────────────────
+  const childOf = useMemo(() => {
+    const map = {};
+    trace?.forEach(n => { map[n.id] = []; });
+    trace?.forEach(n => { if (n.parentId && map[n.parentId]) map[n.parentId].push(n.id); });
+    return map;
+  }, [trace]);
+
+  // ── Scope depth: count same-functor ancestors (recursion indicator) ───────
+  const scopeDepths = useMemo(() => {
+    if (!trace?.length) return {};
+    const depths = {};
+    trace.forEach(node => {
+      const f = node.goal?.match(/^([a-z_][a-zA-Z0-9_]*)/)?.[1];
+      if (!f) { depths[node.id] = 0; return; }
+      let count = 0, cur = nodeById[node.parentId];
+      while (cur) {
+        if (cur.goal?.match(/^([a-z_][a-zA-Z0-9_]*)/)?.[1] === f) count++;
+        cur = nodeById[cur.parentId];
+      }
+      depths[node.id] = count;
+    });
+    return depths;
+  }, [trace, nodeById]);
+
+  // ── Collapse: nodes hidden under collapsed ancestors ─────────────────────
+  const hiddenByCollapse = useMemo(() => {
+    if (collapsedIds.size === 0) return new Set();
+    const hidden = new Set();
+    function hideAll(id) {
+      for (const cid of (childOf[id] || [])) {
+        if (!hidden.has(cid)) { hidden.add(cid); hideAll(cid); }
+      }
+    }
+    collapsedIds.forEach(id => hideAll(id));
+    return hidden;
+  }, [collapsedIds, childOf]);
+
+  const toggleCollapse = useCallback((nodeId) => {
+    setCollapsedIds(prev => {
+      const next = new Set(prev);
+      next.has(nodeId) ? next.delete(nodeId) : next.add(nodeId);
+      return next;
+    });
+  }, []);
+
+  // Auto-expand if the active step falls inside a collapsed subtree
   useEffect(() => {
-    if (activeNode?.lineStart >= 0) onHighlightLine?.(activeNode.lineStart, activeNode.lineEnd);
-  }, [activeNode, onHighlightLine]);
+    if (!activeNode || collapsedIds.size === 0) return;
+    if (!hiddenByCollapse.has(activeNode.id)) return;
+    let cur = nodeById[activeNode.parentId];
+    while (cur) {
+      if (collapsedIds.has(cur.id)) {
+        setCollapsedIds(prev => { const n = new Set(prev); n.delete(cur.id); return n; });
+        break;
+      }
+      cur = nodeById[cur.parentId];
+    }
+  }, [activeNode, hiddenByCollapse, collapsedIds, nodeById]);
+
+  // ── Bindings extraction for active / selected node ────────────────────────
+  const focusNode = selectedNode || activeNode;
+  const extractedBindings = useMemo(() =>
+    sourceClauses ? extractNodeBindings(focusNode, sourceClauses) : {},
+  [focusNode, sourceClauses]);
+
+  // ── Rich highlight: primary + secondary + choice + gutter ────────────────
+  useEffect(() => {
+    const ref = selectedNode || activeNode;
+    if (!ref) {
+      onHighlightLine?.(-1, -1);
+      onHighlightDetails?.({ primary: [], secondary: [], choice: [], gutter: {} });
+      return;
+    }
+
+    const mkRange = (n) => n && n.lineStart >= 0
+      ? Array.from({ length: (n.lineEnd ?? n.lineStart) - n.lineStart + 1 }, (_, i) => n.lineStart + i)
+      : [];
+
+    // Primary: current node's head line
+    const primary = mkRange(ref);
+
+    // Secondary:
+    //   1. Parent node's line (the rule that called this goal)
+    //   2. If ref is a rule node: facts used in the body goal chain
+    const secondary = [];
+    const parentNode = nodeById[ref.parentId];
+    if (parentNode && !parentNode.isQueryRoot) secondary.push(...mkRange(parentNode));
+
+    if (ref.clause?.includes(':-')) {
+      // Body goals are chained: rule → G1 → G2 → ! → G3 (each is parent of next)
+      // Walk the entire chain collecting fact nodes; stop when entering a nested rule call
+      const visited = new Set();
+      const collectChainFacts = (nodeId) => {
+        if (visited.has(nodeId)) return;
+        visited.add(nodeId);
+        for (const cid of (childOf[nodeId] || [])) {
+          const child = nodeById[cid];
+          if (!child || child.cutPrevented) continue;
+          if (child.isFact && child.lineStart >= 0) {
+            mkRange(child).forEach(l => { if (!secondary.includes(l)) secondary.push(l); });
+          }
+          // Continue through builtins/facts in the chain; stop at nested rule calls
+          if (!child.clause?.includes(':-')) collectChainFacts(cid);
+        }
+      };
+      collectChainFacts(ref.id);
+    }
+
+    // Choice: next alternative clause in source
+    const nextChoice = sourceClauses ? getNextChoiceClause(ref, sourceClauses) : null;
+    const choice = nextChoice
+      ? Array.from({ length: nextChoice.lineEnd - nextChoice.lineStart + 1 }, (_, i) => nextChoice.lineStart + i)
+      : [];
+
+    // Gutter: scope counts — ONLY for recursive predicates (count > 1 in the active path)
+    const gutter = {};
+    if (sourceClauses) {
+      const pathCounts = {};
+      let cur = ref;
+      while (cur) {
+        const f = cur.goal?.match(/^([a-z_][a-zA-Z0-9_]*)/)?.[1];
+        if (f) pathCounts[f] = (pathCounts[f] || 0) + 1;
+        cur = nodeById[cur.parentId];
+      }
+      for (const [key, clauses] of sourceClauses) {
+        const f = key.split('/')[0];
+        // Only annotate predicates that appear MORE THAN ONCE = recursion
+        if ((pathCounts[f] || 0) > 1) {
+          clauses.forEach(cl => {
+            for (let l = cl.lineStart; l <= (cl.lineEnd ?? cl.lineStart); l++)
+              gutter[l] = `×${pathCounts[f]}`;
+          });
+        }
+      }
+    }
+
+    // Binding colors: each variable → a color, same color for its bound value
+    const currentBindings = sourceClauses ? extractNodeBindings(ref, sourceClauses) : {};
+    const allBindings = { ...(ref.bindings || {}), ...currentBindings };
+    const palette = ['#86efac', '#7dd3fc', '#c4b5fd', '#fde68a', '#fca5a5'];
+    const bindingColors = {};
+    Object.entries(allBindings).forEach(([varName, value], idx) => {
+      const color = palette[idx % palette.length];
+      bindingColors[varName] = color;
+      // Only color simple atom values (skip numbers, complex terms, single chars)
+      if (value && /^[a-z][a-zA-Z0-9_]{1,}$/.test(value)) bindingColors[value] = color;
+    });
+
+    if (primary.length > 0) onHighlightLine?.(primary[0], primary[primary.length - 1]);
+    onHighlightDetails?.({ primary, secondary, choice, gutter, bindingColors });
+  }, [activeNode, selectedNode, nodeById, childOf, sourceClauses, onHighlightLine, onHighlightDetails]);
 
   useEffect(() => {
     if (isPlaying) {
@@ -249,14 +440,19 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
   }, [onHighlightLine]);
 
   const visibleIds = useMemo(() => {
-    if (stepIdx === -1) return new Set(trace?.map(n => n.id) || []);
-    const shown = new Set();
-    // Query root is always visible
-    trace?.filter(n => n.isQueryRoot).forEach(n => shown.add(n.id));
-    executionOrder.slice(0, stepIdx+1).forEach(n => shown.add(n.id));
-    if (showGhosts) trace?.filter(n => n.cutPrevented).forEach(n => shown.add(n.id));
+    let shown;
+    if (stepIdx === -1) {
+      shown = new Set(trace?.map(n => n.id) || []);
+    } else {
+      shown = new Set();
+      trace?.filter(n => n.isQueryRoot).forEach(n => shown.add(n.id));
+      executionOrder.slice(0, stepIdx+1).forEach(n => shown.add(n.id));
+      if (showGhosts) trace?.filter(n => n.cutPrevented).forEach(n => shown.add(n.id));
+    }
+    // Remove nodes hidden under collapsed ancestors
+    hiddenByCollapse.forEach(id => shown.delete(id));
     return shown;
-  }, [stepIdx, trace, executionOrder, showGhosts]);
+  }, [stepIdx, trace, executionOrder, showGhosts, hiddenByCollapse]);
 
   const ghostCutMap = useMemo(() => {
     const map = {};
@@ -312,6 +508,7 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
         label: n.goal.length > 28 ? n.goal.slice(0, 27) + '…' : n.goal,
         clause: n.clause,
         depth: n.depth || 0,
+        scopeDepth: scopeDepths[n.id] || 0,
         x: minX, y: minY, w: maxX - minX, h: maxY - minY,
         result: n.result,
       });
@@ -320,7 +517,7 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
     // Sort deepest first → inner boxes render on top of outer boxes
     result.sort((a, b) => b.depth - a.depth);
     return result;
-  }, [showBlocks, trace, positions, visibleIds]);
+  }, [showBlocks, trace, positions, visibleIds, scopeDepths]);
 
   // Colour palette for block frames — cycling by depth
   const BLOCK_COLORS = [
@@ -346,7 +543,6 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
   const onSvgUp = useCallback(() => { panStart.current = null; }, []);
 
   const hasGhosts = trace?.some(n => n.cutPrevented);
-  const nodeById = useMemo(() => Object.fromEntries((trace||[]).map(n => [n.id, n])), [trace]);
 
   if (!trace?.length) {
     return (
@@ -403,7 +599,15 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
             {RESULT_LABEL[activeNode.result] || activeNode.result}
           </span>
           <span className="text-txt-primary">{activeNode.goal}</span>
-          {Object.entries(activeNode.bindings || {}).map(([k, v]) => (
+          {/* Scope badge in step bar */}
+          {(scopeDepths[activeNode.id] || 0) > 0 && (
+            <span className="px-1.5 rounded text-[9px] leading-5"
+              style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
+              scope ×{(scopeDepths[activeNode.id] || 0) + 1}
+            </span>
+          )}
+          {/* Variable substitutions */}
+          {Object.entries({ ...(activeNode.bindings || {}), ...extractedBindings }).map(([k, v]) => (
             <span key={k} className="px-1.5 rounded text-[9px] leading-5"
               style={{ background: '#0f2a1a', color: '#86efac', border: '1px solid #22c55e50' }}>
               {k} = {v}
@@ -429,7 +633,7 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
           <g style={{ transition: 'transform 0.35s ease' }} transform={`translate(${pan.x},${pan.y})`}>
           <g transform={`scale(${zoom})`}>
             {/* ── Block frames (bounding boxes, drawn behind everything) ── */}
-            {blocks.map((b, i) => {
+            {blocks.map((b) => {
               const c = BLOCK_COLORS[b.depth % BLOCK_COLORS.length];
               return (
                 <g key={`blk-${b.id}`}>
@@ -440,7 +644,7 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
                     strokeWidth={1.5}
                     strokeDasharray="6 3"
                   />
-                  {/* Label in top-left corner of the frame */}
+                  {/* Goal label in top-left corner */}
                   <text
                     x={b.x + 10} y={b.y + 13}
                     fontSize={8.5} fontFamily="'JetBrains Mono',monospace"
@@ -448,6 +652,24 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
                   >
                     {b.label}
                   </text>
+                  {/* Recursion depth badge — top-right corner, only for recursive predicates */}
+                  {b.scopeDepth > 0 && (
+                    <>
+                      <rect
+                        x={b.x + b.w - 28} y={b.y + 4}
+                        width={24} height={13} rx={4}
+                        fill="rgba(245,158,11,0.18)" stroke="rgba(245,158,11,0.5)" strokeWidth={1}
+                      />
+                      <text
+                        x={b.x + b.w - 16} y={b.y + 10.5}
+                        textAnchor="middle" dominantBaseline="central"
+                        fontSize={8} fontWeight={700} fontFamily="'DM Sans',sans-serif"
+                        fill="#f59e0b"
+                      >
+                        ×{b.scopeDepth + 1}
+                      </text>
+                    </>
+                  )}
                 </g>
               );
             })}
@@ -477,10 +699,15 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
               if (!visibleIds.has(node.id) || (!showGhosts && node.cutPrevented)) return null;
               const pos = positions[node.id];
               if (!pos) return null;
+              const visibleChildren = (childOf[node.id] || []).filter(cid => visibleIds.has(cid));
               return (
                 <TreeNode key={node.id} node={node} pos={pos}
                   isSelected={selectedNode?.id === node.id}
                   isStepActive={activeNode?.id === node.id}
+                  scopeDepth={scopeDepths[node.id] || 0}
+                  hasChildren={visibleChildren.length > 0 || collapsedIds.has(node.id)}
+                  isCollapsed={collapsedIds.has(node.id)}
+                  onToggleCollapse={toggleCollapse}
                   onClick={handleNodeClick} />
               );
             })}
@@ -490,6 +717,7 @@ export default function BacktrackTree({ trace, onHighlightLine, compact = false 
         {(selectedNode || activeNode) && (
           <BindingsPanel
             node={selectedNode || activeNode}
+            extractedBindings={extractedBindings}
             onClose={() => setSelectedNode(null)} />
         )}
       </div>

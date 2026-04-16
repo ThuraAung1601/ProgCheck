@@ -57,7 +57,6 @@ export function extractSourceClauses(code) {
 
   joined.forEach(({ text, lineStart, lineEnd }) => {
     const raw = text.trim().replace(/\.\s*$/, '').trim();
-    console.log("JOINED CLAUSE:", raw);
 
     // Rule: anything with :-
     const ruleMatch = raw.match(/^(.+?)\s*:-\s*(.+)$/);
@@ -530,23 +529,23 @@ function findMatchedClauseIndex(node, allClauses) {
   const hasCut = clauseText.includes('!') || node.hasCutInClause;
   const isFact = node.isFact === true || (!isRule && !hasCut);
 
-  // Exact-ish head match: strip spaces and compare
   const nodeHead = clauseText.split(':-')[0].trim().replace(/\s+/g, '');
 
+  // 1. Exact head match — must be tried FIRST for all clauses before any fallback.
+  //    This handles instantiated facts like ripe(orange) vs ripe(apple).
+  for (let i = 0; i < allClauses.length; i++) {
+    if (allClauses[i].head.replace(/\s+/g, '') === nodeHead) return i;
+  }
+
+  // 2. Structural fallback — used only when no exact match was found (e.g. variables in goal)
   for (let i = 0; i < allClauses.length; i++) {
     const src = allClauses[i];
-    const srcHead = src.head.replace(/\s+/g, '');
-
-    // Try exact head match first (most reliable)
-    if (srcHead === nodeHead) return i;
-
-    // Structural match
     if (isFact && !src.isRule) return i;
     if (isRule && hasCut && src.isRule && src.hascut) return i;
     if (isRule && !hasCut && src.isRule && !src.hascut) return i;
   }
 
-  // Fallback: first rule if this is a rule, else first clause
+  // 3. Last resort
   if (isRule) {
     const ri = allClauses.findIndex(c => c.isRule);
     return ri >= 0 ? ri : 0;
@@ -562,22 +561,29 @@ export function mergeTraces(queries) {
   return queries.flatMap(q => q.trace);
 }
 
+// Annotate nodes with source line numbers.
+// Rules highlight only their HEAD line; builtin body goals find their specific line.
 export function annotateWithSourceLines(trace, code, sourceClauses) {
   const lines = code.split('\n');
-  return trace.map(node => {
-    if (node.cutPrevented && node.lineStart >= 0) return node;
-    if (node.lineStart >= 0) return node;
+  const nodeById = {};
 
-    const functor = node.goal.match(/^([a-z_][a-zA-Z0-9_]*)/)?.[1];
+  // ── Pass 1: assign clause-level lines (head line only for multi-line rules) ──
+  const partial = trace.map(node => {
+    if (node.lineStart >= 0) return node;   // already set (backend or ghost)
+    if (node.clause === '(built-in)') return node;  // handled in pass 2
+
+    const functor = node.goal?.match(/^([a-z_][a-zA-Z0-9_]*)/)?.[1];
     if (!functor) return node;
 
-    // Try sourceClauses first for accurate line numbers
     if (sourceClauses) {
-      const key3 = [...sourceClauses.keys()].find(k => k.startsWith(functor + '/'));
-      if (key3) {
-        const clauses = sourceClauses.get(key3);
-        if (clauses && clauses.length > 0) {
-          return { ...node, lineStart: clauses[0].lineStart, lineEnd: clauses[0].lineEnd };
+      const key = [...sourceClauses.keys()].find(k => k.startsWith(functor + '/'));
+      if (key) {
+        const clauses = sourceClauses.get(key);
+        if (clauses?.length > 0) {
+          const idx = findMatchedClauseIndex(node, clauses);
+          const cl  = clauses[Math.min(idx, clauses.length - 1)];
+          // Highlight only the head line; store full clause end for body-goal lookup
+          return { ...node, lineStart: cl.lineStart, lineEnd: cl.lineStart, _clauseEnd: cl.lineEnd };
         }
       }
     }
@@ -589,4 +595,122 @@ export function annotateWithSourceLines(trace, code, sourceClauses) {
     }
     return node;
   });
+
+  partial.forEach(n => { nodeById[n.id] = n; });
+
+  // ── Pass 2: find the specific source line for builtin body goals ──
+  return partial.map(node => {
+    if (node.lineStart >= 0) return node;
+    if (node.clause !== '(built-in)') return node;
+
+    // Walk up to the nearest RULE ancestor that has a multi-line clause range
+    let cur = nodeById[node.parentId];
+    while (cur) {
+      if (cur.lineStart >= 0) {
+        const clauseEnd = cur._clauseEnd ?? cur.lineEnd ?? cur.lineStart;
+        if (clauseEnd > cur.lineStart) {
+          const goalLine = _findGoalLineInRange(node.goal, cur.lineStart, clauseEnd, lines);
+          if (goalLine >= 0) return { ...node, lineStart: goalLine, lineEnd: goalLine };
+          break;  // found the rule ancestor but goal not located — stop
+        }
+      }
+      cur = nodeById[cur.parentId];
+    }
+    return node;
+  });
+}
+
+// Search for the source line of a body goal within a clause's line range.
+// Starts AFTER the head line (headLine+1) to avoid matching the head itself.
+function _findGoalLineInRange(goal, headLine, clauseEnd, lines) {
+  const g = goal.trim();
+  const terms = [];
+
+  if (g === '!') {
+    terms.push('!');
+  } else {
+    // Lowercase functor (e.g. "homemade", "factorial")
+    const fMatch = g.match(/^([a-z_][a-zA-Z0-9_]*)/);
+    if (fMatch) terms.push(fMatch[1]);
+
+    // Keyword operators
+    const kwMatch = g.match(/\b(is|not|true|fail|assert|retract|findall|bagof|setof)\b/);
+    if (kwMatch && !terms.includes(kwMatch[1])) terms.push(kwMatch[1]);
+
+    // Symbolic operators (>, <, >=, =<, =:=, \=, etc.) — only when no functor found
+    if (terms.length === 0) {
+      const opMatch = g.match(/([><=\\!+\-*\/]+)/);
+      if (opMatch) terms.push(opMatch[1]);
+    }
+  }
+
+  if (terms.length === 0) return -1;
+
+  for (let i = headLine + 1; i <= clauseEnd; i++) {
+    const line = lines[i] || '';
+    if (line.trim().startsWith('%')) continue;
+    if (terms.some(t => line.includes(t))) return i;
+  }
+  return -1;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 6. BINDINGS EXTRACTION & CHOICE POINT
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Extract variable bindings for a node by matching its goal string to the
+ * matched source clause head.
+ * e.g. goal="meal(pizza,apple)", head="meal(Main,Fruit)" → {Main:"pizza",Fruit:"apple"}
+ */
+export function extractNodeBindings(node, sourceClauses) {
+  if (!sourceClauses || !node?.goal) return {};
+  const { functor, arity } = parseFunctorArityFromGoal(node.goal);
+  if (!functor || arity === 0) return {};
+  const key = `${functor}/${arity}`;
+  const clauses = sourceClauses.get(key);
+  if (!clauses?.length) return {};
+  const matchedIdx = findMatchedClauseIndex(node, clauses);
+  const head = clauses[Math.min(matchedIdx, clauses.length - 1)]?.head;
+  if (!head) return {};
+  return _matchGoalToHead(node.goal, head);
+}
+
+function _matchGoalToHead(goalStr, headStr) {
+  const goalArgs = _termArgs(goalStr);
+  const headArgs = _termArgs(headStr);
+  if (!goalArgs || !headArgs || goalArgs.length !== headArgs.length) return {};
+  const bindings = {};
+  headArgs.forEach((hArg, i) => {
+    const h = hArg.trim(), g = goalArgs[i].trim();
+    // Variable in head: uppercase start, not anonymous _
+    if (/^[A-Z][a-zA-Z0-9_]*$/.test(h) && h !== g) bindings[h] = g;
+  });
+  return bindings;
+}
+
+function _termArgs(termStr) {
+  if (!termStr) return null;
+  const p = termStr.indexOf('(');
+  if (p === -1) return null;
+  const close = termStr.lastIndexOf(')');
+  if (close === -1) return null;
+  return splitTopLevel(termStr.slice(p + 1, close));
+}
+
+/**
+ * Return source lines for the NEXT clause alternative after node's matched clause.
+ * Used for the look-ahead choice-point indicator in the code panel.
+ * Returns { lineStart, lineEnd } or null.
+ */
+export function getNextChoiceClause(node, sourceClauses) {
+  if (!sourceClauses || !node?.goal) return null;
+  const { functor, arity } = parseFunctorArityFromGoal(node.goal);
+  if (!functor) return null;
+  const key = `${functor}/${arity}`;
+  const clauses = sourceClauses.get(key);
+  if (!clauses?.length) return null;
+  const matchedIdx = findMatchedClauseIndex(node, clauses);
+  const next = clauses[matchedIdx + 1];
+  return next ? { lineStart: next.lineStart, lineEnd: next.lineEnd } : null;
 }

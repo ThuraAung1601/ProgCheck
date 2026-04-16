@@ -5,7 +5,7 @@ const FONT_FAMILY = "'JetBrains Mono', 'Fira Code', monospace";
 const FONT_SIZE = '13px';
 const LINE_HEIGHT = '1.7';
 const PAD_H = '12px';   // horizontal padding inside the code area
-const GUTTER_W = 52;       // px — line-number gutter width
+const GUTTER_W = 64;       // px — line-number gutter width (wider for annotations)
 
 // ── Syntax token colours ──
 const TOKEN_CSS = `
@@ -16,11 +16,22 @@ const TOKEN_CSS = `
 .tok-functor { color: #85B7EB; }
 .tok-number  { color: #EF9F27; }
 .tok-punct   { color: #6b7a99; }
-.hl-line     { min-height: 1.7em; color: #e2e4ec; }
-.hl-active   { background: rgba(59,139,212,0.10); }
+.hl-line      { min-height: 1.7em; color: #e2e4ec; }
+.hl-active    { background: rgba(59,139,212,0.20); border-left: 3px solid #3b8bd4; }
+.hl-secondary { background: rgba(133,183,235,0.09); border-left: 3px solid rgba(133,183,235,0.45); }
+.hl-choice    { background: rgba(239,159,39,0.14); border-left: 3px dashed #EF9F27; border-right: 1px dashed rgba(239,159,39,0.4); }
 `;
 
-export default function CodeEditor({ value, onChange, highlightLines = [], tabSize = 2 }) {
+export default function CodeEditor({
+  value,
+  onChange,
+  highlightLines  = [],   // primary highlight (current node)
+  secondaryLines  = [],   // secondary highlight (parent/caller rule)
+  choiceLines     = [],   // dashed choice-point look-ahead
+  gutterAnnotations = {}, // { lineIdx: string } — shown in gutter (scope counts, arrows)
+  bindingColors   = {},   // { tokenText: cssColor } — variable/value coloring on highlighted lines
+  tabSize = 2,
+}) {
   const textareaRef = useRef(null);
   const highlightRef = useRef(null);
   const gutterRef = useRef(null);
@@ -60,11 +71,20 @@ export default function CodeEditor({ value, onChange, highlightLines = [], tabSi
   // Build highlighted HTML — one div per line, no line numbers here
   const buildHighlight = () =>
     lines.map((line, li) => {
-      const isHL = highlightLines.includes(li);
-      const inner = line.trim().startsWith('%')
+      const isHl  = highlightLines.includes(li);
+      const isSec = secondaryLines.includes(li);
+      const isCho = choiceLines.includes(li);
+      let inner = line.trim().startsWith('%')
         ? `<span class="tok-comment">${esc(line)}</span>`
         : tokenizeLine(line);
-      return `<div class="hl-line${isHL ? ' hl-active' : ''}">${inner || '\u00a0'}</div>`;
+      // Apply variable/value coloring on highlighted and secondary lines
+      if ((isHl || isSec) && Object.keys(bindingColors).length > 0)
+        inner = applyBindingColors(inner, bindingColors);
+      let cls = 'hl-line';
+      if (isHl)       cls += ' hl-active';
+      else if (isSec) cls += ' hl-secondary';
+      else if (isCho) cls += ' hl-choice';
+      return `<div class="${cls}">${inner || '\u00a0'}</div>`;
     }).join('');
 
   return (
@@ -92,9 +112,36 @@ export default function CodeEditor({ value, onChange, highlightLines = [], tabSi
           paddingTop: 0,
         }}
       >
-        {lines.map((_, i) => (
-          <div key={i} style={{ paddingRight: 10, paddingLeft: 8 }}>{i + 1}</div>
-        ))}
+        {lines.map((_, i) => {
+          const ann    = gutterAnnotations[i];
+          const isAct  = highlightLines.includes(i);
+          const isSec  = secondaryLines.includes(i);
+          const isCho  = choiceLines.includes(i);
+          return (
+            <div key={i} style={{
+              paddingRight: 6, paddingLeft: 6,
+              display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 3,
+            }}>
+              {/* Scope-count badge */}
+              {ann && (
+                <span style={{
+                  fontSize: 8, fontWeight: 700, color: '#f59e0b',
+                  background: 'rgba(245,158,11,0.12)', borderRadius: 3,
+                  padding: '0 2px', lineHeight: '12px', flexShrink: 0,
+                }}>{ann}</span>
+              )}
+              {/* Arrow indicator */}
+              {(isAct || isSec || isCho) && (
+                <span style={{
+                  fontSize: 9,
+                  color: isAct ? '#3b8bd4' : isSec ? 'rgba(133,183,235,0.5)' : 'rgba(239,159,39,0.7)',
+                  flexShrink: 0,
+                }}>{isAct ? '►' : isCho ? '⇢' : '·'}</span>
+              )}
+              <span style={{ color: isAct ? '#85B7EB' : '#505968' }}>{i + 1}</span>
+            </div>
+          );
+        })}
       </div>
 
       {/* ── Code area: highlight layer + textarea, perfectly stacked ── */}
@@ -208,4 +255,26 @@ function tokenizeLine(line) {
 
 function esc(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Apply variable/value coloring to an already-tokenized HTML string.
+// Targets: (a) tok-var spans for variable names, (b) plain text atoms between tags.
+function applyBindingColors(html, bindingColors) {
+  let result = html;
+  Object.entries(bindingColors).forEach(([text, color]) => {
+    if (!text || text.length < 2) return;
+    const re = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const style = `color:${color};background:${color}28;border-radius:2px;padding:0 1px;font-weight:700`;
+    // Variable spans: <span class="tok-var">Name</span>
+    result = result.replace(
+      new RegExp(`<span class="tok-var">(${re})</span>`, 'g'),
+      `<span class="tok-var" style="${style}">$1</span>`
+    );
+    // Plain-text atoms sitting between HTML tag boundaries (e.g. "pizza" in homemade(pizza))
+    result = result.replace(
+      new RegExp(`(?<=>)(${re})(?=<)`, 'g'),
+      `<span style="${style}">$1</span>`
+    );
+  });
+  return result;
 }

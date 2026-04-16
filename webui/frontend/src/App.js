@@ -10,7 +10,7 @@ import BacktrackTree from './components/BacktrackTree';
 import Modal from './components/Modal';
 import DiffViewer from './components/DiffViewer';
 import { rewireEdge } from './utils/rewire';
-import { extractSourceClauses, injectCutGhostsFromSource } from './utils/engineOutputParser';
+import { extractSourceClauses, injectCutGhostsFromSource, annotateWithSourceLines } from './utils/engineOutputParser';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
 
@@ -119,7 +119,12 @@ export default function App() {
   const [graph, setGraph] = useState({ nodes: [], edges: [] });
   const [selNode, setSelNode] = useState(null);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 500 });
-  const [hlLines, setHlLines] = useState([]);
+  const [hlLines, setHlLines]             = useState([]);
+  const [secHlLines, setSecHlLines]       = useState([]);
+  const [choiceHlLines, setChoiceHlLines] = useState([]);
+  const [gutterAnns, setGutterAnns]       = useState({});
+  const [bindingColors, setBindingColors] = useState({});
+  const [sourceClauses, setSourceClauses] = useState(null);
   const posRef = useRef({});
   const parseTimer = useRef(null);
   const obsRef = useRef(null);
@@ -357,6 +362,28 @@ export default function App() {
       : []);
   }, []);
 
+  // Rich highlight from BacktrackTree (primary + secondary + choice-point + gutter + binding colors)
+  const onHighlightDetails = useCallback(({ primary = [], secondary = [], choice = [], gutter = {}, bindingColors: bc = {} }) => {
+    setHlLines(primary);
+    setSecHlLines(secondary);
+    setChoiceHlLines(choice);
+    setGutterAnns(gutter);
+    setBindingColors(bc);
+  }, []);
+
+  // Clear all highlights and trace whenever code is edited (trace becomes stale)
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    setHlLines([]);
+    setSecHlLines([]);
+    setChoiceHlLines([]);
+    setGutterAnns({});
+    setBindingColors({});
+    setTraceData(null);
+    setCanVisualize(false);
+  }, [code]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const withLoading = useCallback(async (fn) => {
     setLoading(true);
     try { await fn(); }
@@ -575,9 +602,11 @@ export default function App() {
         isQueryRoot: true, bindings: {}, children: [],
       });
 
-      const sourceClauses = extractSourceClauses(code);
-      injectCutGhostsFromSource(nodes, sourceClauses);
-      setTraceData(nodes);
+      const sc = extractSourceClauses(code);
+      injectCutGhostsFromSource(nodes, sc);
+      const annotated = annotateWithSourceLines(nodes, code, sc);
+      setSourceClauses(sc);
+      setTraceData(annotated);
       setRightTab('trace');
       setMsg(`Visualizing ${nodes.length} nodes`, 'ok');
     } catch (e) {
@@ -699,6 +728,10 @@ export default function App() {
                 rightTab === 'trace' ? hlLines
                   : selNode?.lineStart != null ? [selNode.lineStart] : []
               }
+              secondaryLines={rightTab === 'trace' ? secHlLines : []}
+              choiceLines={rightTab === 'trace' ? choiceHlLines : []}
+              gutterAnnotations={rightTab === 'trace' ? gutterAnns : {}}
+              bindingColors={rightTab === 'trace' ? bindingColors : {}}
             />
           </div>
         </div>
@@ -926,7 +959,12 @@ export default function App() {
 
           {rightTab === 'trace' && traceData && (
             <div className="flex-1 min-h-0 overflow-hidden">
-              <BacktrackTree trace={traceData} onHighlightLine={onHighlightLine} />
+              <BacktrackTree
+                trace={traceData}
+                sourceClauses={sourceClauses}
+                onHighlightLine={onHighlightLine}
+                onHighlightDetails={onHighlightDetails}
+              />
             </div>
           )}
         </div>
