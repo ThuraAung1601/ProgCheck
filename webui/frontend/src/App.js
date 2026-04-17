@@ -635,19 +635,19 @@ export default function App() {
     setMsg('Review test cases', 'idle');
   });
 
-  const getClauseFix = (ce, clause) => withLoading(async () => {
-    if (!clause) return;
+  const getClauseFix = (ce, clause, clauseSourceText) => withLoading(async () => {
+    if (!clause || !clauseSourceText) return;
     setMsg('Asking LLM to fix clause…', 'idle');
     try {
       const r = await apiFetch('/api/fix-clause-from-counterexample', {
         problem_id: Number(selProblemPreset),
-        clause_text: clause.raw,
+        student_code: code,
+        clause_text: clauseSourceText,
         counter_example: { query: ce.query, expected: ce.expected, actual: ce.actual },
       });
       setCeClauseFix({
         explanation: r.explanation || '',
         fixedClause: r.fixed_clause || '',
-        oldRaw: clause.raw,
         lineStart: clause.lineStart,
         lineEnd: clause.lineEnd,
       });
@@ -1033,7 +1033,7 @@ export default function App() {
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-[11px] font-semibold uppercase tracking-widest text-txt-tertiary">
-                      Counter Examples&nbsp;
+                      Based on Counterfactuals&nbsp;
                       {ceResult.counter_examples.length > 0
                         ? <span className="text-red-400">({ceResult.counter_examples.length} failing)</span>
                         : <span className="text-green-400">(all pass)</span>}
@@ -1052,7 +1052,12 @@ export default function App() {
                     <div className="mb-3">
                       {ceResult.counter_examples.map((ce, i) => {
                         const clause = findClauseForCE(ce, sourceClauses);
-                        const isFixTarget = ceClauseFix && ceClauseFix.oldRaw === clause?.raw;
+                        // Extract the exact source lines from the editor — the clause table entry
+                        // (lineStart/lineEnd) is the authoritative reference to the source code.
+                        const clauseSourceText = clause
+                          ? code.split('\n').slice(clause.lineStart, clause.lineEnd + 1).join('\n')
+                          : null;
+                        const isFixTarget = ceClauseFix && ceClauseFix.lineStart === clause?.lineStart;
                         return (
                           <div key={i} className="mb-3 rounded border border-red-700/40 bg-red-900/10 overflow-hidden">
                             {/* Query row */}
@@ -1066,19 +1071,21 @@ export default function App() {
                               </div>
                             </div>
 
-                            {/* Responsible clause */}
-                            {clause && (
+                            {/* Responsible clause — extracted directly from source lines */}
+                            {clause && clauseSourceText && (
                               <div className="border-t border-red-700/30 bg-red-950/30 px-3 py-2">
                                 <div className="text-[10px] font-semibold uppercase text-txt-tertiary mb-1 flex items-center gap-2">
                                   Responsible clause
-                                  <span className="text-txt-tertiary/60 font-normal normal-case">line {clause.lineStart + 1}</span>
+                                  <span className="text-txt-tertiary/60 font-normal normal-case">
+                                    line {clause.lineStart + 1}{clause.lineEnd > clause.lineStart ? `–${clause.lineEnd + 1}` : ''}
+                                  </span>
                                   <button
                                     onClick={() => onHighlightLine(clause.lineStart, clause.lineEnd)}
                                     className="ml-auto text-[10px] px-1.5 py-0.5 border border-border-accent rounded text-txt-tertiary hover:text-txt-secondary"
                                     title="Highlight in editor"
                                   >↑ show</button>
                                 </div>
-                                <pre className="font-mono text-[11px] text-amber-200/90 whitespace-pre-wrap">{clause.raw}</pre>
+                                <pre className="font-mono text-[11px] text-amber-200/90 whitespace-pre-wrap">{clauseSourceText}</pre>
 
                                 {/* Per-CE fix button / inline result */}
                                 {isFixTarget && ceClauseFix.fixedClause ? (
@@ -1100,7 +1107,7 @@ export default function App() {
                                   </div>
                                 ) : (
                                   <button
-                                    onClick={() => getClauseFix(ce, clause)}
+                                    onClick={() => getClauseFix(ce, clause, clauseSourceText)}
                                     disabled={loading}
                                     className="mt-2 text-xs px-2 py-0.5 bg-yellow-900/20 border border-yellow-700/40 text-yellow-300 rounded disabled:opacity-40"
                                   >

@@ -244,11 +244,12 @@ Rules:
     return _chat_completion(prompt, temperature=0.2, api_key=api_key)
 
 
-def fix_clause_from_counterexample(problem_text: str, clause_text: str, counterexample: dict, api_key: str) -> dict:
+def fix_clause_from_counterexample(problem_text: str, student_code: str, clause_text: str, counterexample: dict, api_key: str) -> dict:
     """Fix a single Prolog clause that is responsible for a counter example.
 
     Args:
-        clause_text: The full text of the offending clause, e.g. "mortal(X) :- human(X)."
+        student_code: The complete student program (for context only).
+        clause_text:  The exact source text of the offending clause (multi-line as written).
         counterexample: {"query": str, "expected": "true"|"false", "actual": "true"|"false"}
 
     Returns:
@@ -263,20 +264,27 @@ def fix_clause_from_counterexample(problem_text: str, clause_text: str, countere
 Problem specification:
 {problem_text[:400]}
 
-Counter example:
+Full student program (READ-ONLY context — do NOT change any other clause):
+```prolog
+{student_code}
+```
+
+Counter example that reveals the bug:
   Query:    {query}
   Expected: {expected}  (should the query succeed?)
   Actual:   {actual}    (what the program currently does)
 
-The specific clause that is responsible:
+The specific clause responsible for this counter example:
 ```prolog
 {clause_text}
 ```
 
-Task: Fix ONLY this one clause so the counter example is handled correctly.
-- If expected is FALSE but the clause makes the query TRUE → restrict or guard the clause (e.g. add \\+ immortal(X)).
-- If expected is TRUE but the clause makes the query FAIL → correct the clause body.
-Do NOT rewrite other clauses or add new predicates.
+Task:
+- Fix ONLY the clause shown above.
+- Do NOT change any other clause, do NOT add new predicates.
+- Use the full program above only as context to understand the predicate's role.
+- If expected is FALSE but the clause makes the query TRUE → restrict or guard the clause.
+- If expected is TRUE but the clause makes the query FAIL → correct the clause body or guard condition.
 
 Output EXACTLY in this format:
 EXPLANATION: <one sentence: what is wrong with this clause and how the fix addresses it>

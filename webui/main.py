@@ -961,6 +961,7 @@ class SuggestFixPayload(BaseModel):
 
 class FixClausePayload(BaseModel):
     problem_id: int
+    student_code: str
     clause_text: str
     counter_example: Dict[str, str]
 
@@ -1086,6 +1087,7 @@ def fix_clause_from_counterexample_endpoint(payload: FixClausePayload) -> dict[s
 
                     result = fix_clause_from_counterexample(
                         q.problem,
+                        payload.student_code,
                         payload.clause_text,
                         payload.counter_example,
                         api_key,
