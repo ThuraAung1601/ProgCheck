@@ -390,7 +390,7 @@ export default function BacktrackTree({
         if ((pathCounts[f] || 0) > 1) {
           clauses.forEach(cl => {
             for (let l = cl.lineStart; l <= (cl.lineEnd ?? cl.lineStart); l++)
-              gutter[l] = `×${pathCounts[f]}`;
+              gutter[l] = `×${pathCounts[f] - 1}`;
           });
         }
       }

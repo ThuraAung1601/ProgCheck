@@ -5,11 +5,12 @@ import CodeEditor from '../components/CodeEditor.js';
 import GraphCanvas from '../components/GraphCanvas.js';
 import NodeInfo from '../components/NodeInfo.js';
 import BacktrackTree from '../components/BacktrackTree.js';
+import AndOrTree from '../components/AndOrTree.js';
 import Modal from '../components/Modal.js';
 import DiffViewer from '../components/DiffViewer.js';
 import { TestCaseReviewBody } from '../App.js';
 import { rewireEdge } from '../utils/rewire.js';
-import { extractSourceClauses, injectCutGhostsFromSource } from '../utils/engineOutputParser.js';
+import { extractSourceClauses, injectCutGhostsFromSource, annotateWithSourceLines } from '../utils/engineOutputParser.js';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
 
@@ -44,7 +45,12 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
   const [graph, setGraph] = useState({ nodes: [], edges: [] });
   const [selNode, setSelNode] = useState(null);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 500 });
-  const [hlLines, setHlLines] = useState([]);
+  const [hlLines, setHlLines]             = useState([]);
+  const [secHlLines, setSecHlLines]       = useState([]);
+  const [choiceHlLines, setChoiceHlLines] = useState([]);
+  const [gutterAnns, setGutterAnns]       = useState({});
+  const [bindingColors, setBindingColors] = useState({});
+  const [sourceClauses, setSourceClauses] = useState(null);
   const posRef = useRef({});
   const parseTimer = useRef(null);
   const obsRef = useRef(null);
@@ -229,6 +235,11 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
     return () => clearTimeout(parseTimer.current);
   }, [code]);
 
+  // Keep sourceClauses in sync with code so And-Or tree works without running Visualize
+  useEffect(() => {
+    setSourceClauses(code.trim() ? extractSourceClauses(code) : null);
+  }, [code]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const onNodeDragEnd = useCallback((positions) => {
     const posMap = Object.fromEntries(positions.map(p => [p.id, { x: p.x, y: p.y }]));
     posRef.current = { ...posRef.current, ...posMap };
@@ -251,6 +262,14 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
     setHlLines(lineStart >= 0
       ? Array.from({ length: (lineEnd ?? lineStart) - lineStart + 1 }, (_, i) => lineStart + i)
       : []);
+  }, []);
+
+  const onHighlightDetails = useCallback(({ primary = [], secondary = [], choice = [], gutter = {}, bindingColors: bc = {} }) => {
+    setHlLines(primary);
+    setSecHlLines(secondary);
+    setChoiceHlLines(choice);
+    setGutterAnns(gutter);
+    setBindingColors(bc);
   }, []);
 
   const apiFetch = async (path, body) => {
@@ -320,9 +339,11 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
         isQueryRoot: true, bindings: {}, children: [],
       });
 
-      const sourceClauses = extractSourceClauses(code);
-      injectCutGhostsFromSource(nodes, sourceClauses);
-      setTraceData(nodes);
+      const sc = extractSourceClauses(code);
+      injectCutGhostsFromSource(nodes, sc);
+      const annotated = annotateWithSourceLines(nodes, code, sc);
+      setSourceClauses(sc);
+      setTraceData(annotated);
       setRightTab('trace');
       setMsg(`Visualizing ${nodes.length} nodes`, 'ok');
     } catch (e) {
@@ -458,6 +479,7 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
     ['results', '✅ Results', false],
     ['feedback', '💬 Feedback', false],
     ['graph', '⬡ Graph', false],
+    ['aotree', '∧∨ And-Or', false],
     ['trace', '↯ Trace', !traceData],
   ];
 
@@ -468,6 +490,12 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
   const traceLegend = [
     ['✓', '#22c55e', 'success'], ['✗', '#ef4444', 'fail'],
     ['!', '#f59e0b', 'cut'], ['✂', '#6366f1', 'cut-prevented'],
+  ];
+  const aotreeLegend = [
+    ['OR', '#85B7EB', 'predicate (OR node)'],
+    ['∧', '#97C459', 'AND: conjunctive body goals'],
+    ['!', '#f59e0b', 'cut in clause'],
+    ['≡', '#22c55e', 'fact clause'],
   ];
 
   const filteredResults = studentResults.filter(r => String(r.student_id) === selStudent);
@@ -577,7 +605,16 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
               <CodeEditor
                 value={code}
                 onChange={role === 'teacher' ? () => { } : setCode}
-                highlightLines={rightTab === 'trace' ? hlLines : selNode?.lineStart != null ? [selNode.lineStart] : []}
+                highlightLines={
+                  rightTab === 'trace' ? hlLines
+                    : rightTab === 'aotree' ? hlLines
+                    : rightTab === 'feedback' ? hlLines
+                    : selNode?.lineStart != null ? [selNode.lineStart] : []
+                }
+                secondaryLines={rightTab === 'trace' ? secHlLines : []}
+                choiceLines={rightTab === 'trace' ? choiceHlLines : []}
+                gutterAnnotations={rightTab === 'trace' ? gutterAnns : {}}
+                bindingColors={rightTab === 'trace' ? bindingColors : {}}
               />
             </div>
           </div>
@@ -595,9 +632,9 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
                   {id === 'trace' && traceData && <span className="ml-1 text-[9px] text-indigo-400">●</span>}
                 </button>
               ))}
-              {(rightTab === 'graph' || rightTab === 'trace') && (
+              {(rightTab === 'graph' || rightTab === 'trace' || rightTab === 'aotree') && (
                 <div className="flex gap-2 ml-auto px-3 flex-shrink-0">
-                  {(rightTab === 'graph' ? graphLegend : traceLegend).map(([sym, color, tip]) => (
+                  {(rightTab === 'graph' ? graphLegend : rightTab === 'aotree' ? aotreeLegend : traceLegend).map(([sym, color, tip]) => (
                     <span key={sym} style={{ color }} className="text-[10px] font-mono cursor-default" title={tip}>{sym}</span>
                   ))}
                 </div>
@@ -706,9 +743,23 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
               </div>
             )}
 
+            {rightTab === 'aotree' && (
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <AndOrTree
+                  sourceClauses={sourceClauses}
+                  onHighlightLine={onHighlightLine}
+                />
+              </div>
+            )}
+
             {rightTab === 'trace' && traceData && (
               <div className="flex-1 min-h-0 overflow-hidden">
-                <BacktrackTree trace={traceData} onHighlightLine={onHighlightLine} />
+                <BacktrackTree
+                  trace={traceData}
+                  sourceClauses={sourceClauses}
+                  onHighlightLine={onHighlightLine}
+                  onHighlightDetails={onHighlightDetails}
+                />
               </div>
             )}
           </div>
