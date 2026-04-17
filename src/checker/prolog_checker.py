@@ -615,6 +615,137 @@ class PrologChecker:
             if tf.exists():
                 tf.unlink()
     
+    def get_counterexamples(self, tests_text: str) -> dict:
+        """Run tests and return structured counter examples for the falsification debug loop.
+
+        Each counter example includes `clause_line` (1-indexed SWI-Prolog line of the clause
+        that caused a false positive, or None for false negatives / when unavailable).
+
+        Returns:
+            {
+                "status": "correct" | "has_counterexamples" | "no_tests" | "error",
+                "counter_examples": [
+                    {"query": str, "expected": "true"|"false", "actual": "true"|"false",
+                     "clause_line": int|None},
+                    ...
+                ],
+                "passing": [{"query": str, "expected": "true"|"false", "actual": "true"|"false"}, ...],
+            }
+        """
+        if not tests_text or not tests_text.strip():
+            return {"status": "no_tests", "counter_examples": [], "passing": []}
+
+        tf = Path("temp_ce_tests.pl")
+        tf.write_text(tests_text)
+
+        try:
+            prolog = self._new_prolog()
+            self._consult(prolog, self.src_dir / "prolog" / "meta_interpreter.pl")
+            self._consult(prolog, self.student_file)
+            self._consult(prolog, tf)
+
+            pred = self._detect_predicate_from_tests(prolog)
+            if not pred:
+                pred = self._detect_predicate_from_file(prolog)
+            if not pred:
+                return {"status": "error", "message": "No predicate found", "counter_examples": [], "passing": []}
+
+            predicate_name, predicate_arity = pred
+            goal_template = f"{predicate_name}({', '.join(['_'] * predicate_arity)})"
+
+            # clause(FGoal, _, FRef) finds the responsible clause for both cases:
+            #   false positive (actual \= []): finds the clause that fired and caused a wrong success
+            #   false negative (actual == []): finds the clause whose head unifies with the goal
+            #                                  (the rule that should handle it but has wrong body)
+            # Format per failure line: query|exp_list|act_list|clause_line
+            q = (
+                f"catch(call_with_time_limit(15, ("
+                f"  findall(test(G,E), test(G,E), Tests), "
+                f"  meta_interpreter:validate_with_tests({goal_template}, Tests, Errors), "
+                f"  with_output_to(string(FailS), ("
+                f"    forall(member(test_failure(FGoal, FExp, FAct), Errors), ("
+                f"      term_string(FGoal, FGS), term_string(FExp, FES), term_string(FAct, FAS), "
+                f"      (clause(FGoal, _, FRef), clause_property(FRef, line_count(FLine)) ->"
+                f"        number_string(FLine, FLS)"
+                f"      ; FLS = ''), "
+                f"      format('~w|~w|~w|~w~n', [FGS, FES, FAS, FLS])"
+                f"    ))"
+                f"  )), "
+                f"  with_output_to(string(PassS), ("
+                f"    forall(("
+                f"      member(test(PGoal, PExp), Tests), "
+                f"      \\+ member(test_failure(PGoal, PExp, _), Errors)"
+                f"    ), ("
+                f"      term_string(PGoal, PGS), term_string(PExp, PES), "
+                f"      format('~w|~w~n', [PGS, PES])"
+                f"    ))"
+                f"  ))"
+                f")), _, (FailS='', PassS=''))"
+            )
+
+            result = self._query_one(prolog, q, timeout_seconds=20)
+
+            if not result or result.get("__error__"):
+                return {
+                    "status": "error",
+                    "message": str(result.get("__error__", "Analysis failed") if result else "Timeout"),
+                    "counter_examples": [],
+                    "passing": [],
+                }
+
+            # pyswip may return with_output_to results as bytes — decode explicitly.
+            # Also strip the str(bytes) repr artifact "b'...'" that appears when
+            # an older pyswip version returns bytes and the caller does str() on them.
+            def _decode(val):
+                if val is None:
+                    return ""
+                if isinstance(val, bytes):
+                    return val.decode("utf-8", errors="replace")
+                s = str(val)
+                # Strip spurious b'...' wrapper from str(bytes) conversion
+                if s.startswith("b'") and s.endswith("'"):
+                    s = s[2:-1].encode("raw_unicode_escape").decode("unicode_escape", errors="replace")
+                elif s.startswith('b"') and s.endswith('"'):
+                    s = s[2:-1].encode("raw_unicode_escape").decode("unicode_escape", errors="replace")
+                return s
+
+            fail_text = _decode(result.get("FailS", ""))
+            pass_text = _decode(result.get("PassS", ""))
+
+            counter_examples = []
+            for line in fail_text.strip().splitlines():
+                parts = line.strip().split("|", 3)
+                if len(parts) >= 3:
+                    goal_s, exp_s, act_s = parts[0], parts[1], parts[2]
+                    clause_line_s = parts[3].strip() if len(parts) > 3 else ""
+                    clause_line = int(clause_line_s) if clause_line_s.isdigit() else None
+                    counter_examples.append({
+                        "query": goal_s.strip(),
+                        "expected": "false" if exp_s.strip() == "[]" else "true",
+                        "actual":   "false" if act_s.strip() == "[]" else "true",
+                        "clause_line": clause_line,
+                    })
+
+            passing = []
+            for line in pass_text.strip().splitlines():
+                parts = line.strip().split("|", 1)
+                if len(parts) == 2:
+                    goal_s, exp_s = parts
+                    exp_bool = "false" if exp_s.strip() == "[]" else "true"
+                    passing.append({"query": goal_s.strip(), "expected": exp_bool, "actual": exp_bool})
+
+            return {
+                "status": "correct" if not counter_examples else "has_counterexamples",
+                "counter_examples": counter_examples,
+                "passing": passing,
+            }
+
+        except Exception as e:
+            return {"status": "error", "message": str(e), "counter_examples": [], "passing": []}
+        finally:
+            if tf.exists():
+                tf.unlink()
+
     def _gen_proof(self):
         if not self.predicate_name:
             return None

@@ -84,6 +84,43 @@ function clearSession() {
   } catch { /* ignore */ }
 }
 
+/** Parse a Prolog query string into {functor, arity, key}.
+ *  e.g. "mortal(God)" → {functor:"mortal", arity:1, key:"mortal/1"}
+ *       "human(X,Y)"  → {functor:"human",  arity:2, key:"human/2"}
+ */
+function parsePrologQuery(queryStr) {
+  const s = (queryStr || '').trim();
+  const parenIdx = s.indexOf('(');
+  if (parenIdx === -1) return { functor: s, arity: 0, key: `${s}/0` };
+  const functor = s.slice(0, parenIdx).trim();
+  const inner = s.slice(parenIdx + 1, s.lastIndexOf(')'));
+  if (!inner.trim()) return { functor, arity: 0, key: `${functor}/0` };
+  let depth = 0, arity = 1;
+  for (const ch of inner) {
+    if (ch === '(' || ch === '[') depth++;
+    else if (ch === ')' || ch === ']') depth--;
+    else if (ch === ',' && depth === 0) arity++;
+  }
+  return { functor, arity, key: `${functor}/${arity}` };
+}
+
+/** From sourceClauses map + a counter-example, return the responsible clause object.
+ *  clause_line is 1-indexed (from SWI-Prolog); sourceClauses uses 0-indexed lineStart.
+ */
+function findClauseForCE(ce, sourceClauses) {
+  if (!sourceClauses) return null;
+  const { key } = parsePrologQuery(ce.query);
+  const clauses = sourceClauses.get(key) || [];
+  if (!clauses.length) return null;
+  if (ce.clause_line != null) {
+    const target = ce.clause_line - 1; // convert to 0-indexed
+    const exact = clauses.find(c => c.lineStart <= target && target <= c.lineEnd);
+    if (exact) return exact;
+  }
+  // Fall back to the first clause of the predicate
+  return clauses[0];
+}
+
 export default function App() {
   // ── Auth & routing ────────────────────────────────────────────────────────
   const [screen, setScreen] = useState(() => {
@@ -130,6 +167,10 @@ export default function App() {
   const parseTimer = useRef(null);
   const obsRef = useRef(null);
   const resizeTimerRef = useRef(null);
+
+  // ── Counter-example debug loop state ─────────────────────────────────────
+  const [ceResult, setCeResult] = useState(null); // {status, counter_examples, passing}
+  const [ceClauseFix, setCeClauseFix] = useState(null); // {ceIdx, explanation, fixedClause, oldRaw, lineStart, lineEnd}
 
   // ── Test-case review modal state ──────────────────────────────────────────
   const [reviewTcs, setReviewTcs] = useState([]);
@@ -559,25 +600,30 @@ export default function App() {
       onConfirm: async (confirmedTcs) => {
         setLoading(true);
         setModal(null);
+        setCeResult(null);
         try {
-          const r = await apiFetch('/api/full-diagnosis', {
+          const r = await apiFetch('/api/counterexample-diagnosis', {
             ...buildPayload(),
             test_cases_file: confirmedTcs.length ? confirmedTcs : null,
           });
-          setFeedback(r.log || 'Diagnosis complete.');
-          setRightTab('feedback');
-          if (r.corrected_code) {
-            setModal({
-              type: 'confirm',
-              diff: r.diff || '',
-              onConfirm: () => {
-                setCode(r.corrected_code);
-                posRef.current = {};
-                setMsg('Fix applied', 'ok');
-              },
-            });
+          if (!r.ok && r.status === 'syntax_error') {
+            setFeedback(r.log || 'Syntax error detected.');
+            setRightTab('feedback');
+            setMsg('Syntax error', 'error');
+            return;
           }
-          setMsg('Diagnosis complete', 'ok');
+          setCeResult({
+            status: r.status,
+            counter_examples: r.counter_examples || [],
+            passing: r.passing || [],
+          });
+          setRightTab('feedback');
+          setMsg(
+            r.counter_examples?.length
+              ? `${r.counter_examples.length} counter example(s) found`
+              : 'All tests pass!',
+            r.counter_examples?.length ? 'error' : 'ok',
+          );
         } catch (e) {
           setFeedback(`Error: ${e.message}`);
           setMsg(e.message, 'error');
@@ -588,6 +634,45 @@ export default function App() {
     });
     setMsg('Review test cases', 'idle');
   });
+
+  const getClauseFix = (ce, clause) => withLoading(async () => {
+    if (!clause) return;
+    setMsg('Asking LLM to fix clause…', 'idle');
+    try {
+      const r = await apiFetch('/api/fix-clause-from-counterexample', {
+        problem_id: Number(selProblemPreset),
+        clause_text: clause.raw,
+        counter_example: { query: ce.query, expected: ce.expected, actual: ce.actual },
+      });
+      setCeClauseFix({
+        explanation: r.explanation || '',
+        fixedClause: r.fixed_clause || '',
+        oldRaw: clause.raw,
+        lineStart: clause.lineStart,
+        lineEnd: clause.lineEnd,
+      });
+      setMsg('Clause fix ready', 'ok');
+    } catch (e) {
+      setMsg(e.message, 'error');
+    }
+  });
+
+  const applyClauseFix = () => {
+    if (!ceClauseFix) return;
+    const { fixedClause, lineStart, lineEnd } = ceClauseFix;
+    if (!fixedClause) return;
+    const lines = code.split('\n');
+    const newLines = [
+      ...lines.slice(0, lineStart),
+      fixedClause,
+      ...lines.slice(lineEnd + 1),
+    ];
+    setCode(newLines.join('\n'));
+    posRef.current = {};
+    setCeClauseFix(null);
+    setCeResult(null);
+    setMsg('Clause fix applied — re-run Diagnose to verify', 'ok');
+  };
 
   const visualize = useCallback(async () => {
     if (!code.trim()) { setMsg('Load or write some code first', 'error'); return; }
@@ -740,6 +825,7 @@ export default function App() {
               highlightLines={
                 rightTab === 'trace' ? hlLines
                   : rightTab === 'aotree' ? hlLines
+                  : rightTab === 'feedback' ? hlLines
                   : selNode?.lineStart != null ? [selNode.lineStart] : []
               }
               secondaryLines={rightTab === 'trace' ? secHlLines : []}
@@ -943,9 +1029,110 @@ export default function App() {
 
           {rightTab === 'feedback' && (
             <div className="flex-1 overflow-auto min-h-0 p-4">
-              <pre className="font-mono text-[12px] leading-relaxed text-txt-secondary whitespace-pre-wrap">
-                {feedback || 'Run a query or check syntax to see output here.'}
-              </pre>
+              {ceResult ? (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[11px] font-semibold uppercase tracking-widest text-txt-tertiary">
+                      Counter Examples&nbsp;
+                      {ceResult.counter_examples.length > 0
+                        ? <span className="text-red-400">({ceResult.counter_examples.length} failing)</span>
+                        : <span className="text-green-400">(all pass)</span>}
+                    </span>
+                    <button
+                      onClick={() => { setCeResult(null); setCeClauseFix(null); setHlLines([]); setFeedback(''); }}
+                      className="text-[10px] text-txt-tertiary border border-border-accent rounded px-2 py-0.5 hover:text-txt-secondary"
+                    >clear</button>
+                  </div>
+
+                  {ceResult.counter_examples.length === 0 ? (
+                    <div className="text-green-300 text-[12px] p-3 bg-green-900/15 rounded border border-green-700/40 mb-3">
+                      All test cases pass — no counter examples found.
+                    </div>
+                  ) : (
+                    <div className="mb-3">
+                      {ceResult.counter_examples.map((ce, i) => {
+                        const clause = findClauseForCE(ce, sourceClauses);
+                        const isFixTarget = ceClauseFix && ceClauseFix.oldRaw === clause?.raw;
+                        return (
+                          <div key={i} className="mb-3 rounded border border-red-700/40 bg-red-900/10 overflow-hidden">
+                            {/* Query row */}
+                            <div className="px-3 py-2">
+                              <div className="font-mono text-[12px] text-red-300">? {ce.query}</div>
+                              <div className="text-[11px] text-txt-tertiary mt-0.5 font-mono">
+                                expected&nbsp;
+                                <span className={ce.expected === 'true' ? 'text-green-400' : 'text-red-400'}>{ce.expected}</span>
+                                &nbsp;·&nbsp;got&nbsp;
+                                <span className={ce.actual === 'true' ? 'text-green-400' : 'text-red-400'}>{ce.actual}</span>
+                              </div>
+                            </div>
+
+                            {/* Responsible clause */}
+                            {clause && (
+                              <div className="border-t border-red-700/30 bg-red-950/30 px-3 py-2">
+                                <div className="text-[10px] font-semibold uppercase text-txt-tertiary mb-1 flex items-center gap-2">
+                                  Responsible clause
+                                  <span className="text-txt-tertiary/60 font-normal normal-case">line {clause.lineStart + 1}</span>
+                                  <button
+                                    onClick={() => onHighlightLine(clause.lineStart, clause.lineEnd)}
+                                    className="ml-auto text-[10px] px-1.5 py-0.5 border border-border-accent rounded text-txt-tertiary hover:text-txt-secondary"
+                                    title="Highlight in editor"
+                                  >↑ show</button>
+                                </div>
+                                <pre className="font-mono text-[11px] text-amber-200/90 whitespace-pre-wrap">{clause.raw}</pre>
+
+                                {/* Per-CE fix button / inline result */}
+                                {isFixTarget && ceClauseFix.fixedClause ? (
+                                  <div className="mt-2 border-t border-amber-700/30 pt-2">
+                                    {ceClauseFix.explanation && (
+                                      <div className="text-[11px] text-amber-300 mb-1">{ceClauseFix.explanation}</div>
+                                    )}
+                                    <pre className="font-mono text-[11px] text-green-300 whitespace-pre-wrap bg-green-950/30 rounded p-1 mb-2">{ceClauseFix.fixedClause}</pre>
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={applyClauseFix}
+                                        className="text-xs px-2 py-0.5 bg-green-900/20 border border-green-700/50 text-green-300 rounded"
+                                      >Apply fix</button>
+                                      <button
+                                        onClick={() => setCeClauseFix(null)}
+                                        className="text-xs px-2 py-0.5 border border-border-accent text-txt-tertiary rounded"
+                                      >Discard</button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => getClauseFix(ce, clause)}
+                                    disabled={loading}
+                                    className="mt-2 text-xs px-2 py-0.5 bg-yellow-900/20 border border-yellow-700/40 text-yellow-300 rounded disabled:opacity-40"
+                                  >
+                                    {loading ? '…' : 'Fix this clause'}
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                      {ceResult.passing.length > 0 && (
+                        <div className="text-[11px] text-txt-tertiary mb-3">
+                          + {ceResult.passing.length} passing test{ceResult.passing.length !== 1 ? 's' : ''}
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={runDiagnosis}
+                          disabled={loading}
+                          className="text-xs px-3 py-1 border border-border-accent text-txt-tertiary rounded disabled:opacity-40"
+                        >Re-run diagnosis</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <pre className="font-mono text-[12px] leading-relaxed text-txt-secondary whitespace-pre-wrap">
+                  {feedback || 'Run a query or check syntax to see output here.'}
+                </pre>
+              )}
             </div>
           )}
 

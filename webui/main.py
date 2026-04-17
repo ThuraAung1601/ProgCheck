@@ -949,9 +949,153 @@ def full_diagnosis(payload: FullDiagnosisPayload) -> dict[str, Any]:
     finally:
         conn.close()
 
+class CounterExPayload(BaseModel):
+    problem_id: int
+    student_code: str
+    test_cases_file: Optional[List[TestCase]] = None
+
+class SuggestFixPayload(BaseModel):
+    problem_id: int
+    student_code: str
+    counter_examples: List[Dict[str, str]]
+
+class FixClausePayload(BaseModel):
+    problem_id: int
+    clause_text: str
+    counter_example: Dict[str, str]
+
 class GenerateTestCasesPayload(BaseModel):
     problem_id: int
     student_code: str
+
+@app.post("/api/counterexample-diagnosis")
+def counterexample_diagnosis(payload: CounterExPayload) -> dict[str, Any]:
+    """Run tests, return structured counter examples without auto-fixing."""
+    data, conn = get_root()
+    try:
+        qid = int(payload.problem_id)
+        for lab in data.labs.values():
+            for q in lab.lab_question:
+                if q.question_id == qid:
+                    problem_path = _write_temp(q.problem)
+                    temp_student = _write_temp(payload.student_code)
+                    test_file_path = None
+
+                    if payload.test_cases_file:
+                        prolog_tests = _convert_testcases_to_prolog(payload.test_cases_file)
+                        with tempfile.NamedTemporaryFile(mode="w", suffix=".pl", delete=False) as tf:
+                            tf.write(prolog_tests)
+                            test_file_path = Path(tf.name)
+
+                    try:
+                        checker = _make_checker(problem_path, temp_student, test_cases_file=test_file_path)
+                        log: list[str] = []
+
+                        syntax_ok = checker.check_syntax(log)
+                        if not syntax_ok:
+                            return {
+                                "ok": False,
+                                "status": "syntax_error",
+                                "log": "\n".join(log),
+                                "counter_examples": [],
+                                "passing": [],
+                            }
+
+                        tests_text = checker.prepare_tests(log)
+                        result = checker.get_counterexamples(tests_text or "")
+
+                        return {
+                            "ok": True,
+                            "status": result["status"],
+                            "counter_examples": result.get("counter_examples", []),
+                            "passing": result.get("passing", []),
+                            "log": "\n".join(log),
+                        }
+                    finally:
+                        temp_student.unlink(missing_ok=True)
+                        problem_path.unlink(missing_ok=True)
+                        if test_file_path:
+                            test_file_path.unlink(missing_ok=True)
+
+        raise HTTPException(status_code=404, detail="Problem not found")
+    finally:
+        conn.close()
+
+
+@app.post("/api/suggest-fix-counterexample")
+def suggest_fix_counterexample(payload: SuggestFixPayload) -> dict[str, Any]:
+    """Ask the LLM for a targeted fix based on counter examples."""
+    import os
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="GROQ_API_KEY not set")
+
+    data, conn = get_root()
+    try:
+        qid = int(payload.problem_id)
+        for lab in data.labs.values():
+            for q in lab.lab_question:
+                if q.question_id == qid:
+                    try:
+                        from llm_bridge import suggest_fix_from_counterexample
+                    except ImportError as e:
+                        raise HTTPException(status_code=500, detail=f"llm_bridge unavailable: {e}")
+
+                    result = suggest_fix_from_counterexample(
+                        q.problem,
+                        payload.student_code,
+                        payload.counter_examples,
+                        api_key,
+                    )
+
+                    diff_text = ""
+                    if result.get("fixed_code") and result["fixed_code"] != payload.student_code:
+                        diff_text = "\n".join(difflib.unified_diff(
+                            payload.student_code.splitlines(),
+                            result["fixed_code"].splitlines(),
+                            fromfile="student_original.pl",
+                            tofile="student_fixed.pl",
+                            lineterm="",
+                        ))
+
+                    return {"ok": True, "diff": diff_text, **result}
+
+        raise HTTPException(status_code=404, detail="Problem not found")
+    finally:
+        conn.close()
+
+
+@app.post("/api/fix-clause-from-counterexample")
+def fix_clause_from_counterexample_endpoint(payload: FixClausePayload) -> dict[str, Any]:
+    """Ask the LLM to fix a single clause responsible for a counter example."""
+    import os
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="GROQ_API_KEY not set")
+
+    data, conn = get_root()
+    try:
+        qid = int(payload.problem_id)
+        for lab in data.labs.values():
+            for q in lab.lab_question:
+                if q.question_id == qid:
+                    try:
+                        from llm_bridge import fix_clause_from_counterexample
+                    except ImportError as e:
+                        raise HTTPException(status_code=500, detail=f"llm_bridge unavailable: {e}")
+
+                    result = fix_clause_from_counterexample(
+                        q.problem,
+                        payload.clause_text,
+                        payload.counter_example,
+                        api_key,
+                    )
+                    return {"ok": True, **result}
+
+        raise HTTPException(status_code=404, detail="Problem not found")
+    finally:
+        conn.close()
+
 
 @app.post("/api/generate-diagnosis-testcases")
 def generate_diagnosis_testcases(payload: GenerateTestCasesPayload) -> dict[str, Any]:

@@ -244,6 +244,124 @@ Rules:
     return _chat_completion(prompt, temperature=0.2, api_key=api_key)
 
 
+def fix_clause_from_counterexample(problem_text: str, clause_text: str, counterexample: dict, api_key: str) -> dict:
+    """Fix a single Prolog clause that is responsible for a counter example.
+
+    Args:
+        clause_text: The full text of the offending clause, e.g. "mortal(X) :- human(X)."
+        counterexample: {"query": str, "expected": "true"|"false", "actual": "true"|"false"}
+
+    Returns:
+        {"explanation": str, "fixed_clause": str}
+    """
+    query    = counterexample.get("query", "")
+    expected = counterexample.get("expected", "")
+    actual   = counterexample.get("actual", "")
+
+    prompt = f"""You are fixing a single Prolog clause using the counter-example / falsification approach.
+
+Problem specification:
+{problem_text[:400]}
+
+Counter example:
+  Query:    {query}
+  Expected: {expected}  (should the query succeed?)
+  Actual:   {actual}    (what the program currently does)
+
+The specific clause that is responsible:
+```prolog
+{clause_text}
+```
+
+Task: Fix ONLY this one clause so the counter example is handled correctly.
+- If expected is FALSE but the clause makes the query TRUE → restrict or guard the clause (e.g. add \\+ immortal(X)).
+- If expected is TRUE but the clause makes the query FAIL → correct the clause body.
+Do NOT rewrite other clauses or add new predicates.
+
+Output EXACTLY in this format:
+EXPLANATION: <one sentence: what is wrong with this clause and how the fix addresses it>
+FIXED_CLAUSE:
+```prolog
+<the corrected clause only (ending with a period)>
+```"""
+
+    response = _chat_completion(prompt, temperature=0.2, api_key=api_key)
+
+    exp_match = re.search(r"EXPLANATION:\s*(.+?)(?=\nFIXED_CLAUSE:|$)", response, re.S | re.I)
+    explanation = exp_match.group(1).strip() if exp_match else ""
+
+    fixed_clause = ""
+    if "```prolog" in response:
+        fixed_clause = response.split("```prolog")[1].split("```")[0].strip()
+    elif "```" in response:
+        fixed_clause = response.split("```")[1].split("```")[0].strip()
+
+    # Ensure the fixed clause ends with a period
+    if fixed_clause and not fixed_clause.rstrip().endswith("."):
+        fixed_clause = fixed_clause.rstrip() + "."
+
+    return {"explanation": explanation, "fixed_clause": fixed_clause}
+
+
+def suggest_fix_from_counterexample(problem_text: str, student_code: str, counterexamples: list, api_key: str) -> dict:
+    """Suggest a targeted fix based on counter examples (falsification/debugging approach).
+
+    Returns dict: {explanation, targeted_clause, fixed_code}
+    """
+    ce_lines = [
+        f"  Query: {ce['query']}  |  Expected: {ce['expected']}  |  Actual: {ce['actual']}"
+        for ce in counterexamples
+    ]
+    ce_text = "\n".join(ce_lines) if ce_lines else "  (none)"
+
+    prompt = f"""You are debugging a Prolog program using the counter-example / falsification approach.
+
+Problem specification:
+{problem_text[:500]}
+
+Student's current code:
+```prolog
+{student_code}
+```
+
+Counter example(s) — queries where the program gives the WRONG answer:
+{ce_text}
+
+Your task:
+1. Identify which SPECIFIC clause(s) in the code are responsible for this counter example.
+2. Suggest the MINIMAL targeted fix — change ONLY what causes the counter example.
+3. Do NOT rewrite the whole program unnecessarily.
+4. Explain in ONE sentence why the counter example reveals this bug.
+
+Output EXACTLY in this format (no extra sections):
+EXPLANATION: <one sentence explaining why the counter example reveals the bug>
+TARGETED_CLAUSE: <the specific clause that needs to change (before fix)>
+FIXED_CODE:
+```prolog
+<complete corrected program>
+```"""
+
+    response = _chat_completion(prompt, temperature=0.2, api_key=api_key)
+
+    exp_match = re.search(r"EXPLANATION:\s*(.+?)(?=\nTARGETED_CLAUSE:|\nFIXED_CODE:|$)", response, re.S | re.I)
+    clause_match = re.search(r"TARGETED_CLAUSE:\s*(.+?)(?=\nFIXED_CODE:|$)", response, re.S | re.I)
+
+    explanation = exp_match.group(1).strip() if exp_match else ""
+    targeted_clause = clause_match.group(1).strip() if clause_match else ""
+    fixed_code = ""
+
+    if "```prolog" in response:
+        fixed_code = response.split("```prolog")[1].split("```")[0].strip()
+    elif "```" in response:
+        fixed_code = response.split("```")[1].split("```")[0].strip()
+
+    return {
+        "explanation": explanation,
+        "targeted_clause": targeted_clause,
+        "fixed_code": fixed_code,
+    }
+
+
 def ask_oracle_node(problem_text, goal_str, body_str, api_key, failing_goal=None):
     """Algorithmic debugging oracle: ask the LLM if a proof tree node is semantically correct.
 
