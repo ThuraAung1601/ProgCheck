@@ -7,6 +7,7 @@ import CodeEditor from './components/CodeEditor';
 import GraphCanvas from './components/GraphCanvas';
 import NodeInfo from './components/NodeInfo';
 import BacktrackTree from './components/BacktrackTree';
+import AndOrTree from './components/AndOrTree';
 import Modal from './components/Modal';
 import DiffViewer from './components/DiffViewer';
 import { rewireEdge } from './utils/rewire';
@@ -371,6 +372,11 @@ export default function App() {
     setBindingColors(bc);
   }, []);
 
+  // Keep sourceClauses in sync with code so And-Or tree works without running Visualize
+  useEffect(() => {
+    setSourceClauses(code.trim() ? extractSourceClauses(code) : null);
+  }, [code]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Clear all highlights and trace whenever code is edited (trace becomes stale)
   const isFirstRender = useRef(true);
   useEffect(() => {
@@ -648,6 +654,7 @@ export default function App() {
     ['problem', '📋 Problem', false],
     ['feedback', '💬 Feedback', false],
     ['graph', '⬡ Graph', false],
+    ['aotree', '∧∨ And-Or', false],
     ['trace', '↯ Trace', !traceData],
   ];
 
@@ -658,6 +665,12 @@ export default function App() {
   const traceLegend = [
     ['✓', '#22c55e', 'success'], ['✗', '#ef4444', 'fail'],
     ['!', '#f59e0b', 'cut'], ['✂', '#6366f1', 'cut-prevented'],
+  ];
+  const aotreeLegend = [
+    ['OR', '#85B7EB', 'predicate (OR node)'],
+    ['∧', '#97C459', 'AND: conjunctive body goals'],
+    ['!', '#f59e0b', 'cut in clause'],
+    ['≡', '#22c55e', 'fact clause'],
   ];
 
   const PrologCheckerUI = () => (
@@ -726,6 +739,7 @@ export default function App() {
               tabSize={user?.tab_size ?? 2}
               highlightLines={
                 rightTab === 'trace' ? hlLines
+                  : rightTab === 'aotree' ? hlLines
                   : selNode?.lineStart != null ? [selNode.lineStart] : []
               }
               secondaryLines={rightTab === 'trace' ? secHlLines : []}
@@ -746,12 +760,13 @@ export default function App() {
                     : rightTab === id ? 'bg-bg-primary text-txt-primary font-medium cursor-pointer'
                       : 'bg-transparent text-txt-tertiary hover:bg-bg-elevated hover:text-txt-secondary cursor-pointer'}`}>
                 {label}
+                {id === 'aotree' && sourceClauses?.size > 0 }
                 {id === 'trace' && traceData && <span className="ml-1 text-[9px] text-indigo-400">●</span>}
               </button>
             ))}
-            {(rightTab === 'graph' || rightTab === 'trace') && (
+            {(rightTab === 'graph' || rightTab === 'trace' || rightTab === 'aotree') && (
               <div className="flex gap-2 ml-auto px-3">
-                {(rightTab === 'graph' ? graphLegend : traceLegend).map(([sym, color, tip]) => (
+                {(rightTab === 'graph' ? graphLegend : rightTab === 'aotree' ? aotreeLegend : traceLegend).map(([sym, color, tip]) => (
                   <span key={sym} style={{ color }} className="text-[10px] font-mono cursor-default" title={tip}>{sym}</span>
                 ))}
               </div>
@@ -954,6 +969,15 @@ export default function App() {
                 />
               )}
               {selNode && <NodeInfo node={selNode} edges={graph.edges} onClose={() => setSelNode(null)} />}
+            </div>
+          )}
+
+          {rightTab === 'aotree' && (
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <AndOrTree
+                sourceClauses={sourceClauses}
+                onHighlightLine={onHighlightLine}
+              />
             </div>
           )}
 
