@@ -30,11 +30,11 @@ const normalizeQuery = q => (q || '').trim().replace(/\.$/, '');
 function Btn({ onClick, children, disabled, variant = 'default', title }) {
   const base = 'font-sans text-[11px] px-3 py-1 rounded border cursor-pointer transition-all whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed';
   const styles = {
-    default: 'bg-bg-elevated border-border-accent text-txt-secondary hover:text-txt-primary hover:border-white/20',
-    primary: 'bg-accent-blue/15 border-accent-blue/50 text-[#85B7EB] hover:bg-accent-blue/25',
-    success: 'bg-green-900/20 border-green-700/40 text-green-300 hover:bg-green-900/30',
-    warning: 'bg-amber-900/20 border-amber-700/40 text-amber-300 hover:bg-amber-900/30',
-    danger: 'bg-red-900/20  border-red-700/40  text-red-300  hover:bg-red-900/30',
+    default: 'bg-bg-elevated border-border-accent text-txt-secondary hover:text-txt-primary hover:border-border-accent',
+    primary: 'bg-accent-blue/15 border-accent-blue/50 text-[var(--txt-accent-blue)] hover:bg-accent-blue/25',
+    success: 'bg-[var(--btn-success-bg)] border-[var(--btn-success-border)] text-[var(--btn-success-text)] hover:bg-[var(--btn-success-hover)]',
+    warning: 'bg-[var(--btn-warning-bg)] border-[var(--btn-warning-border)] text-[var(--btn-warning-text)] hover:bg-[var(--btn-warning-hover)]',
+    danger:  'bg-[var(--btn-danger-bg)]  border-[var(--btn-danger-border)]  text-[var(--btn-danger-text)]  hover:bg-[var(--btn-danger-hover)]',
   };
   return (
     <button onClick={onClick} disabled={disabled} title={title}
@@ -799,9 +799,10 @@ export default function App() {
 
         {lastResult && sidebarCollapsed && (
           <span className={`ml-auto text-[10px] px-2 py-0.5 rounded border flex-shrink-0
-            ${lastResult.has_logic_error
-              ? 'text-red-300 border-red-700/40 bg-red-900/15'
-              : 'text-green-300 border-green-700/40 bg-green-900/15'}`}>
+            ${lastResult.has_logic_error ? '' : ''}`}
+            style={lastResult.has_logic_error
+              ? { color: 'var(--card-err-text)', borderColor: 'var(--card-err-border)', background: 'var(--card-err-bg)' }
+              : { color: 'var(--btn-success-text)', borderColor: 'var(--btn-success-border)', background: 'var(--btn-success-bg)' }}>
             {lastResult.has_logic_error ? (lastResult.shapiro_mode || 'unknown') : 'correct'}
           </span>
         )}
@@ -896,7 +897,7 @@ export default function App() {
                     onClick={() => { setShowAddProblem(v => !v); setSelProblemPreset(''); setProblemDraft(''); setProbError(''); }}
                     className={`text-[10px] font-semibold px-2 py-0.5 rounded border flex-shrink-0 transition-all
                       ${showAddProblem
-                        ? 'bg-accent-blue/20 border-accent-blue/50 text-[#85B7EB]'
+                        ? 'bg-accent-blue/20 border-accent-blue/50 text-[var(--txt-accent-blue)]'
                         : 'border-border-accent text-txt-tertiary hover:text-txt-secondary'}`}
                   >
                     + New
@@ -930,10 +931,10 @@ export default function App() {
                         {newProbTcs.map((tc, i) => (
                           <div key={tc.id} className="flex items-center gap-2 px-2 py-1 rounded border border-border-subtle bg-bg-elevated text-[11px]">
                             <span className="font-mono text-txt-secondary flex-1 truncate">{tc.input}</span>
-                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border flex-shrink-0
-                              ${tc.expected_output === 'true'
-                                ? 'bg-green-900/20 border-green-700/40 text-green-300'
-                                : 'bg-red-900/20 border-red-700/40 text-red-300'}`}>
+                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border flex-shrink-0"
+                              style={tc.expected_output === 'true'
+                                ? { background: 'var(--btn-success-bg)', borderColor: 'var(--btn-success-border)', color: 'var(--btn-success-text)' }
+                                : { background: 'var(--btn-danger-bg)', borderColor: 'var(--btn-danger-border)', color: 'var(--btn-danger-text)' }}>
                               {tc.expected_output}
                             </span>
                             <button
@@ -963,18 +964,19 @@ export default function App() {
                       <button
                         onClick={addNewProbTc}
                         disabled={!newProbTcInput.trim()}
-                        className="text-[10px] px-2 py-1 bg-accent-blue/20 border border-accent-blue/50 text-[#85B7EB] rounded disabled:opacity-40 flex-shrink-0"
+                        className="text-[10px] px-2 py-1 bg-accent-blue/20 border border-accent-blue/50 text-[var(--txt-accent-blue)] rounded disabled:opacity-40 flex-shrink-0"
                       >+ TC</button>
                     </div>
                   </div>
                   {probError && (
-                    <div className="text-[11px] text-red-400 bg-red-900/15 border border-red-700/40 rounded px-2 py-1">{probError}</div>
+                    <div className="text-[11px] rounded px-2 py-1 border"
+                      style={{ color: 'var(--card-err-text)', background: 'var(--card-err-bg)', borderColor: 'var(--card-err-border)' }}>{probError}</div>
                   )}
                   <div className="flex gap-2 pt-1">
                     <button
                       onClick={handleSaveProblem}
                       disabled={savingProblem || !newProbTitle.trim() || !newProbText.trim()}
-                      className="text-xs px-3 py-1 bg-accent-blue/20 border border-accent-blue/50 text-[#85B7EB] rounded disabled:opacity-40"
+                      className="text-xs px-3 py-1 bg-accent-blue/20 border border-accent-blue/50 text-[var(--txt-accent-blue)] rounded disabled:opacity-40"
                     >
                       {savingProblem ? 'Saving…' : 'Save Problem'}
                     </button>
@@ -1045,7 +1047,8 @@ export default function App() {
                   </div>
 
                   {ceResult.counter_examples.length === 0 ? (
-                    <div className="text-green-300 text-[12px] p-3 bg-green-900/15 rounded border border-green-700/40 mb-3">
+                    <div className="text-[12px] p-3 rounded border mb-3"
+                      style={{ color: 'var(--btn-success-text)', background: 'var(--btn-success-bg)', borderColor: 'var(--btn-success-border)' }}>
                       All test cases pass — no counter examples found.
                     </div>
                   ) : (
@@ -1059,10 +1062,11 @@ export default function App() {
                           : null;
                         const isFixTarget = ceClauseFix && ceClauseFix.lineStart === clause?.lineStart;
                         return (
-                          <div key={i} className="mb-3 rounded border border-red-700/40 bg-red-900/10 overflow-hidden">
+                          <div key={i} className="mb-3 rounded overflow-hidden"
+                            style={{ border: '1px solid var(--card-err-border)', background: 'var(--card-err-bg)' }}>
                             {/* Query row */}
                             <div className="px-3 py-2">
-                              <div className="font-mono text-[12px] text-red-300">? {ce.query}</div>
+                              <div className="font-mono text-[12px]" style={{ color: 'var(--card-err-text)' }}>? {ce.query}</div>
                               <div className="text-[11px] text-txt-tertiary mt-0.5 font-mono">
                                 expected&nbsp;
                                 <span className={ce.expected === 'true' ? 'text-green-400' : 'text-red-400'}>{ce.expected}</span>
@@ -1073,7 +1077,7 @@ export default function App() {
 
                             {/* Responsible clause — extracted directly from source lines */}
                             {clause && clauseSourceText && (
-                              <div className="border-t border-red-700/30 bg-red-950/30 px-3 py-2">
+                              <div className="px-3 py-2" style={{ borderTop: '1px solid var(--card-err-inner-bdr)', background: 'var(--card-err-inner-bg)' }}>
                                 <div className="text-[10px] font-semibold uppercase text-txt-tertiary mb-1 flex items-center gap-2">
                                   Responsible clause
                                   <span className="text-txt-tertiary/60 font-normal normal-case">
@@ -1085,19 +1089,21 @@ export default function App() {
                                     title="Highlight in editor"
                                   >↑ show</button>
                                 </div>
-                                <pre className="font-mono text-[11px] text-amber-200/90 whitespace-pre-wrap">{clauseSourceText}</pre>
+                                <pre className="font-mono text-[11px] whitespace-pre-wrap" style={{ color: 'var(--card-err-code)' }}>{clauseSourceText}</pre>
 
                                 {/* Per-CE fix button / inline result */}
                                 {isFixTarget && ceClauseFix.fixedClause ? (
-                                  <div className="mt-2 border-t border-amber-700/30 pt-2">
+                                  <div className="mt-2 pt-2" style={{ borderTop: '1px solid var(--card-fix-border)' }}>
                                     {ceClauseFix.explanation && (
-                                      <div className="text-[11px] text-amber-300 mb-1">{ceClauseFix.explanation}</div>
+                                      <div className="text-[11px] mb-1" style={{ color: 'var(--card-fix-text)' }}>{ceClauseFix.explanation}</div>
                                     )}
-                                    <pre className="font-mono text-[11px] text-green-300 whitespace-pre-wrap bg-green-950/30 rounded p-1 mb-2">{ceClauseFix.fixedClause}</pre>
+                                    <pre className="font-mono text-[11px] whitespace-pre-wrap rounded p-1 mb-2"
+                                      style={{ background: 'var(--card-fixed-bg)', color: 'var(--card-fixed-text)' }}>{ceClauseFix.fixedClause}</pre>
                                     <div className="flex gap-2">
                                       <button
                                         onClick={applyClauseFix}
-                                        className="text-xs px-2 py-0.5 bg-green-900/20 border border-green-700/50 text-green-300 rounded"
+                                        className="text-xs px-2 py-0.5 rounded border"
+                                        style={{ background: 'var(--btn-success-bg)', borderColor: 'var(--btn-success-border)', color: 'var(--btn-success-text)' }}
                                       >Apply fix</button>
                                       <button
                                         onClick={() => setCeClauseFix(null)}
@@ -1109,7 +1115,8 @@ export default function App() {
                                   <button
                                     onClick={() => getClauseFix(ce, clause, clauseSourceText)}
                                     disabled={loading}
-                                    className="mt-2 text-xs px-2 py-0.5 bg-yellow-900/20 border border-yellow-700/40 text-yellow-300 rounded disabled:opacity-40"
+                                    className="mt-2 text-xs px-2 py-0.5 rounded border disabled:opacity-40"
+                                    style={{ background: 'var(--card-fix-bg)', borderColor: 'var(--card-fix-border)', color: 'var(--card-fix-text)' }}
                                   >
                                     {loading ? '…' : 'Fix this clause'}
                                   </button>
@@ -1202,7 +1209,7 @@ export default function App() {
             <button onClick={() => setModal(null)} className="text-xs px-3 py-1 border border-border-accent rounded text-txt-secondary">Cancel</button>
             <button
               onClick={() => { modal.resolve(saveFilename); setModal(null); setSaveFilename(''); }}
-              className="text-xs px-3 py-1 bg-accent-blue/20 border border-accent-blue rounded text-[#85B7EB]"
+              className="text-xs px-3 py-1 bg-accent-blue/20 border border-accent-blue rounded text-[var(--txt-accent-blue)]"
             >
               Save
             </button>
@@ -1223,7 +1230,8 @@ export default function App() {
           <>
             <button onClick={() => setModal(null)} className="text-xs px-3 py-1 border border-border-accent rounded text-txt-secondary">Cancel</button>
             <button onClick={() => { modal.onConfirm(); setModal(null); }}
-              className="text-xs px-3 py-1 bg-green-900/20 border border-green-700 text-green-300 rounded">
+              className="text-xs px-3 py-1 rounded border"
+              style={{ background: 'var(--btn-success-bg)', borderColor: 'var(--btn-success-border)', color: 'var(--btn-success-text)' }}>
               Apply Fix
             </button>
           </>
@@ -1243,7 +1251,8 @@ export default function App() {
             <button onClick={() => setModal(null)} className="text-xs px-3 py-1 border border-border-accent rounded text-txt-secondary">Cancel</button>
             <button
               onClick={() => modal.onConfirm(reviewTcs)}
-              className="text-xs px-3 py-1 bg-red-900/20 border border-red-700 text-red-300 rounded"
+              className="text-xs px-3 py-1 rounded border"
+              style={{ background: 'var(--btn-danger-bg)', borderColor: 'var(--btn-danger-border)', color: 'var(--btn-danger-text)' }}
             >
               Run Diagnosis ({reviewTcs.length} case{reviewTcs.length !== 1 ? 's' : ''})
             </button>
@@ -1325,9 +1334,9 @@ export function TestCaseReviewBody({
   addReviewTc,
 }) {
   const sourceBadge = {
-    llm: { label: 'AI', cls: 'bg-accent-blue/10 border-accent-blue/30 text-[#85B7EB]' },
-    manual: { label: 'Manual', cls: 'bg-green-900/20 border-green-700/40 text-green-300' },
-    given: { label: 'Given', cls: 'bg-bg-elevated border-border-accent text-txt-tertiary' },
+    llm:    { label: 'AI',     cls: 'bg-accent-blue/10 border-accent-blue/30 text-[var(--txt-accent-blue)]' },
+    manual: { label: 'Manual', cls: 'bg-[var(--btn-success-bg)] border-[var(--btn-success-border)] text-[var(--btn-success-text)]' },
+    given:  { label: 'Given',  cls: 'bg-bg-elevated border-border-accent text-txt-tertiary' },
   };
 
   return (
@@ -1347,8 +1356,8 @@ export function TestCaseReviewBody({
               <span className="text-txt-tertiary w-5 flex-shrink-0">#{i + 1}</span>
               <span className="font-mono text-txt-secondary flex-1 min-w-0 truncate">{tc.input}</span>
               <span className={`flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded border ${tc.expected_output === 'true'
-                ? 'bg-green-900/20 border-green-700/40 text-green-300'
-                : 'bg-red-900/20 border-red-700/40 text-red-300'
+                ? 'bg-[var(--btn-success-bg)] border-[var(--btn-success-border)] text-[var(--btn-success-text)]'
+                : 'bg-[var(--btn-danger-bg)] border-[var(--btn-danger-border)] text-[var(--btn-danger-text)]'
                 }`}>
                 {tc.expected_output}
               </span>
@@ -1383,7 +1392,7 @@ export function TestCaseReviewBody({
         <button
           onClick={addReviewTc}
           disabled={!newTcInput.trim()}
-          className="text-xs px-3 py-1 bg-accent-blue/20 border border-accent-blue/50 text-[#85B7EB] rounded disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+          className="text-xs px-3 py-1 bg-accent-blue/20 border border-accent-blue/50 text-[var(--txt-accent-blue)] rounded disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
         >
           Add
         </button>

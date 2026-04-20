@@ -397,7 +397,7 @@ const ClassroomPage = ({ role, user, onOpenAssignment }) => {
               <span
                 style={{
                   fontSize: 13,
-                  color: i === breadcrumb().length - 1 ? '#111827' : 'var(--muted)',
+                  color: i === breadcrumb().length - 1 ? 'var(--ink)' : 'var(--muted)',
                   fontWeight: i === breadcrumb().length - 1 ? 600 : 400,
                   cursor: i < breadcrumb().length - 1 ? 'pointer' : 'default',
                 }}

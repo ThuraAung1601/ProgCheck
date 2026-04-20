@@ -111,7 +111,7 @@ const LoginPage = ({ defaultRole = 'student', defaultIsRegistering = false, onLo
   const handleSubmit = isRegistering ? handleRegister : handleLogin;
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', background: '#F5F7FA', fontFamily: "'Google Sans', sans-serif" }}>
+    <div style={{ minHeight: '100vh', display: 'flex', background: '#F5F7FA', fontFamily: "'Google Sans', sans-serif", colorScheme: 'light', '--ink': '#111827', '--ink-2': '#374151', '--muted': '#6B7280', '--border': '#E5E7EB', '--surface': '#F9FAFB', '--white': '#ffffff' }}>
       <div style={{
         flex: 1,
         display: 'flex',

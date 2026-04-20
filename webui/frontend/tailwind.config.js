@@ -9,19 +9,19 @@ module.exports = {
       },
       colors: {
         bg: {
-          primary:  '#0d0f14',
-          secondary:'#131620',
-          surface:  '#181c26',
-          elevated: '#1e2332',
+          primary:  'var(--bg-primary)',
+          secondary:'var(--bg-secondary)',
+          surface:  'var(--bg-surface)',
+          elevated: 'var(--bg-elevated)',
         },
         border: {
-          subtle: 'rgba(255,255,255,0.07)',
-          accent: 'rgba(255,255,255,0.12)',
+          subtle: 'var(--border-subtle)',
+          accent: 'var(--border-accent)',
         },
         txt: {
-          primary:   '#e2e4ec',
-          secondary: '#8892a4',
-          tertiary:  '#505968',
+          primary:   'var(--txt-primary)',
+          secondary: 'var(--txt-secondary)',
+          tertiary:  'var(--txt-tertiary)',
         },
         accent: {
           blue:  '#3B8BD4',

@@ -19,11 +19,11 @@ const normalizeQuery = q => (q || '').trim().replace(/\.$/, '');
 function Btn({ onClick, children, disabled, variant = 'default', title }) {
   const base = 'font-sans text-[11px] px-3 py-1 rounded border cursor-pointer transition-all whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed';
   const styles = {
-    default: 'bg-bg-elevated border-border-accent text-txt-secondary hover:text-txt-primary hover:border-white/20',
-    primary: 'bg-accent-blue/15 border-accent-blue/50 text-[#85B7EB] hover:bg-accent-blue/25',
-    success: 'bg-green-900/20 border-green-700/40 text-green-300 hover:bg-green-900/30',
-    warning: 'bg-amber-900/20 border-amber-700/40 text-amber-300 hover:bg-amber-900/30',
-    danger: 'bg-red-900/20  border-red-700/40  text-red-300  hover:bg-red-900/30',
+    default: 'bg-bg-elevated border-border-accent text-txt-secondary hover:text-txt-primary hover:border-border-accent',
+    primary: 'bg-accent-blue/15 border-accent-blue/50 text-[var(--txt-accent-blue)] hover:bg-accent-blue/25',
+    success: 'bg-[var(--btn-success-bg)] border-[var(--btn-success-border)] text-[var(--btn-success-text)] hover:bg-[var(--btn-success-hover)]',
+    warning: 'bg-[var(--btn-warning-bg)] border-[var(--btn-warning-border)] text-[var(--btn-warning-text)] hover:bg-[var(--btn-warning-hover)]',
+    danger:  'bg-[var(--btn-danger-bg)]  border-[var(--btn-danger-border)]  text-[var(--btn-danger-text)]  hover:bg-[var(--btn-danger-hover)]',
   };
   return (
     <button onClick={onClick} disabled={disabled} title={title}
@@ -507,7 +507,7 @@ const AssignmentPage = ({ assignmentData, role, user, onBack }) => {
       <div style={{
         padding: '10px 16px', borderBottom: '1px solid var(--border)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        background: '#fff', flexShrink: 0,
+        background: 'var(--bg-surface)', flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button onClick={onBack}

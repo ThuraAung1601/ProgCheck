@@ -125,23 +125,23 @@ function BindingsPanel({ node, extractedBindings, onClose }) {
       </div>
       <div className="font-mono font-semibold mb-1 leading-tight" style={{ color: c.text, fontSize: 10 }}>{node.goal}</div>
       {node.clause && node.clause !== node.goal && (
-        <div className="font-mono mb-1 leading-tight opacity-50" style={{ color: c.text, fontSize: 8 }}>
+        <div className="font-mono mb-1 leading-tight opacity-80" style={{ color: c.text, fontSize: 8 }}>
           {node.clause.length > 40 ? node.clause.slice(0,39)+'…' : node.clause}
         </div>
       )}
       {entries.length > 0 ? (
-        <div className="mt-1 space-y-0.5 border-t border-white/10 pt-1">
+        <div className="mt-1 space-y-0.5 border-t border-border-subtle pt-1">
           <div className="text-[8px] uppercase tracking-widest text-txt-tertiary mb-0.5">Substitutions</div>
           {entries.map(([k,v]) => (
             <div key={k} className="flex gap-1.5 items-center">
-              <span className="font-mono text-[#ED93B1]">{k}</span>
+              <span className="font-mono text-[var(--editor-var)]">{k}</span>
               <span className="text-txt-tertiary text-[9px]">=</span>
-              <span className="font-mono text-[#EF9F27]">{v}</span>
+              <span className="font-mono text-[var(--editor-number)]">{v}</span>
             </div>
           ))}
         </div>
       ) : (
-        <div className="text-txt-tertiary text-[10px] border-t border-white/10 pt-1">No substitutions</div>
+        <div className="text-txt-tertiary text-[10px] border-t border-border-subtle pt-1">No substitutions</div>
       )}
     </div>
   );
@@ -555,7 +555,7 @@ export default function BacktrackTree({
     );
   }
 
-  const btnCls = (active) => `font-sans text-[10px] px-2 py-0.5 rounded border border-white/10 cursor-pointer transition-colors text-[#c9d1d9] ${active ? 'bg-green-900/40 border-green-600/30' : 'bg-bg-elevated hover:bg-bg-surface'}`;
+  const btnCls = (active) => `font-sans text-[10px] px-2 py-0.5 rounded border border-border-subtle cursor-pointer transition-colors text-txt-secondary ${active ? 'bg-[var(--btn-success-bg)] border-[var(--btn-success-border)] text-[var(--btn-success-text)]' : 'bg-bg-elevated hover:bg-bg-surface'}`;
 
   return (
     <div className="flex flex-col h-full relative overflow-hidden">
@@ -587,7 +587,7 @@ export default function BacktrackTree({
           </label>
         )}
         <label className="flex items-center gap-1 cursor-pointer text-[10px] font-sans select-none"
-          style={{ color: showBlocks ? '#85B7EB' : '#4a5568' }}>
+          style={{ color: showBlocks ? 'var(--txt-accent-blue)' : 'var(--txt-tertiary)' }}>
           <input type="checkbox" checked={showBlocks} onChange={e => setShowBlocks(e.target.checked)}
             className="accent-blue-500 w-2.5 h-2.5" />
           ⬡
@@ -596,22 +596,23 @@ export default function BacktrackTree({
 
       {/* Active step info */}
       {activeNode && (
-        <div className="flex gap-2 items-center px-2 py-1 bg-[#0f2030] border-b border-accent-blue/20 flex-shrink-0 flex-wrap font-mono text-[10px]">
-          <span className="font-bold" style={{ color: COLORS[activeNode.result]?.border || '#fff' }}>
+        <div className="flex gap-2 items-center px-2 py-1 border-b border-border-subtle flex-shrink-0 flex-wrap font-mono text-[10px]"
+          style={{ background: 'var(--step-bar-bg)' }}>
+          <span className="font-bold" style={{ color: COLORS[activeNode.result]?.border || 'var(--txt-primary)' }}>
             {RESULT_LABEL[activeNode.result] || activeNode.result}
           </span>
           <span className="text-txt-primary">{activeNode.goal}</span>
           {/* Scope badge in step bar */}
           {(scopeDepths[activeNode.id] || 0) > 0 && (
             <span className="px-1.5 rounded text-[9px] leading-5"
-              style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
+              style={{ background: 'var(--editor-badge-bg)', color: 'var(--editor-badge-color)', border: '1px solid rgba(245,158,11,0.3)' }}>
               scope ×{(scopeDepths[activeNode.id] || 0)}
             </span>
           )}
           {/* Variable substitutions */}
           {Object.entries({ ...(activeNode.bindings || {}), ...extractedBindings }).map(([k, v]) => (
             <span key={k} className="px-1.5 rounded text-[9px] leading-5"
-              style={{ background: '#0f2a1a', color: '#86efac', border: '1px solid #22c55e50' }}>
+              style={{ background: 'var(--step-var-bg)', color: 'var(--step-var-text)', border: '1px solid var(--step-var-border)' }}>
               {k} = {v}
             </span>
           ))}

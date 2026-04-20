@@ -57,17 +57,17 @@ export default function TraceImporter({ code, onTraceLoaded, onCancel }) {
 
   return (
     <div className="fixed inset-0 z-[1000] bg-black/75 flex items-center justify-center backdrop-blur-sm">
-      <div className="bg-bg-secondary border border-white/10 rounded-xl w-[680px] max-h-[88vh] flex flex-col shadow-[0_24px_60px_rgba(0,0,0,0.7)] overflow-hidden">
+      <div className="bg-bg-secondary border border-border-subtle rounded-xl w-[680px] max-h-[88vh] flex flex-col shadow-[var(--shadow-lg)] overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.07] flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border-subtle flex-shrink-0">
           <span className="font-sans text-[15px] font-semibold text-txt-primary tracking-tight">↯ Import Execution Trace</span>
           <button onClick={onCancel} className="bg-transparent border-none text-txt-tertiary text-sm cursor-pointer px-1.5 py-0.5 rounded hover:text-txt-primary">✕</button>
         </div>
 
         {/* Instruction */}
-        <div className="px-5 py-2.5 text-xs text-txt-tertiary border-b border-white/[0.05] flex-shrink-0 leading-relaxed">
-          Paste the full output from your <span className="font-mono text-[11px] text-[#85B7EB]">PROLOG CODE CHECKER</span> below.
+        <div className="px-5 py-2.5 text-xs text-txt-tertiary border-b border-border-subtle flex-shrink-0 leading-relaxed">
+          Paste the full output from your <span className="font-mono text-[11px] text-[var(--txt-accent-blue)]">PROLOG CODE CHECKER</span> below.
           Cut-prevented clauses are <span className="text-indigo-400 font-medium">automatically inferred</span> from
           the Prolog source in the editor — make sure your code is loaded on the left first.
         </div>
@@ -77,7 +77,7 @@ export default function TraceImporter({ code, onTraceLoaded, onCancel }) {
 
           {/* Textarea */}
           <textarea
-            className="mx-5 mt-3 p-3 bg-bg-primary border border-white/10 rounded-lg text-[#c9d1d9] font-mono text-[11.5px] leading-relaxed resize-y outline-none flex-shrink-0"
+            className="mx-5 mt-3 p-3 bg-bg-primary border border-border-subtle rounded-lg text-txt-primary font-mono text-[11.5px] leading-relaxed resize-y outline-none flex-shrink-0"
             style={{ minHeight: 120, maxHeight: 340 }}
             value={text}
             onChange={e => { setText(e.target.value); setParsed(null); setError(''); }}
@@ -93,7 +93,7 @@ export default function TraceImporter({ code, onTraceLoaded, onCancel }) {
           {/* Parse button */}
           <div className="flex items-center gap-2.5 px-5 pt-2.5 flex-shrink-0">
             <button onClick={handleParse} disabled={!text.trim()}
-              className="font-sans text-xs font-medium px-4 py-1.5 bg-accent-blue/15 border border-accent-blue/40 rounded-md text-[#85B7EB] cursor-pointer disabled:opacity-40 hover:bg-accent-blue/20 transition-colors">
+              className="font-sans text-xs font-medium px-4 py-1.5 bg-accent-blue/15 border border-accent-blue/40 rounded-md text-[var(--txt-accent-blue)] cursor-pointer disabled:opacity-40 hover:bg-accent-blue/20 transition-colors">
               Parse output
             </button>
             {parsed && (
@@ -105,20 +105,20 @@ export default function TraceImporter({ code, onTraceLoaded, onCancel }) {
 
           {/* Query selector */}
           {parsed?.queries.length > 0 && (
-            <div className="mx-5 mt-2.5 border border-white/[0.07] rounded-lg overflow-hidden flex-shrink-0">
-              <div className="px-3 py-1.5 bg-white/[0.03] border-b border-white/[0.05] text-[10px] uppercase tracking-[0.06em] text-txt-tertiary font-sans">
+            <div className="mx-5 mt-2.5 border border-border-subtle rounded-lg overflow-hidden flex-shrink-0">
+              <div className="px-3 py-1.5 bg-bg-secondary border-b border-border-subtle text-[10px] uppercase tracking-[0.06em] text-txt-tertiary font-sans">
                 Choose which query to visualize
               </div>
               <div className="py-1">
                 {/* All merged */}
                 <label className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer text-xs font-sans transition-colors
-                  ${selIdx==='all' ? 'bg-accent-blue/08 text-[#85B7EB]' : 'text-txt-secondary hover:bg-white/[0.03]'}`}>
+                  ${selIdx==='all' ? 'bg-accent-blue/08 text-[var(--txt-accent-blue)]' : 'text-txt-secondary hover:bg-bg-secondary'}`}>
                   <input type="radio" name="q" value="all" checked={selIdx==='all'} onChange={() => setSelIdx('all')} className="accent-accent-blue" />
                   All queries merged ({mergeTraces(parsed.queries).length} nodes)
                 </label>
                 {parsed.queries.map((q, i) => (
                   <label key={i} className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer text-xs font-sans transition-colors
-                    ${selIdx===i ? 'bg-accent-blue/08 text-[#85B7EB]' : 'text-txt-secondary hover:bg-white/[0.03]'}`}>
+                    ${selIdx===i ? 'bg-accent-blue/08 text-[var(--txt-accent-blue)]' : 'text-txt-secondary hover:bg-bg-secondary'}`}>
                     <input type="radio" name="q" value={i} checked={selIdx===i} onChange={() => setSelIdx(i)} className="accent-accent-blue" />
                     <span className="font-mono text-[11px]">{q.query}</span>
                     <span className="ml-auto text-[10px] text-txt-tertiary">{q.trace.length} nodes</span>
@@ -135,9 +135,9 @@ export default function TraceImporter({ code, onTraceLoaded, onCancel }) {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 px-5 py-3 border-t border-white/[0.07] flex-shrink-0">
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-border-subtle flex-shrink-0">
           <button onClick={onCancel}
-            className="font-sans text-xs px-4 py-1.5 bg-transparent border border-white/10 rounded-md text-txt-tertiary cursor-pointer hover:text-txt-primary transition-colors">
+            className="font-sans text-xs px-4 py-1.5 bg-transparent border border-border-subtle rounded-md text-txt-tertiary cursor-pointer hover:text-txt-primary transition-colors">
             Cancel
           </button>
           <button onClick={handleLoad} disabled={!parsed}
@@ -158,8 +158,8 @@ function TracePreview({ trace }) {
     ghost:   trace.filter(n => n.cutPrevented).length,
   };
   return (
-    <div className="mx-5 mt-2 border border-white/[0.07] rounded-lg overflow-hidden flex-shrink-0">
-      <div className="px-2.5 py-1 bg-white/[0.03] border-b border-white/[0.05] text-[10px] uppercase tracking-[0.06em] text-txt-tertiary font-sans">
+    <div className="mx-5 mt-2 border border-border-subtle rounded-lg overflow-hidden flex-shrink-0">
+      <div className="px-2.5 py-1 bg-bg-secondary border-b border-border-subtle text-[10px] uppercase tracking-[0.06em] text-txt-tertiary font-sans">
         Preview
       </div>
       <div className="flex gap-3.5 px-2.5 py-1.5 border-b border-white/[0.04]">
